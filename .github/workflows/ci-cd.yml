@@ -147,6 +147,7 @@ jobs:
             type=sha,prefix={{branch}}-
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: backend/services/${{ matrix.service }}
@@ -155,6 +156,40 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.meta.outputs.version }}
+
+      - name: Generate SBOM
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ matrix.service }}:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}.spdx.json
+
+      - name: Upload SBOM
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom-reports
+          path: sbom-${{ matrix.service }}.spdx.json
+
+      - name: Install Cosign
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: "v2.2.0"
+
+      - name: Sign Docker image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ matrix.service }}@${{ steps.build.outputs.digest }}
 
   # ==================== Build Frontend ====================
   build-frontend:
@@ -208,6 +243,7 @@ jobs:
             type=sha,prefix={{branch}}-
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: frontend
@@ -216,46 +252,72 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            BUILDKIT_INLINE_CACHE=1
+            BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ steps.meta.outputs.version }}
+
+      - name: Generate SBOM
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/frontend:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom-frontend.spdx.json
+
+      - name: Upload SBOM
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom-reports
+          path: sbom-frontend.spdx.json
+
+      - name: Install Cosign
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: "v2.2.0"
+
+      - name: Sign Docker image
+        if: ${{ github.event_name != 'pull_request' }}
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/frontend@${{ steps.build.outputs.digest }}
 
   # ==================== Deploy to Staging ====================
   deploy-staging:
-    needs: [build-images, build-frontend]
+    needs: build-images
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment: staging
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ env.PROJECT_ID }}
           service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Get GKE credentials
         run: |
           gcloud container clusters get-credentials staging-cluster \
-            --zone ${{ env.REGION }} \
-            --project ${{ env.PROJECT_ID }}
+            --region us-central1
 
-      - name: Deploy to GKE
+      - name: Deploy with Helm
         run: |
-          kubectl apply -f kubernetes/namespaces.yaml
-          kubectl apply -f kubernetes/network-policies.yaml
-          kubectl apply -f kubernetes/deployments.yaml
-          kubectl apply -f kubernetes/hpa-ingress.yaml
-          kubectl rollout status deployment/auth-service -n platform-v2-stable
-
-      - name: Run smoke tests
-        run: |
-          kubectl run smoke-test \
-            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/smoke-tests:latest \
-            --rm -i --restart=Never \
-            -n platform-v2-stable
+          helm upgrade --install code-review-platform ./helm/code-review-platform \
+            --namespace platform-v2-stable \
+            --set image.tag=${{ github.sha }} \
+            --set environment=staging \
+            --wait --timeout=10m
 
   # ==================== Deploy to Production ====================
   deploy-production:
-    needs: [build-images, build-frontend]
+    needs: build-images
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment:
@@ -267,23 +329,23 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
-          project_id: ${{ env.PROJECT_ID }}
           service_account_key: ${{ secrets.GCP_SA_KEY }}
-          export_default_credentials: true
+          project_id: ${{ env.PROJECT_ID }}
 
       - name: Get GKE credentials
         run: |
           gcloud container clusters get-credentials production-cluster \
-            --zone ${{ env.REGION }} \
-            --project ${{ env.PROJECT_ID }}
+            --region us-central1
 
-      - name: Deploy to GKE
+      - name: Deploy with Helm
+        id: helm-deploy
         run: |
-          kubectl apply -f kubernetes/namespaces.yaml
-          kubectl apply -f kubernetes/network-policies.yaml
-          kubectl apply -f kubernetes/deployments.yaml
-          kubectl apply -f kubernetes/hpa-ingress.yaml
-          kubectl rollout status deployment/auth-service -n platform-v2-stable
+          helm upgrade --install code-review-platform ./helm/code-review-platform \
+            --namespace platform-v2-stable \
+            --set image.tag=${{ github.sha }} \
+            --set environment=production \
+            --set replicaCount=3 \
+            --wait --timeout=10m
 
       - name: Verify deployment
         run: |
@@ -302,6 +364,12 @@ jobs:
             sleep 10
           done
           exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          kubectl rollout undo deployment/code-ai-service \
+            -n platform-v2-stable
 
       - name: Notify Slack
         if: always()

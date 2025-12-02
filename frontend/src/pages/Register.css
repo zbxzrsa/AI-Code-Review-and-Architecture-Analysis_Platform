@@ -1,0 +1,132 @@
+/**
+ * Register Page Styles
+ * 注册页面样式
+ * 
+ * Responsive design with mobile-first approach
+ * 响应式设计，移动优先
+ */
+
+/* 容器样式 / Container styles */
+.register-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 背景装饰 / Background decoration */
+.register-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    z-index: 0;
+}
+
+.register-background::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
+    animation: rotate 30s linear infinite;
+}
+
+@keyframes rotate {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 卡片样式 / Card styles */
+.register-card {
+    width: 100%;
+    max-width: 440px;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+    z-index: 1;
+}
+
+/* 头部样式 / Header styles */
+.register-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.register-header .ant-typography {
+    margin-bottom: 8px;
+}
+
+/* 错误提示样式 / Error alert styles */
+.register-error {
+    margin-bottom: 24px;
+}
+
+/* 密码强度指示器 / Password strength indicator */
+.password-strength {
+    margin-top: -16px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--bg-secondary, #fafafa);
+    border-radius: 8px;
+}
+
+.password-rules {
+    margin-top: 8px;
+}
+
+.password-rule {
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.password-rule .anticon {
+    font-size: 12px;
+}
+
+/* 页脚样式 / Footer styles */
+.register-footer {
+    text-align: center;
+}
+
+.register-footer .ant-divider {
+    margin: 16px 0;
+}
+
+/* 响应式设计 / Responsive design */
+@media (max-width: 480px) {
+    .register-container {
+        padding: 16px;
+    }
+
+    .register-card {
+        border-radius: 12px;
+    }
+
+    .register-header h2 {
+        font-size: 20px;
+    }
+}
+
+/* 暗色模式 / Dark mode */
+:root[data-theme='dark'] .register-card {
+    background: #1f1f1f;
+}
+
+:root[data-theme='dark'] .password-strength {
+    background: #141414;
+}

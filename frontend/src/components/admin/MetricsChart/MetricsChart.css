@@ -1,0 +1,11 @@
+.metrics-chart {
+  width: 100%;
+}
+
+.metrics-chart-loading,
+.metrics-chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}

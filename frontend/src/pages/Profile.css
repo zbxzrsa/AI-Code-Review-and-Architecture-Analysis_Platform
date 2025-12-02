@@ -1,0 +1,142 @@
+.profile-container {
+  padding: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.profile-header-card {
+  margin-bottom: 24px;
+}
+
+.profile-avatar-section {
+  text-align: center;
+  padding: 24px;
+}
+
+.profile-avatar {
+  width: 120px !important;
+  height: 120px !important;
+  font-size: 48px !important;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.profile-avatar-upload {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-avatar-upload .upload-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.profile-avatar-upload:hover .upload-overlay {
+  opacity: 1;
+}
+
+.profile-name {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px !important;
+}
+
+.profile-email {
+  color: var(--text-secondary, #8c8c8c);
+}
+
+.profile-joined {
+  margin-top: 8px;
+  color: var(--text-secondary, #8c8c8c);
+  font-size: 13px;
+}
+
+.profile-stats-card {
+  margin-bottom: 24px;
+}
+
+.profile-stat-item {
+  text-align: center;
+  padding: 16px;
+}
+
+.profile-achievements-card {
+  margin-bottom: 24px;
+}
+
+.achievement-tag {
+  margin: 4px;
+  padding: 4px 12px;
+  border-radius: 16px;
+}
+
+.achievement-tag.gold {
+  background: linear-gradient(135deg, #f5af19 0%, #f12711 100%);
+  color: #fff;
+  border: none;
+}
+
+.achievement-tag.silver {
+  background: linear-gradient(135deg, #bdc3c7 0%, #2c3e50 100%);
+  color: #fff;
+  border: none;
+}
+
+.achievement-tag.bronze {
+  background: linear-gradient(135deg, #cd7f32 0%, #8b4513 100%);
+  color: #fff;
+  border: none;
+}
+
+.profile-activity-card {
+  margin-bottom: 24px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  margin-right: 12px;
+  font-size: 16px;
+  color: var(--primary-color, #1890ff);
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-title {
+  font-weight: 500;
+}
+
+.activity-time {
+  font-size: 12px;
+  color: var(--text-secondary, #8c8c8c);
+}
+
+/* Dark mode */
+:root[data-theme='dark'] .profile-container {
+  color: #fff;
+}
+
+:root[data-theme='dark'] .activity-item {
+  border-color: #303030;
+}

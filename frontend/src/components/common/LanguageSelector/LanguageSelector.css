@@ -1,0 +1,187 @@
+/**
+ * LanguageSelector Styles / 语言选择器样式
+ * 
+ * Responsive design with RTL support
+ * 响应式设计，支持从右到左
+ */
+
+/* Dropdown Button / 下拉按钮 */
+.language-selector-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.language-selector-button .current-language-name {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.language-selector-button .dropdown-arrow {
+    font-size: 10px;
+    transition: transform 0.2s ease;
+}
+
+.ant-dropdown-open .language-selector-button .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+/* Language Item / 语言项 */
+.language-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    width: 100%;
+    cursor: pointer;
+}
+
+.language-item.selected {
+    color: var(--ant-primary-color, #1890ff);
+    font-weight: 500;
+}
+
+.language-item .language-flag {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.language-item .language-name {
+    flex: 1;
+}
+
+.language-item .check-icon {
+    color: var(--ant-primary-color, #1890ff);
+    font-size: 12px;
+}
+
+/* RTL Support / 从右到左支持 */
+.language-item.rtl {
+    direction: rtl;
+}
+
+.language-item.rtl .language-name {
+    font-family: 'Noto Sans Arabic', 'Arial', sans-serif;
+}
+
+/* Inline Mode / 内联模式 */
+.language-selector-inline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.language-selector-label {
+    font-size: 14px;
+}
+
+.language-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.language-inline-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.language-inline-button .language-flag {
+    font-size: 16px;
+}
+
+.language-inline-button.rtl {
+    direction: rtl;
+}
+
+/* Modal / 模态框 */
+.language-selector-modal .ant-modal-body {
+    padding: 0;
+    position: relative;
+}
+
+.language-selector-modal .ant-list-item {
+    padding: 12px 24px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.language-selector-modal .ant-list-item:hover {
+    background-color: var(--ant-primary-1, #e6f7ff);
+}
+
+.language-selector-modal .language-list-item.selected {
+    background-color: var(--ant-primary-1, #e6f7ff);
+}
+
+/* Loading Overlay / 加载遮罩 */
+.language-loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 10;
+}
+
+.language-loading-overlay .loading-text {
+    font-size: 14px;
+    color: #666;
+}
+
+/* Dark Mode / 深色模式 */
+:root[data-theme='dark'] .language-loading-overlay {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme='dark'] .language-selector-modal .ant-list-item:hover,
+:root[data-theme='dark'] .language-selector-modal .language-list-item.selected {
+    background-color: rgba(24, 144, 255, 0.2);
+}
+
+/* Responsive / 响应式 */
+@media (max-width: 576px) {
+    .language-selector-button .current-language-name {
+        display: none;
+    }
+
+    .language-inline-button {
+        flex: 1;
+        justify-content: center;
+        min-width: 120px;
+    }
+}
+
+/* Animation / 动画 */
+@keyframes language-switch {
+    0% {
+        opacity: 0.5;
+        transform: scale(0.98);
+    }
+
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.language-switched {
+    animation: language-switch 0.3s ease-out;
+}
+
+/* Accessibility / 无障碍 */
+.language-selector-button:focus-visible,
+.language-inline-button:focus-visible,
+.language-list-item:focus-visible {
+    outline: 2px solid var(--ant-primary-color, #1890ff);
+    outline-offset: 2px;
+}

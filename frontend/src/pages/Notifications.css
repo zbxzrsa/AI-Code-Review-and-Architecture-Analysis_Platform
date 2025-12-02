@@ -1,0 +1,44 @@
+.notifications-container {
+  padding: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.notifications-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.notification-item {
+  padding: 16px !important;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: var(--hover-bg, #fafafa);
+}
+
+.notification-item.unread {
+  background-color: var(--unread-bg, #e6f7ff);
+}
+
+.notification-item.unread:hover {
+  background-color: var(--unread-hover-bg, #bae7ff);
+}
+
+/* Dark mode */
+:root[data-theme='dark'] .notification-item:hover {
+  background-color: #1f1f1f;
+}
+
+:root[data-theme='dark'] .notification-item.unread {
+  background-color: #111d2c;
+}
+
+:root[data-theme='dark'] .notification-item.unread:hover {
+  background-color: #112a45;
+}

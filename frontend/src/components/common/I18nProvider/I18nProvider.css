@@ -1,0 +1,110 @@
+/**
+ * I18nProvider Styles / 国际化提供者样式
+ */
+
+/* Loading Fallback / 加载回退 */
+.i18n-loading-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.i18n-loading-fallback .loading-text {
+    color: white;
+    font-size: 14px;
+}
+
+.i18n-loading-fallback .ant-spin-dot-item {
+    background-color: white;
+}
+
+/* RTL Global Styles / 从右到左全局样式 */
+body.lang-rtl {
+    direction: rtl;
+    text-align: right;
+}
+
+body.lang-rtl .ant-layout-sider {
+    right: 0;
+    left: auto;
+}
+
+body.lang-rtl .ant-menu-item .anticon,
+body.lang-rtl .ant-menu-submenu-title .anticon {
+    margin-right: 0;
+    margin-left: 10px;
+}
+
+body.lang-rtl .ant-form-item-label {
+    text-align: right;
+}
+
+body.lang-rtl .ant-input-affix-wrapper>.ant-input-prefix {
+    margin-right: 0;
+    margin-left: 4px;
+}
+
+body.lang-rtl .ant-input-affix-wrapper>.ant-input-suffix {
+    margin-left: 0;
+    margin-right: 4px;
+}
+
+body.lang-rtl .ant-btn>.anticon+span,
+body.lang-rtl .ant-btn>span+.anticon {
+    margin-left: 0;
+    margin-right: 8px;
+}
+
+body.lang-rtl .ant-breadcrumb-separator {
+    margin: 0 8px;
+}
+
+body.lang-rtl .ant-table-thead>tr>th,
+body.lang-rtl .ant-table-tbody>tr>td {
+    text-align: right;
+}
+
+body.lang-rtl .ant-modal-close {
+    right: auto;
+    left: 0;
+}
+
+body.lang-rtl .ant-drawer-left {
+    right: 0;
+    left: auto;
+}
+
+body.lang-rtl .ant-notification {
+    right: auto;
+    left: 24px;
+}
+
+body.lang-rtl .ant-message {
+    direction: rtl;
+}
+
+/* LTR specific styles (default) / 从左到右特定样式（默认） */
+body.lang-ltr {
+    direction: ltr;
+    text-align: left;
+}
+
+/* Transition for direction change / 方向变更的过渡效果 */
+body {
+    transition: direction 0.2s ease;
+}
+
+/* Arabic font support / 阿拉伯语字体支持 */
+[lang="ar"] {
+    font-family: 'Noto Sans Arabic', 'Arial', sans-serif;
+}
+
+/* Chinese font support / 中文字体支持 */
+[lang="zh-CN"],
+[lang="zh-TW"] {
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans CJK SC', sans-serif;
+}

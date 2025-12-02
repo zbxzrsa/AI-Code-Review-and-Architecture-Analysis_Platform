@@ -1,0 +1,68 @@
+.help-container {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.help-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.guide-card {
+  height: 100%;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.guide-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.guide-icon {
+  font-size: 32px;
+  color: var(--primary-color, #1890ff);
+}
+
+.faq-collapse {
+  background: transparent;
+}
+
+.faq-collapse .ant-collapse-item {
+  margin-bottom: 8px;
+  border: 1px solid var(--border-color, #f0f0f0);
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.faq-collapse .ant-collapse-header {
+  padding: 16px !important;
+}
+
+.contact-card {
+  text-align: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+}
+
+.contact-card .ant-typography {
+  color: #fff !important;
+}
+
+.contact-card .ant-typography-secondary {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Dark mode */
+:root[data-theme='dark'] .faq-collapse .ant-collapse-item {
+  border-color: #303030;
+}
+
+:root[data-theme='dark'] .guide-card {
+  background: #1f1f1f;
+}
+
+:root[data-theme='dark'] .guide-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}

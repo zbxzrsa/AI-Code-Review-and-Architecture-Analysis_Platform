@@ -1,0 +1,58 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "auth-service"
+    static_configs:
+      - targets: ["auth-service:9090"]
+    metrics_path: /metrics
+
+  - job_name: "project-service"
+    static_configs:
+      - targets: ["project-service:9090"]
+    metrics_path: /metrics
+
+  - job_name: "analysis-service"
+    static_configs:
+      - targets: ["analysis-service:9090"]
+    metrics_path: /metrics
+
+  - job_name: "ai-orchestrator"
+    static_configs:
+      - targets: ["ai-orchestrator:9090"]
+    metrics_path: /metrics
+
+  - job_name: "version-control-service"
+    static_configs:
+      - targets: ["version-control-service:9090"]
+    metrics_path: /metrics
+
+  - job_name: "comparison-service"
+    static_configs:
+      - targets: ["comparison-service:9090"]
+    metrics_path: /metrics
+
+  - job_name: "provider-service"
+    static_configs:
+      - targets: ["provider-service:9090"]
+    metrics_path: /metrics
+
+  - job_name: "redis"
+    static_configs:
+      - targets: ["redis:6379"]
+
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["postgres:5432"]

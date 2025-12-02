@@ -1,0 +1,48 @@
+.projects-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.projects-header {
+  margin-bottom: 24px;
+}
+
+.projects-stats {
+  margin-bottom: 24px;
+}
+
+.projects-filters {
+  margin-bottom: 16px;
+}
+
+.projects-table {
+  background: var(--bg-color, #fff);
+  border-radius: 8px;
+}
+
+.project-name {
+  font-weight: 500;
+}
+
+.project-name:hover {
+  color: var(--primary-color, #1890ff);
+  cursor: pointer;
+}
+
+.project-avatar {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.language-tag {
+  text-transform: capitalize;
+}
+
+/* Dark mode */
+:root[data-theme='dark'] .projects-container {
+  color: #fff;
+}
+
+:root[data-theme='dark'] .projects-table {
+  background: #1f1f1f;
+}

@@ -1,0 +1,99 @@
+.diff-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-primary, #fff);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.diff-viewer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+  background: var(--bg-secondary, #fafafa);
+}
+
+.diff-viewer-content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Diff2Html Overrides */
+.d2h-wrapper {
+  font-family: 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+}
+
+.d2h-file-header {
+  background: var(--bg-secondary, #fafafa);
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+}
+
+.d2h-file-name {
+  font-weight: 600;
+}
+
+.d2h-code-line {
+  padding: 0 8px;
+}
+
+.d2h-code-side-line {
+  padding: 0 8px;
+}
+
+.d2h-del {
+  background-color: rgba(255, 77, 79, 0.15);
+}
+
+.d2h-ins {
+  background-color: rgba(82, 196, 26, 0.15);
+}
+
+.d2h-del .d2h-code-line-ctn {
+  background-color: rgba(255, 77, 79, 0.25);
+}
+
+.d2h-ins .d2h-code-line-ctn {
+  background-color: rgba(82, 196, 26, 0.25);
+}
+
+.d2h-code-line-prefix {
+  color: var(--text-secondary, #666);
+  user-select: none;
+}
+
+.d2h-info {
+  background: var(--bg-tertiary, #f5f5f5);
+  color: var(--text-secondary, #666);
+}
+
+/* Dark mode */
+:root[class~='dark'] .diff-viewer {
+  background: #1f1f1f;
+}
+
+:root[class~='dark'] .diff-viewer-toolbar {
+  background: #262626;
+  border-color: #303030;
+}
+
+:root[class~='dark'] .d2h-file-header {
+  background: #262626;
+  border-color: #303030;
+}
+
+:root[class~='dark'] .d2h-info {
+  background: #2d2d2d;
+  color: #a0a0a0;
+}
+
+:root[class~='dark'] .d2h-del {
+  background-color: rgba(255, 77, 79, 0.2);
+}
+
+:root[class~='dark'] .d2h-ins {
+  background-color: rgba(82, 196, 26, 0.2);
+}

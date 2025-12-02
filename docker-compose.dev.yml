@@ -1,0 +1,106 @@
+# Simplified Docker Compose for Development
+# Usage: docker-compose -f docker-compose.dev.yml up -d
+
+services:
+  # Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: platform-postgres
+    environment:
+      POSTGRES_USER: coderev
+      POSTGRES_PASSWORD: dev_password
+      POSTGRES_DB: code_review_platform
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coderev"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Cache
+  redis:
+    image: redis:7-alpine
+    container_name: platform-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Local AI (Ollama)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: platform-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./backend/services/auth-service
+      dockerfile: Dockerfile
+    container_name: platform-auth-service
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://coderev:dev_password@postgres:5432/code_review_platform
+      REDIS_URL: redis://redis:6379/0
+      JWT_SECRET_KEY: dev_secret_key_change_in_production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8001:8000"
+
+  # Analysis Service
+  analysis-service:
+    build:
+      context: ./backend/services/analysis-service
+      dockerfile: Dockerfile
+    container_name: platform-analysis-service
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://coderev:dev_password@postgres:5432/code_review_platform
+      REDIS_URL: redis://redis:6379/0
+      OLLAMA_HOST: http://ollama:11434
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8003:8000"
+
+  # Project Service
+  project-service:
+    build:
+      context: ./backend/services/project-service
+      dockerfile: Dockerfile
+    container_name: platform-project-service
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://coderev:dev_password@postgres:5432/code_review_platform
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8002:8000"
+
+volumes:
+  postgres_data:
+  redis_data:
+  ollama_data:

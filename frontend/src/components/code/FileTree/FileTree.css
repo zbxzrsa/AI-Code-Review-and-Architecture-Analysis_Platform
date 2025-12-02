@@ -1,0 +1,64 @@
+.file-tree {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-secondary, #fafafa);
+}
+
+.file-tree-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+}
+
+.file-tree-search {
+  padding: 8px;
+  border-bottom: 1px solid var(--border-color, #f0f0f0);
+}
+
+.file-tree-content {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 0;
+}
+
+.file-tree-content .ant-tree-treenode {
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin: 1px 4px;
+}
+
+.file-tree-content .ant-tree-treenode:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+}
+
+.file-tree-content .ant-tree-treenode-selected {
+  background: var(--primary-bg, #e6f7ff) !important;
+}
+
+.file-tree-content .ant-tree-title {
+  font-size: 13px;
+}
+
+.file-tree-content .ant-tree-iconEle {
+  margin-right: 4px;
+}
+
+/* Dark mode */
+:root[class~='dark'] .file-tree {
+  background: #1f1f1f;
+}
+
+:root[class~='dark'] .file-tree-search {
+  border-color: #303030;
+}
+
+:root[class~='dark'] .file-tree-content .ant-tree-treenode:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+:root[class~='dark'] .file-tree-content .ant-tree-treenode-selected {
+  background: rgba(24, 144, 255, 0.2) !important;
+}

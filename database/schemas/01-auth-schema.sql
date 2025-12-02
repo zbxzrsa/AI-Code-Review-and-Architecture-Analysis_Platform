@@ -14,20 +14,17 @@ IF
       id UUID PRIMARY KEY DEFAULT gen_random_uuid()
       , email VARCHAR(255) UNIQUE NOT NULL
       , password_hash VARCHAR(255) NOT NULL
-      , -- Argon2id
-        role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'user', 'viewer'))
+      , name VARCHAR(255)
+      , role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user', 'viewer', 'guest'))
       , verified BOOLEAN DEFAULT FALSE
       , totp_secret VARCHAR(32)
-      , -- For 2FA
-        created_at TIMESTAMPTZ DEFAULT NOW()
+      , created_at TIMESTAMPTZ DEFAULT NOW()
       , updated_at TIMESTAMPTZ DEFAULT NOW()
       , last_login TIMESTAMPTZ
       , failed_login_attempts INTEGER DEFAULT 0
       , locked_until TIMESTAMPTZ
+      , avatar VARCHAR(512)
       , settings JSONB DEFAULT '{}': :jsonb
-      , CONSTRAINT email_format CHECK (
-        email ~ * '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}$'
-      )
     );
 
     CREATE INDEX
@@ -53,6 +50,7 @@ IF
               , refresh_token_hash VARCHAR(255) NOT NULL UNIQUE
               , expires_at TIMESTAMPTZ NOT NULL
               , device_info JSONB
+              , ip_address VARCHAR(45)
               , created_at TIMESTAMPTZ DEFAULT NOW()
               , last_used TIMESTAMPTZ DEFAULT NOW()
             );
@@ -76,7 +74,9 @@ IF
                     NOT EXISTS auth.invitations (
                       id UUID PRIMARY KEY DEFAULT gen_random_uuid()
                       , code_hash VARCHAR(255) UNIQUE NOT NULL
-                      , role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'user', 'viewer'))
+                      , created_by UUID REFERENCES auth.users(id)
+                      ON DELETE SET NULL
+                      , role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('admin', 'user', 'viewer'))
                       , max_uses INTEGER DEFAULT 1
                       , uses INTEGER DEFAULT 0
                       , expires_at TIMESTAMPTZ NOT NULL
@@ -101,10 +101,10 @@ IF
                             ON DELETE SET NULL
                             , action VARCHAR(255) NOT NULL
                             , resource VARCHAR(255) NOT NULL
-                            , status VARCHAR(50) NOT NULL CHECK (status IN ('success', 'failure'))
+                            , status VARCHAR(50) NOT NULL CHECK (status IN ('success', 'failure', 'denied'))
                             , details JSONB
                             , ip_address VARCHAR(45)
-                            , user_agent VARCHAR(255)
+                            , user_agent VARCHAR(512)
                             , created_at TIMESTAMPTZ DEFAULT NOW()
                           );
 
@@ -147,16 +147,27 @@ IF
                                         NOT EXISTS idx_password_resets_expires
                                         ON auth.password_resets(expires_at);
 
-                                        -- Grant permissions
-                                        GRANT
-                                          USAGE
-                                        ON SCHEMA auth
-                                        TO
-                                          PUBLIC;
-                                        GRANT
-                                          SELECT
-                                          , INSERT
-                                        , UPDATE
-                                        ON ALL TABLES IN SCHEMA auth
-                                        TO
-                                          PUBLIC;
+                                        -- API Keys table
+                                        CREATE TABLE
+                                        IF
+                                          NOT EXISTS auth.api_keys (
+                                            id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+                                            , user_id UUID NOT NULL REFERENCES auth.users(id)
+                                            ON DELETE CASCADE
+                                            , name VARCHAR(255) NOT NULL
+                                            , key_prefix VARCHAR(12) NOT NULL
+                                            , key_hash VARCHAR(255) NOT NULL UNIQUE
+                                            , scopes JSONB DEFAULT '["read"]': :jsonb
+                                            , expires_at TIMESTAMPTZ
+                                            , last_used TIMESTAMPTZ
+                                            , created_at TIMESTAMPTZ DEFAULT NOW()
+                                          );
+
+                                          CREATE INDEX
+                                          IF
+                                            NOT EXISTS idx_api_keys_user
+                                            ON auth.api_keys(user_id);
+                                            CREATE INDEX
+                                            IF
+                                              NOT EXISTS idx_api_keys_hash
+                                              ON auth.api_keys(key_hash);

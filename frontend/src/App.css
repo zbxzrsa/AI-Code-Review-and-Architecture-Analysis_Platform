@@ -1,0 +1,125 @@
+/* App-level styles */
+
+/* Layout */
+.app-layout {
+    min-height: 100vh;
+}
+
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.app-content {
+    padding: 24px;
+    min-height: calc(100vh - 64px);
+}
+
+.app-sider {
+    background: #fff;
+}
+
+/* Page transitions */
+.page-enter {
+    opacity: 0;
+    transform: translateY(10px);
+}
+
+.page-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 200ms, transform 200ms;
+}
+
+.page-exit {
+    opacity: 1;
+}
+
+.page-exit-active {
+    opacity: 0;
+    transition: opacity 200ms;
+}
+
+/* Loading states */
+.loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 16px;
+}
+
+.loading-spinner {
+    font-size: 32px;
+    color: var(--primary-color);
+}
+
+/* Error states */
+.error-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 16px;
+    text-align: center;
+}
+
+.error-icon {
+    font-size: 64px;
+    color: var(--error-color);
+}
+
+/* Empty states */
+.empty-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    gap: 16px;
+    text-align: center;
+}
+
+/* Card styles */
+.card-hover {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode adjustments */
+:root[data-theme='dark'] .app-header {
+    background: #1f1f1f;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root[data-theme='dark'] .app-sider {
+    background: #1f1f1f;
+}
+
+:root[data-theme='dark'] .card-hover:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .app-content {
+        padding: 16px;
+    }
+
+    .app-header {
+        padding: 0 16px;
+    }
+}
