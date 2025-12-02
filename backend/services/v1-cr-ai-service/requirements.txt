@@ -1,0 +1,74 @@
+# V1 Code Review AI Service Dependencies
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+pydantic>=2.5.0
+python-multipart>=0.0.6
+
+# Async HTTP
+httpx>=0.25.0
+aiohttp>=3.9.0
+
+# Machine Learning - Core
+torch>=2.1.0
+transformers>=4.35.0
+tokenizers>=0.15.0
+datasets>=2.15.0
+accelerate>=0.25.0
+
+# Model Optimization
+peft>=0.6.0                    # LoRA/QLoRA
+bitsandbytes>=0.41.0          # Quantization
+optimum>=1.14.0               # Optimization utilities
+
+# Attention Optimization
+flash-attn>=2.3.0; platform_system != "Windows"
+xformers>=0.0.23; platform_system != "Windows"
+
+# Code Analysis
+tree-sitter>=0.20.0           # AST parsing
+tree-sitter-python>=0.20.0
+tree-sitter-javascript>=0.20.0
+tree-sitter-typescript>=0.20.0
+tree-sitter-java>=0.20.0
+tree-sitter-go>=0.20.0
+pygments>=2.17.0              # Syntax highlighting
+
+# Security Analysis
+bandit>=1.7.0                 # Python security linter
+semgrep>=1.50.0               # Multi-language SAST
+
+# NLP
+nltk>=3.8.0
+spacy>=3.7.0
+sentence-transformers>=2.2.0  # For semantic similarity
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.1.0
+scikit-learn>=1.3.0
+
+# Caching
+redis>=5.0.0
+diskcache>=5.6.0
+
+# Monitoring
+prometheus-client>=0.19.0
+opentelemetry-api>=1.21.0
+opentelemetry-sdk>=1.21.0
+opentelemetry-instrumentation-fastapi>=0.42b0
+
+# Logging
+structlog>=23.2.0
+python-json-logger>=2.0.7
+
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Development
+black>=23.11.0
+ruff>=0.1.0
+mypy>=1.7.0
