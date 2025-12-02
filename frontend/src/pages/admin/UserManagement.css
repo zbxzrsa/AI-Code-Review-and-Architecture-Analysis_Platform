@@ -1,0 +1,126 @@
+/**
+ * User Management Page Styles
+ */
+
+.user-management {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h2 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Stats Section */
+.user-stats {
+    margin-bottom: 24px;
+}
+
+.user-stats .ant-card {
+    text-align: center;
+}
+
+.user-stats .ant-statistic-title {
+    font-size: 12px;
+}
+
+/* Filters Card */
+.filters-card {
+    margin-bottom: 16px;
+}
+
+.filters-card .ant-card-body {
+    padding: 16px;
+}
+
+/* Table Card */
+.users-table-card .ant-table-wrapper {
+    overflow-x: auto;
+}
+
+.users-table-card .ant-table {
+    font-size: 13px;
+}
+
+.users-table-card .ant-table-row {
+    cursor: pointer;
+}
+
+.users-table-card .ant-table-row:hover {
+    background-color: rgba(24, 144, 255, 0.02);
+}
+
+/* User Cell */
+.users-table-card .ant-table-cell .ant-space {
+    align-items: center;
+}
+
+/* Actions */
+.users-table-card .ant-btn-sm {
+    padding: 0 8px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .user-management {
+        padding: 16px;
+    }
+
+    .page-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .page-header .ant-space {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .user-stats .ant-col {
+        min-width: 50%;
+    }
+
+    .filters-card .ant-row {
+        gap: 12px;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .users-table-card .ant-table-row:hover {
+        background-color: rgba(255, 255, 255, 0.02);
+    }
+}
+
+/* Chart Styles */
+.user-stats .recharts-wrapper {
+    margin: 0 auto;
+}
+
+/* Modal Styles */
+.ant-modal-body .ant-descriptions {
+    margin-top: 16px;
+}
+
+/* Accessibility */
+.user-management .ant-btn:focus-visible {
+    outline: 2px solid var(--ant-color-primary);
+    outline-offset: 2px;
+}
+
+.user-management .ant-table-row:focus-visible {
+    outline: 2px solid var(--ant-color-primary);
+    outline-offset: -2px;
+}

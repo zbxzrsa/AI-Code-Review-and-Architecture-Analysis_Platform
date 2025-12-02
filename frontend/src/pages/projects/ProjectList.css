@@ -1,0 +1,180 @@
+/**
+ * Project List Page Styles
+ */
+
+.project-list-container {
+  padding: 24px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.project-list-header {
+  margin-bottom: 24px;
+}
+
+.project-stats {
+  margin-bottom: 24px;
+}
+
+.project-stats .ant-card {
+  height: 100%;
+}
+
+.project-filters {
+  margin-bottom: 16px;
+}
+
+.project-content {
+  min-height: 400px;
+}
+
+/* Project Card Styles */
+.project-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.project-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.project-card .ant-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.project-card .ant-card-meta {
+  flex: 1;
+}
+
+.project-card .ant-card-meta-title {
+  margin-bottom: 8px;
+}
+
+.project-card-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.project-card-meta {
+  margin-top: 8px;
+}
+
+.project-card-stats {
+  display: flex;
+  justify-content: space-around;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.project-card-stats .ant-statistic {
+  text-align: center;
+}
+
+.project-card-stats .ant-statistic-title {
+  font-size: 12px;
+}
+
+/* Table Styles */
+.project-list-container .ant-table-wrapper {
+  overflow-x: auto;
+}
+
+/* Empty State */
+.project-list-container .ant-empty {
+  padding: 48px 0;
+}
+
+/* Filter Styles */
+.project-filters .ant-select {
+  min-width: 140px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .project-list-container {
+    padding: 16px;
+  }
+
+  .project-list-header {
+    margin-bottom: 16px;
+  }
+
+  .project-list-header .ant-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .project-list-header .ant-col:last-child {
+    width: 100%;
+  }
+
+  .project-list-header .ant-btn {
+    width: 100%;
+  }
+
+  .project-stats {
+    margin-bottom: 16px;
+  }
+
+  .project-stats .ant-col {
+    margin-bottom: 8px;
+  }
+
+  .project-filters .ant-row {
+    flex-direction: column;
+  }
+
+  .project-filters .ant-col {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* Dark Mode Adjustments */
+@media (prefers-color-scheme: dark) {
+  .project-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  }
+
+  .project-card-footer,
+  .project-card-stats {
+    border-top-color: var(--ant-color-border-secondary, #303030);
+  }
+}
+
+/* Animation for loading states */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.project-list-container .ant-skeleton {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Accessibility improvements */
+.project-card:focus-within {
+  outline: 2px solid var(--ant-color-primary, #1890ff);
+  outline-offset: 2px;
+}
+
+.project-list-container .ant-btn:focus-visible {
+  outline: 2px solid var(--ant-color-primary, #1890ff);
+  outline-offset: 2px;
+}
+
+/* View mode segmented control */
+.project-filters .ant-segmented {
+  background-color: var(--ant-color-bg-container);
+}

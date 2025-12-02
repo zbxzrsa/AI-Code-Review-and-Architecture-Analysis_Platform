@@ -1,0 +1,369 @@
+# =============================================================================
+# Comprehensive Testing Pipeline
+# =============================================================================
+# Test Pyramid:
+#   - Unit Tests: 70%
+#   - Integration Tests: 20%
+#   - E2E Tests: 10%
+#
+# Coverage Targets: 50%+
+# =============================================================================
+
+name: Tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  NODE_VERSION: "18"
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ===========================================================================
+  # Frontend Unit Tests
+  # ===========================================================================
+  frontend-unit-tests:
+    name: Frontend Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Run linting
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Run type check
+        run: |
+          cd frontend
+          npm run type-check
+
+      - name: Run unit tests
+        run: |
+          cd frontend
+          npm run test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: frontend/coverage/lcov.info
+          flags: frontend-unit
+          name: frontend-unit-coverage
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-unit-test-results
+          path: frontend/coverage/
+          retention-days: 7
+
+  # ===========================================================================
+  # Backend Unit Tests
+  # ===========================================================================
+  backend-unit-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+
+      - name: Run linting
+        run: |
+          cd backend
+          ruff check src/ tests/
+          black --check src/ tests/
+          isort --check-only src/ tests/
+
+      - name: Run type check
+        run: |
+          cd backend
+          mypy src/ --ignore-missing-imports || true
+
+      - name: Run unit tests
+        run: |
+          cd backend
+          pytest tests/unit/ \
+            -v \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=html \
+            --cov-report=term-missing \
+            --junitxml=test-results/junit.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: backend/coverage.xml
+          flags: backend-unit
+          name: backend-unit-coverage
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-unit-test-results
+          path: |
+            backend/test-results/
+            backend/htmlcov/
+          retention-days: 7
+
+  # ===========================================================================
+  # Backend Integration Tests
+  # ===========================================================================
+  backend-integration-tests:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+    needs: backend-unit-tests
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+
+      - name: Wait for services
+        run: |
+          until pg_isready -h localhost -p 5432; do sleep 1; done
+          until redis-cli -h localhost ping; do sleep 1; done
+
+      - name: Run database migrations
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+        run: |
+          cd backend
+          alembic upgrade head || true
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/15
+          ENVIRONMENT: test
+          JWT_SECRET_KEY: test-secret-key
+        run: |
+          cd backend
+          pytest tests/integration/ \
+            -v \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=test-results/integration-junit.xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: backend/coverage.xml
+          flags: backend-integration
+          name: backend-integration-coverage
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-integration-test-results
+          path: backend/test-results/
+          retention-days: 7
+
+  # ===========================================================================
+  # E2E Tests
+  # ===========================================================================
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    needs: [frontend-unit-tests, backend-unit-tests]
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Install Playwright browsers
+        run: |
+          cd frontend
+          npx playwright install --with-deps chromium
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      - name: Start backend server
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/15
+          ENVIRONMENT: test
+        run: |
+          cd backend
+          uvicorn src.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm run build
+
+      - name: Run E2E tests
+        env:
+          BASE_URL: http://localhost:3000
+          API_URL: http://localhost:8000
+        run: |
+          cd frontend
+          npx playwright test --project=chromium
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          retention-days: 7
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-test-results
+          path: frontend/test-results/
+          retention-days: 7
+
+  # ===========================================================================
+  # Test Summary
+  # ===========================================================================
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs:
+      [
+        frontend-unit-tests,
+        backend-unit-tests,
+        backend-integration-tests,
+        e2e-tests,
+      ]
+    if: always()
+
+    steps:
+      - name: Download all test results
+        uses: actions/download-artifact@v4
+        with:
+          path: test-results
+
+      - name: Generate test summary
+        run: |
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Frontend Unit | ${{ needs.frontend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Unit | ${{ needs.backend-unit-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Integration | ${{ needs.backend-integration-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check overall status
+        if: contains(needs.*.result, 'failure')
+        run: exit 1

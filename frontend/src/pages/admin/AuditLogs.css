@@ -1,0 +1,165 @@
+/**
+ * Audit Logs Page Styles
+ */
+
+.audit-logs {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h2 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Stats Section */
+.audit-stats {
+    margin-bottom: 24px;
+}
+
+.audit-stats .ant-card {
+    text-align: center;
+}
+
+.audit-stats .ant-statistic-title {
+    font-size: 12px;
+}
+
+/* Content Card */
+.audit-content-card .ant-card-body {
+    padding: 16px 24px;
+}
+
+/* Filters Card */
+.filters-card {
+    margin-bottom: 16px;
+}
+
+.filters-card .ant-card-body {
+    padding: 16px;
+}
+
+/* Logs Table */
+.logs-table-card .ant-table-wrapper {
+    overflow-x: auto;
+}
+
+.logs-table-card .ant-table {
+    font-size: 13px;
+}
+
+.logs-table-card .ant-table-row {
+    cursor: pointer;
+}
+
+.logs-table-card .ant-table-row:hover {
+    background-color: rgba(24, 144, 255, 0.02);
+}
+
+/* Log Detail Modal */
+.audit-log-detail .ant-descriptions {
+    margin-bottom: 16px;
+}
+
+.json-viewer {
+    background: var(--ant-color-bg-container-disabled, #f5f5f5);
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    overflow-x: auto;
+    max-height: 200px;
+    margin: 0;
+}
+
+/* Security Alerts */
+.audit-logs .ant-list-item {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.audit-logs .ant-list-item:last-child {
+    border-bottom: none;
+}
+
+/* Analytics Charts */
+.audit-logs .recharts-wrapper {
+    margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .audit-logs {
+        padding: 16px;
+    }
+
+    .page-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .filters-card .ant-row {
+        gap: 12px;
+    }
+
+    .json-viewer {
+        max-height: 150px;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .logs-table-card .ant-table-row:hover {
+        background-color: rgba(255, 255, 255, 0.02);
+    }
+
+    .json-viewer {
+        background: rgba(255, 255, 255, 0.04);
+    }
+
+    .audit-logs .ant-list-item {
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+}
+
+/* Accessibility */
+.audit-logs .ant-btn:focus-visible {
+    outline: 2px solid var(--ant-color-primary);
+    outline-offset: 2px;
+}
+
+.audit-logs .ant-table-row:focus-visible {
+    outline: 2px solid var(--ant-color-primary);
+    outline-offset: -2px;
+}
+
+/* Animation */
+.audit-logs .ant-tabs-tabpane {
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Badge on Alerts */
+.audit-logs .ant-badge {
+    margin-right: 8px;
+}

@@ -1,0 +1,191 @@
+/**
+ * Provider Management Page Styles
+ */
+
+.provider-management {
+    padding: 24px;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.page-header h2 {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Stats */
+.provider-stats {
+    margin-bottom: 24px;
+}
+
+.provider-stats .ant-card {
+    text-align: center;
+}
+
+/* Provider List Card */
+.providers-list-card {
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+}
+
+.providers-list-card .ant-card-body {
+    padding: 12px;
+}
+
+/* Provider Card */
+.provider-card {
+    margin-bottom: 12px;
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.provider-card.selected {
+    border-color: #1890ff;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.provider-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.provider-info {
+    flex: 1;
+}
+
+.provider-info .ant-typography {
+    display: block;
+}
+
+.provider-quota {
+    margin-top: 12px;
+}
+
+.provider-quota .ant-typography {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 12px;
+}
+
+/* Config Panel Card */
+.config-panel-card {
+    min-height: calc(100vh - 280px);
+}
+
+.config-panel-card .ant-card-body {
+    padding: 24px;
+}
+
+/* Provider Config Panel */
+.provider-config-panel .panel-header {
+    margin-bottom: 24px;
+}
+
+.provider-config-panel .panel-header h4 {
+    margin-bottom: 0;
+}
+
+/* Health Card */
+.health-card {
+    margin-top: 16px;
+}
+
+.recent-errors {
+    margin-top: 16px;
+}
+
+.recent-errors .ant-list-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+}
+
+/* Model Table */
+.provider-config-panel .ant-table {
+    font-size: 13px;
+}
+
+/* Charts */
+.provider-config-panel .recharts-wrapper {
+    margin: 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .provider-management {
+        padding: 16px;
+    }
+
+    .providers-list-card,
+    .config-panel-card {
+        max-height: none;
+        min-height: auto;
+    }
+
+    .providers-list-card {
+        margin-bottom: 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 16px;
+        align-items: flex-start;
+    }
+
+    .provider-card-header {
+        flex-wrap: wrap;
+    }
+
+    .provider-card-header .ant-btn {
+        margin-top: 8px;
+        width: 100%;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .provider-card.selected {
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.4);
+    }
+}
+
+/* Accessibility */
+.provider-management .ant-btn:focus-visible {
+    outline: 2px solid var(--ant-color-primary);
+    outline-offset: 2px;
+}
+
+.provider-card:focus-visible {
+    outline: 2px solid var(--ant-color-primary);
+    outline-offset: 2px;
+}
+
+/* Scrollbar */
+.providers-list-card::-webkit-scrollbar {
+    width: 6px;
+}
+
+.providers-list-card::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.providers-list-card::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+.providers-list-card::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.3);
+}

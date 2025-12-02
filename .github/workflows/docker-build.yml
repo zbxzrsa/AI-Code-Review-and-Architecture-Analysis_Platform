@@ -1,0 +1,491 @@
+# =============================================================================
+# Docker Build, Test, and Deploy Pipeline
+# =============================================================================
+# Triggers:
+#   - Push to main/develop branches
+#   - Pull requests to main
+#   - Manual dispatch
+#
+# Jobs:
+#   1. lint-test: Code quality and unit tests
+#   2. security-scan: Trivy, Snyk, Gitleaks
+#   3. build-images: Build and push Docker images
+#   4. integration-test: Run integration tests
+#   5. load-test: Run load tests (optional)
+#   6. deploy: Deploy to Kubernetes
+# =============================================================================
+
+name: Docker CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - "docker/**"
+      - "kubernetes/**"
+      - ".github/workflows/docker-build.yml"
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_load_tests:
+        description: "Run load tests"
+        required: false
+        default: "false"
+      deploy_environment:
+        description: "Deploy environment"
+        required: false
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  REGISTRY: gcr.io
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  CLUSTER_NAME: ai-codereview-cluster
+  CLUSTER_ZONE: us-central1-a
+
+jobs:
+  # ===========================================================================
+  # Job 1: Lint and Unit Tests
+  # ===========================================================================
+  lint-test:
+    name: Lint & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-test.txt
+
+      - name: Run linting
+        run: |
+          cd backend
+          ruff check src/ tests/
+          black --check src/ tests/
+          isort --check-only src/ tests/
+
+      - name: Run unit tests
+        run: |
+          cd backend
+          pytest tests/unit/ \
+            -v \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --junitxml=test-results/junit.xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: backend/coverage.xml
+          fail_ci_if_error: false
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: backend/test-results/
+
+  # ===========================================================================
+  # Job 2: Security Scanning
+  # ===========================================================================
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    needs: lint-test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Gitleaks - Secret Detection
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Trivy - Filesystem Scan
+      - name: Run Trivy vulnerability scanner (filesystem)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "./backend"
+          format: "sarif"
+          output: "trivy-fs-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-fs-results.sarif"
+
+      # Snyk - Dependency Scanning
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/python@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --file=backend/requirements.txt --severity-threshold=high
+
+      # OWASP Dependency Check
+      - name: OWASP Dependency Check
+        uses: dependency-check/Dependency-Check_Action@main
+        with:
+          project: "ai-code-review"
+          path: "./backend"
+          format: "HTML"
+          out: "dependency-check-report"
+
+      - name: Upload dependency check report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-check-report
+          path: dependency-check-report/
+
+  # ===========================================================================
+  # Job 3: Build Docker Images
+  # ===========================================================================
+  build-images:
+    name: Build Docker Images
+    runs-on: ubuntu-latest
+    needs: [lint-test, security-scan]
+
+    strategy:
+      matrix:
+        service:
+          - auth-service
+          - project-service
+          - analysis-service
+          - ai-orchestrator
+          - version-control-service
+          - comparison-service
+          - provider-service
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: _json_key
+          password: ${{ secrets.GCR_JSON_KEY }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ matrix.service }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend/services/${{ matrix.service }}
+          file: ./backend/services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VCS_REF=${{ github.sha }}
+            VERSION=${{ github.ref_name }}
+
+      # Trivy - Container Scan
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ matrix.service }}:${{ github.sha }}
+          format: "sarif"
+          output: "trivy-image-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy image scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-image-results.sarif"
+          category: "${{ matrix.service }}-container"
+
+      # Generate SBOM
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ matrix.service }}:${{ github.sha }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.service }}.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.service }}
+          path: sbom-${{ matrix.service }}.spdx.json
+          retention-days: 30
+
+      # Sign image with Cosign
+      - name: Sign image with Cosign
+        uses: sigstore/cosign-installer@v3.3.0
+
+      - name: Sign the image
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/${{ matrix.service }}:${{ github.sha }}
+
+  # ===========================================================================
+  # Job 4: Integration Tests
+  # ===========================================================================
+  integration-test:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: build-images
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r backend/requirements-test.txt
+
+      - name: Wait for services
+        run: |
+          until pg_isready -h localhost -p 5432; do sleep 1; done
+          until redis-cli -h localhost ping; do sleep 1; done
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379/15
+          ENVIRONMENT: test
+        run: |
+          cd backend
+          pytest tests/integration/ \
+            -v \
+            --junitxml=test-results/integration-junit.xml
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: backend/test-results/
+
+  # ===========================================================================
+  # Job 5: Load Tests (Optional)
+  # ===========================================================================
+  load-test:
+    name: Load Tests
+    runs-on: ubuntu-latest
+    needs: integration-test
+    if: github.event.inputs.run_load_tests == 'true'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start services with Docker Compose
+        run: |
+          docker-compose -f docker/docker-compose.test.yml up -d \
+            test-postgres test-redis auth-service project-service api-gateway
+          sleep 30
+
+      - name: Run load tests
+        run: |
+          docker-compose -f docker/docker-compose.test.yml run --rm \
+            -e LOCUST_USERS=50 \
+            -e LOCUST_SPAWN_RATE=10 \
+            -e LOCUST_RUN_TIME=2m \
+            locust-master \
+            --headless \
+            --csv=/mnt/locust/results
+
+      - name: Upload load test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-test-results
+          path: tests/load/results*
+
+      - name: Cleanup
+        if: always()
+        run: docker-compose -f docker/docker-compose.test.yml down -v
+
+  # ===========================================================================
+  # Job 6: Deploy to Kubernetes
+  # ===========================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [build-images, integration-test]
+    if: github.ref == 'refs/heads/develop'
+    environment: staging
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Google Cloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Authenticate to GKE
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GKE_SA_KEY }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.CLUSTER_ZONE }}
+
+      - name: Deploy to staging
+        run: |
+          # Update image tags
+          for service in auth-service project-service analysis-service ai-orchestrator; do
+            kubectl set image deployment/$service \
+              $service=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/$service:${{ github.sha }} \
+              -n ai-codereview-staging
+          done
+
+      - name: Wait for rollout
+        run: |
+          for service in auth-service project-service analysis-service ai-orchestrator; do
+            kubectl rollout status deployment/$service -n ai-codereview-staging --timeout=300s
+          done
+
+      - name: Run smoke tests
+        run: |
+          STAGING_URL=$(kubectl get ingress -n ai-codereview-staging -o jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
+          curl -f http://$STAGING_URL/health || exit 1
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build-images, integration-test]
+    if: github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Google Cloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+
+      - name: Authenticate to GKE
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GKE_SA_KEY }}
+
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.CLUSTER_NAME }}
+          location: ${{ env.CLUSTER_ZONE }}
+
+      - name: Deploy to production
+        run: |
+          for service in auth-service project-service analysis-service ai-orchestrator \
+                         version-control-service comparison-service provider-service; do
+            kubectl set image deployment/$service \
+              $service=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/$service:${{ github.sha }} \
+              -n ai-codereview
+          done
+
+      - name: Wait for rollout
+        run: |
+          for service in auth-service project-service analysis-service ai-orchestrator \
+                         version-control-service comparison-service provider-service; do
+            kubectl rollout status deployment/$service -n ai-codereview --timeout=300s
+          done
+
+      - name: Health check
+        run: |
+          for i in {1..30}; do
+            if curl -sf http://api.codereview.example.com/health; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Waiting for service... ($i/30)"
+            sleep 10
+          done
+          echo "Health check failed"
+          exit 1
+
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.25.0
+        with:
+          channel-id: ${{ secrets.SLACK_CHANNEL_ID }}
+          slack-message: |
+            🚀 *Production Deployment Complete*
+            - Commit: `${{ github.sha }}`
+            - Branch: `${{ github.ref_name }}`
+            - Author: ${{ github.actor }}
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}

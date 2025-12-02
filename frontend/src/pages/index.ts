@@ -12,10 +12,22 @@ export { Register } from './Register';
 export { Dashboard } from './Dashboard';
 export { CodeReview } from './CodeReview';
 export { Projects } from './Projects';
-export { Settings } from './Settings';
-export { Profile } from './Profile';
 export { Notifications } from './Notifications';
 export { Help } from './Help';
 
+// Profile pages / 个人资料页面
+export { Profile } from './profile';
+
+// Settings pages / 设置页面
+export { Settings } from './settings';
+
+// Projects pages / 项目页面
+export { ProjectList, NewProject, ProjectSettings } from './projects';
+
 // Admin pages / 管理员页面
-export { ExperimentManagement } from './admin/ExperimentManagement';
+export { 
+  ExperimentManagement,
+  UserManagement,
+  ProviderManagement,
+  AuditLogs,
+} from './admin';

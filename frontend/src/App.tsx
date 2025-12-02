@@ -24,6 +24,7 @@ import { useUIStore } from './store/uiStore';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ProtectedRoute, PublicRoute, AdminRoute } from './components/common/ProtectedRoute';
 import { CommandPalette } from './components/common/CommandPalette';
+import { NotificationCenter } from './components/common/NotificationCenter';
 import { Layout } from './components/layout';
 import { isRTL } from './i18n/config';
 
@@ -40,11 +41,23 @@ const Register = lazy(() => import('./pages/Register'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const CodeReview = lazy(() => import('./pages/CodeReview'));
 const Projects = lazy(() => import('./pages/Projects'));
-const Settings = lazy(() => import('./pages/Settings'));
-const Profile = lazy(() => import('./pages/Profile'));
 const Notifications = lazy(() => import('./pages/Notifications'));
 const Help = lazy(() => import('./pages/Help'));
+
+// Profile & Settings pages / 个人资料和设置页面
+const Profile = lazy(() => import('./pages/profile/Profile'));
+const Settings = lazy(() => import('./pages/settings/Settings'));
+
+// Projects pages / 项目管理页面
+const ProjectList = lazy(() => import('./pages/projects/ProjectList'));
+const NewProject = lazy(() => import('./pages/projects/NewProject'));
+const ProjectSettings = lazy(() => import('./pages/projects/ProjectSettings'));
+
+// Admin pages / 管理员页面
 const ExperimentManagement = lazy(() => import('./pages/admin/ExperimentManagement'));
+const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
+const ProviderManagement = lazy(() => import('./pages/admin/ProviderManagement'));
+const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
 
 // Query client for React Query
 const queryClient = new QueryClient({
@@ -119,6 +132,7 @@ export default function App() {
         >
           <Router>
             <CommandPalette />
+            <NotificationCenter />
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Public routes / 公开路由 */}
@@ -141,8 +155,15 @@ export default function App() {
                   </ProtectedRoute>
                 }>
                   <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/projects" element={<Projects />} />
+                  
+                  {/* Projects routes / 项目路由 */}
+                  <Route path="/projects" element={<ProjectList />} />
+                  <Route path="/projects/new" element={<NewProject />} />
+                  <Route path="/projects/:id/settings" element={<ProjectSettings />} />
+                  
+                  {/* Legacy projects route for backwards compatibility */}
                   <Route path="/projects/:projectId" element={<Projects />} />
+                  
                   <Route path="/review" element={<CodeReview />} />
                   <Route path="/review/:projectId" element={<CodeReview />} />
                   <Route path="/settings" element={<Settings />} />
@@ -154,6 +175,21 @@ export default function App() {
                   <Route path="/admin/experiments" element={
                     <AdminRoute>
                       <ExperimentManagement />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/users" element={
+                    <AdminRoute>
+                      <UserManagement />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/providers" element={
+                    <AdminRoute>
+                      <ProviderManagement />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/audit" element={
+                    <AdminRoute>
+                      <AuditLogs />
                     </AdminRoute>
                   } />
                 </Route>

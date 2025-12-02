@@ -1,13 +1,41 @@
-import React from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
-import { Spin, Result, Button } from 'antd';
+import React, { useEffect, useCallback } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Spin, Result, Button, Space } from 'antd';
+import { HomeOutlined, ArrowLeftOutlined, LockOutlined } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
+import { errorLoggingService, ErrorCategory } from '../../services/errorLogging';
 
+/**
+ * Permission types for fine-grained access control
+ */
+export type Permission = 
+  | 'read:projects' | 'write:projects' | 'delete:projects'
+  | 'read:analyses' | 'write:analyses'
+  | 'read:users' | 'write:users' | 'delete:users'
+  | 'read:providers' | 'write:providers'
+  | 'read:audit' | 'admin:all'
+  | string; // Allow custom permissions
+
+/**
+ * ProtectedRoute component props
+ * @interface ProtectedRouteProps
+ * @property {React.ReactNode} children - Child components to render when authorized
+ * @property {string[]} requiredRoles - Roles required to access the route (OR logic)
+ * @property {string[]} requiredPermissions - Permissions required to access the route
+ * @property {boolean} requireAll - If true, ALL permissions required; otherwise ANY
+ * @property {string} redirectTo - URL to redirect to when not authenticated
+ * @property {React.ReactNode} fallback - Custom loading component
+ * @property {() => void} onAccessDenied - Callback when access is denied
+ */
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredRoles?: string[];
+  requiredPermissions?: string[];
+  requireAll?: boolean;
   redirectTo?: string;
   fallback?: React.ReactNode;
+  onAccessDenied?: () => void;
 }
 
 /**
@@ -16,14 +44,51 @@ interface ProtectedRouteProps {
  * Wraps routes that require authentication and optionally specific roles.
  * Redirects to login if not authenticated or shows forbidden if lacking permissions.
  */
+/**
+ * Check if user has required permissions
+ */
+const hasPermissions = (
+  userPermissions: string[] = [],
+  requiredPermissions: Permission[] = [],
+  requireAll: boolean = false
+): boolean => {
+  if (requiredPermissions.length === 0) return true;
+  
+  // Admin has all permissions
+  if (userPermissions.includes('admin:all')) return true;
+  
+  if (requireAll) {
+    return requiredPermissions.every(perm => userPermissions.includes(perm));
+  } else {
+    return requiredPermissions.some(perm => userPermissions.includes(perm));
+  }
+};
+
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requiredRoles = [],
+  requiredPermissions = [],
+  requireAll = false,
   redirectTo = '/login',
-  fallback
+  fallback,
+  onAccessDenied,
 }) => {
+  const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isAuthenticated, user, isLoading } = useAuthStore();
+
+  // Call onAccessDenied when access is denied
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      const roleCheck = requiredRoles.length === 0 || requiredRoles.includes(user.role);
+      const permCheck = hasPermissions(user.permissions, requiredPermissions, requireAll);
+      
+      if (!roleCheck || !permCheck) {
+        onAccessDenied?.();
+      }
+    }
+  }, [isLoading, isAuthenticated, user, requiredRoles, requiredPermissions, requireAll, onAccessDenied]);
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -37,7 +102,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         gap: 16
       }}>
         <Spin size="large" />
-        <span style={{ color: '#666' }}>Checking authentication...</span>
+        <span style={{ color: '#666' }}>{t('auth.checking', 'Checking authentication...')}</span>
       </div>
     );
   }
@@ -55,22 +120,49 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   // Check role-based access
-  if (requiredRoles.length > 0 && !requiredRoles.includes(user.role)) {
+  const hasRequiredRole = requiredRoles.length === 0 || requiredRoles.includes(user.role);
+  
+  // Check permission-based access
+  const hasRequiredPermissions = hasPermissions(user.permissions, requiredPermissions, requireAll);
+
+  if (!hasRequiredRole || !hasRequiredPermissions) {
     return (
-      <Result
-        status="403"
-        title="Access Denied"
-        subTitle="You don't have permission to access this page."
-        extra={
-          <Button type="primary" onClick={() => window.history.back()}>
-            Go Back
-          </Button>
-        }
-      />
+      <div style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        padding: 24,
+        background: '#f5f5f5'
+      }}>
+        <Result
+          status="403"
+          icon={<LockOutlined style={{ color: '#ff4d4f' }} />}
+          title={t('auth.access_denied', 'Access Denied')}
+          subTitle={t('auth.no_permission', "You don't have permission to access this page.")}
+          extra={
+            <Space>
+              <Button 
+                icon={<ArrowLeftOutlined />} 
+                onClick={() => navigate(-1)}
+              >
+                {t('common.go_back', 'Go Back')}
+              </Button>
+              <Button 
+                type="primary" 
+                icon={<HomeOutlined />}
+                onClick={() => navigate('/dashboard')}
+              >
+                {t('common.go_home', 'Go to Dashboard')}
+              </Button>
+            </Space>
+          }
+        />
+      </div>
     );
   }
 
-  // User is authenticated and has required role
+  // User is authenticated and has required role/permissions
   return <>{children}</>;
 };
 

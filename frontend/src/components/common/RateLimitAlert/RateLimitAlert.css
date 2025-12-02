@@ -1,0 +1,80 @@
+/**
+ * Rate Limit Alert Styles
+ */
+
+.rate-limit-alert {
+    margin-bottom: 16px;
+}
+
+.rate-limit-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.rate-limit-progress .ant-progress {
+    flex: 1;
+}
+
+.rate-limit-timer {
+    min-width: 60px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Inline warning */
+.rate-limit-warning {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(250, 173, 20, 0.1);
+    border-radius: 4px;
+    margin-top: 8px;
+}
+
+.rate-limit-warning .anticon {
+    color: #faad14;
+}
+
+/* Rate limit info */
+.rate-limit-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Animation for countdown */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.rate-limit-alert .anticon-clock-circle {
+    animation: pulse 1s ease-in-out infinite;
+}
+
+/* Dark mode */
+.dark .rate-limit-warning {
+    background: rgba(250, 173, 20, 0.15);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .rate-limit-progress {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .rate-limit-timer {
+        text-align: center;
+    }
+}

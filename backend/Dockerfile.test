@@ -1,0 +1,38 @@
+# =============================================================================
+# Test Runner Dockerfile
+# Used for running unit and integration tests
+# =============================================================================
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    curl \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python test dependencies
+COPY requirements.txt requirements-test.txt ./
+RUN pip install --no-cache-dir -r requirements.txt -r requirements-test.txt
+
+# Copy test configuration
+COPY pytest.ini pyproject.toml ./
+COPY tests/ ./tests/
+COPY src/ ./src/
+COPY shared/ ./shared/
+
+# Create test results directory
+RUN mkdir -p /app/test-results
+
+# Set environment
+ENV PYTHONPATH=/app \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    ENVIRONMENT=test
+
+# Default command runs all tests
+CMD ["pytest", "tests/", "-v", "--cov=src", "--cov-report=term-missing"]

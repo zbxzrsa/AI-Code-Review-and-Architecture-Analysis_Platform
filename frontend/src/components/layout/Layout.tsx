@@ -3,16 +3,16 @@
  * 
  * Main application layout with:
  * 主应用布局，包含：
- * - Sidebar navigation / 侧边栏导航
- * - Header with user menu and language selector / 带用户菜单和语言选择器的头部
- * - Content area / 内容区域
+ * - Enhanced sidebar navigation / 增强的侧边栏导航
+ * - Header with user menu, search, and notifications / 带用户菜单、搜索和通知的头部
+ * - Content area with breadcrumbs / 带面包屑的内容区域
+ * - Responsive design / 响应式设计
  */
 
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation, Outlet } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
 import {
   Layout as AntLayout,
-  Menu,
   Avatar,
   Dropdown,
   Button,
@@ -20,50 +20,50 @@ import {
   Typography,
   Badge,
   Tooltip,
-  theme
+  Input,
+  Breadcrumb,
+  theme,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import {
-  DashboardOutlined,
-  ProjectOutlined,
-  CodeOutlined,
-  ExperimentOutlined,
-  SettingOutlined,
   UserOutlined,
   LogoutOutlined,
   BellOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
+  MenuOutlined,
   QuestionCircleOutlined,
   SunOutlined,
-  MoonOutlined
+  MoonOutlined,
+  SearchOutlined,
+  SettingOutlined,
+  HomeOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { LanguageSelector } from '../common/LanguageSelector';
+import { Sidebar } from './Sidebar';
 import './Layout.css';
 
-const { Header, Sider, Content } = AntLayout;
+const { Header, Content } = AntLayout;
 const { Text } = Typography;
+const { Search } = Input;
 
-type MenuItem = Required<MenuProps>['items'][number];
-
-function getItem(
-  label: React.ReactNode,
-  key: React.Key,
-  icon?: React.ReactNode,
-  children?: MenuItem[],
-  type?: 'group'
-): MenuItem {
-  return {
-    key,
-    icon,
-    children,
-    label,
-    type,
-  } as MenuItem;
-}
+/** Breadcrumb route mapping */
+const routeToBreadcrumb: Record<string, { label: string; icon?: React.ReactNode }> = {
+  '/dashboard': { label: 'Dashboard', icon: <HomeOutlined /> },
+  '/projects': { label: 'Projects' },
+  '/projects/new': { label: 'New Project' },
+  '/review': { label: 'Code Review' },
+  '/profile': { label: 'Profile' },
+  '/settings': { label: 'Settings' },
+  '/notifications': { label: 'Notifications' },
+  '/help': { label: 'Help' },
+  '/admin': { label: 'Administration' },
+  '/admin/users': { label: 'Users' },
+  '/admin/providers': { label: 'AI Providers' },
+  '/admin/experiments': { label: 'Experiments' },
+  '/admin/audit': { label: 'Audit Logs' },
+};
 
 export const Layout: React.FC = () => {
   const { t } = useTranslation();
@@ -72,42 +72,58 @@ export const Layout: React.FC = () => {
   const { token } = theme.useToken();
   
   const { user, logout } = useAuthStore();
-  const { sidebar, toggleSidebar, resolvedTheme, setTheme } = useUIStore();
-  
-  const [collapsed, setCollapsed] = useState(!sidebar.isOpen);
+  const { 
+    sidebar, 
+    toggleMobileDrawer, 
+    resolvedTheme, 
+    setTheme,
+    breadcrumbs,
+    openCommandPalette,
+  } = useUIStore();
+
   const [notifications] = useState(3); // Mock notification count
+  const [globalSearch, setGlobalSearch] = useState('');
 
-  useEffect(() => {
-    setCollapsed(!sidebar.isOpen);
-  }, [sidebar.isOpen]);
+  // Generate breadcrumbs from current path
+  const currentBreadcrumbs = useMemo(() => {
+    const paths = location.pathname.split('/').filter(Boolean);
+    const items: { title: React.ReactNode; href?: string }[] = [
+      {
+        title: <Link to="/dashboard"><HomeOutlined /></Link>,
+        href: '/dashboard',
+      },
+    ];
 
-  const handleCollapse = () => {
-    toggleSidebar();
-    setCollapsed(!collapsed);
-  };
+    let currentPath = '';
+    for (const path of paths) {
+      currentPath += `/${path}`;
+      const route = routeToBreadcrumb[currentPath];
+      if (route) {
+        items.push({
+          title: currentPath === location.pathname ? (
+            <span>{t(`nav.${path}`, route.label)}</span>
+          ) : (
+            <Link to={currentPath}>{t(`nav.${path}`, route.label)}</Link>
+          ),
+        });
+      }
+    }
+
+    return items.length > 1 ? items : [];
+  }, [location.pathname, t]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  // Navigation menu items
-  const menuItems: MenuItem[] = [
-    getItem(t('nav.dashboard', 'Dashboard'), '/dashboard', <DashboardOutlined />),
-    getItem(t('nav.projects', 'Projects'), '/projects', <ProjectOutlined />),
-    getItem(t('nav.code_review', 'Code Review'), '/review', <CodeOutlined />),
-    
-    // Admin menu items (only visible to admins)
-    ...(user?.role === 'admin' ? [
-      { type: 'divider' as const },
-      getItem(t('nav.admin', 'Administration'), 'admin', <SettingOutlined />, [
-        getItem(t('nav.experiments', 'Experiments'), '/admin/experiments', <ExperimentOutlined />),
-        getItem(t('nav.users', 'Users'), '/admin/users', <UserOutlined />),
-        getItem(t('nav.providers', 'AI Providers'), '/admin/providers'),
-        getItem(t('nav.audit', 'Audit Logs'), '/admin/audit'),
-      ]),
-    ] : []),
-  ];
+  // Handle global search
+  const handleGlobalSearch = (value: string) => {
+    if (value.trim()) {
+      // Navigate to search results or open command palette
+      openCommandPalette();
+    }
+  };
 
   // User dropdown menu
   const userMenuItems: MenuProps['items'] = [
@@ -133,73 +149,35 @@ export const Layout: React.FC = () => {
     }
   ];
 
-  const handleMenuClick = (e: { key: string }) => {
-    if (e.key.startsWith('/')) {
-      navigate(e.key);
-    }
-  };
-
-  const getSelectedKey = () => {
-    const path = location.pathname;
-    // Handle nested routes
-    if (path.startsWith('/admin')) {
-      return path;
-    }
-    if (path.startsWith('/review')) {
-      return '/review';
-    }
-    if (path.startsWith('/projects')) {
-      return '/projects';
-    }
-    return path;
-  };
+  const collapsed = !sidebar.isOpen;
 
   return (
     <AntLayout className="app-layout">
-      {/* Sidebar */}
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        onCollapse={handleCollapse}
-        trigger={null}
-        width={240}
-        collapsedWidth={80}
-        className="app-sider"
-        style={{
-          background: token.colorBgContainer
-        }}
-      >
-        {/* Logo */}
-        <div className="app-logo">
-          {collapsed ? (
-            <CodeOutlined style={{ fontSize: 24, color: token.colorPrimary }} />
-          ) : (
-            <Space>
-              <CodeOutlined style={{ fontSize: 24, color: token.colorPrimary }} />
-              <Text strong style={{ fontSize: 16 }}>Code Review AI</Text>
-            </Space>
-          )}
-        </div>
+      {/* Enhanced Sidebar */}
+      <Sidebar />
 
-        {/* Navigation Menu */}
-        <Menu
-          mode="inline"
-          selectedKeys={[getSelectedKey()]}
-          items={menuItems}
-          onClick={handleMenuClick}
-          style={{ borderRight: 0 }}
-        />
-      </Sider>
-
-      <AntLayout>
+      <AntLayout className={`app-main ${collapsed ? 'sidebar-collapsed' : ''}`}>
         {/* Header */}
         <Header className="app-header" style={{ background: token.colorBgContainer }}>
           <div className="header-left">
+            {/* Mobile Menu Button */}
             <Button
               type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={handleCollapse}
-              className="collapse-btn"
+              icon={<MenuOutlined />}
+              onClick={toggleMobileDrawer}
+              className="mobile-menu-btn"
+              aria-label={t('nav.open_menu', 'Open menu')}
+            />
+
+            {/* Global Search */}
+            <Search
+              placeholder={t('header.search', 'Search...')}
+              value={globalSearch}
+              onChange={(e) => setGlobalSearch(e.target.value)}
+              onSearch={handleGlobalSearch}
+              className="header-search"
+              style={{ width: 240 }}
+              allowClear
             />
           </div>
 
@@ -219,6 +197,7 @@ export const Layout: React.FC = () => {
                   type="text"
                   icon={resolvedTheme === 'dark' ? <SunOutlined /> : <MoonOutlined />}
                   onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+                  aria-label={resolvedTheme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 />
               </Tooltip>
 
@@ -228,6 +207,7 @@ export const Layout: React.FC = () => {
                   type="text"
                   icon={<QuestionCircleOutlined />}
                   onClick={() => navigate('/help')}
+                  aria-label={t('header.help', 'Help')}
                 />
               </Tooltip>
 
@@ -238,6 +218,7 @@ export const Layout: React.FC = () => {
                     type="text" 
                     icon={<BellOutlined />} 
                     onClick={() => navigate('/notifications')}
+                    aria-label={`${t('header.notifications', 'Notifications')} (${notifications})`}
                   />
                 </Badge>
               </Tooltip>
@@ -254,19 +235,21 @@ export const Layout: React.FC = () => {
                     icon={!user?.avatar && <UserOutlined />}
                     style={{ backgroundColor: token.colorPrimary }}
                   />
-                  {!collapsed && (
-                    <div className="user-info">
-                      <Text strong>{user?.name || 'User'}</Text>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {user?.role || 'user'}
-                      </Text>
-                    </div>
-                  )}
+                  <div className="user-info-header">
+                    <Text strong>{user?.name || 'User'}</Text>
+                  </div>
                 </Space>
               </Dropdown>
             </Space>
           </div>
         </Header>
+
+        {/* Breadcrumbs */}
+        {currentBreadcrumbs.length > 0 && (
+          <div className="app-breadcrumbs" style={{ background: token.colorBgContainer }}>
+            <Breadcrumb items={currentBreadcrumbs} />
+          </div>
+        )}
 
         {/* Main Content */}
         <Content className="app-content">

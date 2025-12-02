@@ -3,6 +3,13 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type Theme = 'light' | 'dark' | 'system';
 export type Language = 'en' | 'zh-CN' | 'zh-TW';
+export type NotificationPosition = 'top-right' | 'top-center' | 'bottom-right' | 'bottom-center';
+
+export interface NotificationAction {
+  label: string;
+  onClick: () => void;
+  type?: 'primary' | 'default' | 'danger';
+}
 
 interface Notification {
   id: string;
@@ -11,6 +18,17 @@ interface Notification {
   message?: string;
   duration?: number;
   timestamp: number;
+  dismissible?: boolean;
+  actions?: NotificationAction[];
+  icon?: React.ReactNode;
+}
+
+export interface FavoriteItem {
+  id: string;
+  label: string;
+  path: string;
+  icon?: string;
+  order: number;
 }
 
 interface Modal {
@@ -23,6 +41,16 @@ interface SidebarState {
   isOpen: boolean;
   width: number;
   activeSection?: string;
+  searchQuery: string;
+  expandedKeys: string[];
+  favorites: FavoriteItem[];
+  mobileDrawerOpen: boolean;
+}
+
+interface NotificationSettings {
+  position: NotificationPosition;
+  maxVisible: number;
+  defaultDuration: number;
 }
 
 interface UIState {
@@ -41,6 +69,7 @@ interface UIState {
   
   // Notifications
   notifications: Notification[];
+  notificationSettings: NotificationSettings;
   
   // Modals
   modals: Modal[];
@@ -59,6 +88,15 @@ interface UIState {
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
   setSidebarSection: (section: string) => void;
+  setSidebarSearch: (query: string) => void;
+  setSidebarExpandedKeys: (keys: string[]) => void;
+  toggleMobileDrawer: () => void;
+  closeMobileDrawer: () => void;
+  
+  // Favorites
+  addFavorite: (item: Omit<FavoriteItem, 'id' | 'order'>) => void;
+  removeFavorite: (id: string) => void;
+  reorderFavorites: (favorites: FavoriteItem[]) => void;
   
   toggleCommandPalette: () => void;
   openCommandPalette: () => void;
@@ -67,6 +105,7 @@ interface UIState {
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp'>) => string;
   removeNotification: (id: string) => void;
   clearNotifications: () => void;
+  setNotificationPosition: (position: NotificationPosition) => void;
   
   openModal: (type: string, props?: Record<string, unknown>) => string;
   closeModal: (id: string) => void;
@@ -100,10 +139,19 @@ export const useUIStore = create<UIState>()(
       sidebar: {
         isOpen: true,
         width: 280,
-        activeSection: undefined
+        activeSection: undefined,
+        searchQuery: '',
+        expandedKeys: [],
+        favorites: [],
+        mobileDrawerOpen: false,
       },
       isCommandPaletteOpen: false,
       notifications: [],
+      notificationSettings: {
+        position: 'top-right',
+        maxVisible: 3,
+        defaultDuration: 5000,
+      },
       modals: [],
       globalLoading: false,
       loadingMessage: undefined,
@@ -135,6 +183,45 @@ export const useUIStore = create<UIState>()(
 
       setSidebarSection: (section) => set((state) => ({
         sidebar: { ...state.sidebar, activeSection: section }
+      })),
+
+      setSidebarSearch: (query) => set((state) => ({
+        sidebar: { ...state.sidebar, searchQuery: query }
+      })),
+
+      setSidebarExpandedKeys: (keys) => set((state) => ({
+        sidebar: { ...state.sidebar, expandedKeys: keys }
+      })),
+
+      toggleMobileDrawer: () => set((state) => ({
+        sidebar: { ...state.sidebar, mobileDrawerOpen: !state.sidebar.mobileDrawerOpen }
+      })),
+
+      closeMobileDrawer: () => set((state) => ({
+        sidebar: { ...state.sidebar, mobileDrawerOpen: false }
+      })),
+
+      // Favorites actions
+      addFavorite: (item) => set((state) => {
+        const id = generateId();
+        const order = state.sidebar.favorites.length;
+        return {
+          sidebar: {
+            ...state.sidebar,
+            favorites: [...state.sidebar.favorites, { ...item, id, order }]
+          }
+        };
+      }),
+
+      removeFavorite: (id) => set((state) => ({
+        sidebar: {
+          ...state.sidebar,
+          favorites: state.sidebar.favorites.filter(f => f.id !== id)
+        }
+      })),
+
+      reorderFavorites: (favorites) => set((state) => ({
+        sidebar: { ...state.sidebar, favorites }
       })),
 
       // Command palette actions
@@ -175,6 +262,10 @@ export const useUIStore = create<UIState>()(
       })),
 
       clearNotifications: () => set({ notifications: [] }),
+
+      setNotificationPosition: (position) => set((state) => ({
+        notificationSettings: { ...state.notificationSettings, position }
+      })),
 
       // Modal actions
       openModal: (type, props) => {

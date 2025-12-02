@@ -1,0 +1,303 @@
+/**
+ * Enhanced Settings Page Styles
+ */
+
+.settings-container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.settings-card {
+    min-height: 600px;
+}
+
+.settings-card .ant-card-body {
+    padding: 0;
+}
+
+/* Settings Tabs */
+.settings-tabs {
+    min-height: 600px;
+}
+
+.settings-tabs .ant-tabs-nav {
+    width: 200px;
+    padding: 16px 0;
+}
+
+.settings-tabs .ant-tabs-content {
+    padding: 24px;
+}
+
+.settings-tabs .ant-tabs-tab {
+    padding: 12px 16px !important;
+    margin: 0 !important;
+}
+
+.settings-tabs .ant-tabs-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Settings Section */
+.settings-section {
+    max-width: 800px;
+}
+
+.settings-section h4 {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-form {
+    max-width: 500px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.section-header h4 {
+    margin-bottom: 4px !important;
+}
+
+/* Toggle Items */
+.toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.editor-toggles .toggle-item {
+    padding: 6px 0;
+}
+
+/* Password Form */
+.password-form {
+    max-width: 400px;
+}
+
+/* Session Table */
+.settings-section .ant-table-wrapper {
+    margin-top: 16px;
+}
+
+/* Alert Toggles */
+.alert-toggles .toggle-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.alert-toggles .toggle-item:last-child {
+    border-bottom: none;
+}
+
+/* Integration Cards */
+.integration-card {
+    margin-bottom: 16px;
+}
+
+.integration-card .ant-card-body {
+    padding: 16px;
+}
+
+.integration-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Notification List */
+.notification-list .notification-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--ant-color-border-secondary, #f0f0f0);
+}
+
+.notification-list .notification-item:last-child {
+    border-bottom: none;
+}
+
+/* 2FA Setup Modal */
+.qr-code-section {
+    text-align: center;
+    padding: 16px;
+}
+
+.qr-code-image {
+    width: 200px;
+    height: 200px;
+    margin-bottom: 16px;
+    border: 1px solid var(--ant-color-border);
+    border-radius: 8px;
+}
+
+.secret-code {
+    margin-top: 12px;
+    padding: 8px;
+    background: var(--ant-color-bg-container-disabled);
+    border-radius: 4px;
+}
+
+.backup-codes {
+    margin-top: 16px;
+}
+
+.codes-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.codes-grid code {
+    display: block;
+    text-align: center;
+    padding: 8px;
+    background: var(--ant-color-bg-container-disabled);
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .settings-tabs .ant-tabs-nav {
+        width: 180px;
+    }
+}
+
+@media (max-width: 768px) {
+    .settings-container {
+        padding: 16px;
+    }
+
+    .settings-tabs {
+        flex-direction: column !important;
+    }
+
+    .settings-tabs .ant-tabs-nav {
+        width: 100%;
+        padding: 0;
+    }
+
+    .settings-tabs .ant-tabs-nav-list {
+        flex-direction: row !important;
+        overflow-x: auto;
+    }
+
+    .settings-tabs .ant-tabs-content {
+        padding: 16px;
+    }
+
+    .settings-tabs .ant-tabs-tab {
+        padding: 8px 12px !important;
+    }
+
+    .settings-tabs .ant-tabs-tab-btn span {
+        display: none;
+    }
+
+    .section-header {
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .section-header .ant-btn {
+        width: 100%;
+    }
+
+    .integration-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .notification-item {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 12px;
+    }
+
+    .notification-item .ant-switch {
+        margin-left: auto;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+
+    .alert-toggles .toggle-item,
+    .notification-list .notification-item {
+        border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .secret-code,
+    .codes-grid code {
+        background: rgba(255, 255, 255, 0.04);
+    }
+}
+
+/* Animations */
+.settings-tabs .ant-tabs-tabpane {
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Accessibility */
+.settings-container .ant-tabs-tab:focus-visible {
+    outline: 2px solid var(--ant-color-primary, #1890ff);
+    outline-offset: -2px;
+}
+
+.settings-container .ant-btn:focus-visible {
+    outline: 2px solid var(--ant-color-primary, #1890ff);
+    outline-offset: 2px;
+}
+
+.settings-container .ant-switch:focus-visible {
+    outline: 2px solid var(--ant-color-primary, #1890ff);
+    outline-offset: 2px;
+}
+
+/* Loading State */
+.settings-container .ant-skeleton {
+    padding: 24px;
+}
+
+/* Empty States */
+.settings-section .ant-empty {
+    padding: 32px 0;
+}
+
+/* API Key Modal */
+.settings-section .ant-modal-body {
+    padding-top: 16px;
+}
+
+/* Webhook List */
+.settings-section .ant-list-item {
+    padding: 16px 0;
+}
+
+.settings-section .ant-list-item-meta-description {
+    margin-top: 4px;
+}
