@@ -1,0 +1,63 @@
+---
+# Platform Configuration ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: platform-v2-stable
+data:
+  # Database configuration
+  db_host: "postgres.default.svc.cluster.local"
+  db_port: "5432"
+
+  # AI Provider configuration
+  primary_ai_provider: "openai"
+  primary_ai_model: "gpt-4"
+
+  secondary_ai_provider: "anthropic"
+  secondary_ai_model: "claude-3-opus-20240229"
+
+  # SLO configuration
+  slo_response_time_p95_ms: "3000"
+  slo_error_rate_threshold: "0.02"
+
+  # Evaluation thresholds
+  v1_accuracy_threshold: "0.95"
+  v1_latency_threshold_ms: "3000"
+  v1_error_rate_threshold: "0.02"
+
+---
+# V1 Configuration ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: platform-v1-exp
+data:
+  # Database configuration
+  db_host: "postgres.default.svc.cluster.local"
+  db_port: "5432"
+
+  # AI Provider configuration
+  primary_ai_provider: "openai"
+  primary_ai_model: "gpt-4"
+
+  secondary_ai_provider: "anthropic"
+  secondary_ai_model: "claude-3-opus-20240229"
+
+  # Evaluation thresholds
+  v1_accuracy_threshold: "0.95"
+  v1_latency_threshold_ms: "3000"
+  v1_error_rate_threshold: "0.02"
+
+---
+# V3 Configuration ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: platform-v3-quarantine
+data:
+  # Database configuration (read-only)
+  db_host: "postgres.default.svc.cluster.local"
+  db_port: "5432"

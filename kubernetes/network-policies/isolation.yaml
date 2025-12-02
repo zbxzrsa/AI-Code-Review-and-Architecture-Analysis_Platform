@@ -1,0 +1,204 @@
+---
+# V1 Network Policy - Allow internal communication only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v1-isolation
+  namespace: platform-v1-exp
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from same namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-v1-exp
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow to same namespace
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-v1-exp
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow external API calls (for AI providers)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# V2 Network Policy - Strict isolation from V1 and V3
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v2-isolation
+  namespace: platform-v2-stable
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from same namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-v2-stable
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Allow to same namespace
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-v2-stable
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow external API calls (for AI providers)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443
+
+---
+# V3 Network Policy - Minimal access, read-only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v3-isolation
+  namespace: platform-v3-quarantine
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from same namespace
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-v3-quarantine
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: monitoring
+      ports:
+        - protocol: TCP
+          port: 9090
+    # Allow from V1 (for re-evaluation requests)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-v1-exp
+      ports:
+        - protocol: TCP
+          port: 8000
+  egress:
+    # Allow to same namespace (read-only database)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-v3-quarantine
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+
+---
+# Deny all ingress by default (except what's explicitly allowed)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: platform-v1-exp
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: platform-v2-stable
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: platform-v3-quarantine
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress

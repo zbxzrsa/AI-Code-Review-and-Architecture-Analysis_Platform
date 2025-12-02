@@ -1,0 +1,258 @@
+---
+# Version Control AI Service - Admin-only evaluation and promotion
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: version-control-ai
+  namespace: platform-v1-exp
+  labels:
+    app: version-control-ai
+    tier: admin
+    component: evaluation
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: version-control-ai
+  template:
+    metadata:
+      labels:
+        app: version-control-ai
+        tier: admin
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+    spec:
+      serviceAccountName: version-control-ai
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: service
+          image: platform-version-control-ai:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: SERVICE_NAME
+              value: "version-control-ai"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: db_host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: db_port
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: db_user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: db_password
+            - name: S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: s3_bucket
+            - name: S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: s3_region
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: aws_access_key
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: aws_secret_key
+            - name: OPA_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: opa_url
+
+          resources:
+            requests:
+              cpu: 1000m
+              memory: 2Gi
+              nvidia.com/gpu: "1" # GPU for intensive evaluation
+            limits:
+              cpu: 4
+              memory: 8Gi
+              nvidia.com/gpu: "1"
+
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /cache
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir:
+            sizeLimit: 5Gi
+
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: accelerator
+                    operator: In
+                    values:
+                      - nvidia-gpu
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - version-control-ai
+                topologyKey: kubernetes.io/hostname
+
+---
+# Version Control AI Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: version-control-ai
+  namespace: platform-v1-exp
+  labels:
+    app: version-control-ai
+spec:
+  type: ClusterIP
+  selector:
+    app: version-control-ai
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+
+---
+# Version Control AI ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: version-control-ai
+  namespace: platform-v1-exp
+
+---
+# Version Control AI Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: version-control-ai
+  namespace: platform-v1-exp
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+
+---
+# Version Control AI RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: version-control-ai
+  namespace: platform-v1-exp
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: version-control-ai
+subjects:
+  - kind: ServiceAccount
+    name: version-control-ai
+    namespace: platform-v1-exp
+
+---
+# Cross-namespace role for accessing V2 resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: version-control-ai-v2-access
+  namespace: platform-v2-stable
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+
+---
+# Cross-namespace role binding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: version-control-ai-v2-access
+  namespace: platform-v2-stable
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: version-control-ai-v2-access
+subjects:
+  - kind: ServiceAccount
+    name: version-control-ai
+    namespace: platform-v1-exp

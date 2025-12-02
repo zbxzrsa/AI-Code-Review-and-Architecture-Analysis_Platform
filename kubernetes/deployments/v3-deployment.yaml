@@ -1,0 +1,179 @@
+---
+# V3 Quarantine Deployment (minimal resources)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: platform-v3-api
+  namespace: platform-v3-quarantine
+  labels:
+    app: platform-v3
+    version: v3
+    tier: quarantine
+spec:
+  replicas: 1 # Single replica for read-only archive
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: platform-v3
+      version: v3
+  template:
+    metadata:
+      labels:
+        app: platform-v3
+        version: v3
+        tier: quarantine
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: platform-v3
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: api
+          image: platform-v3:latest
+          imagePullPolicy: Always
+
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: PLATFORM_VERSION
+              value: "v3"
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: db_host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: platform-config
+                  key: db_port
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: db_user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: db_password
+
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 2
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+---
+# V3 Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: platform-v3-api
+  namespace: platform-v3-quarantine
+  labels:
+    app: platform-v3
+    version: v3
+spec:
+  type: ClusterIP
+  selector:
+    app: platform-v3
+    version: v3
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: metrics
+      protocol: TCP
+
+---
+# V3 ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: platform-v3
+  namespace: platform-v3-quarantine
+
+---
+# V3 Role (read-only)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: platform-v3
+  namespace: platform-v3-quarantine
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+
+---
+# V3 RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: platform-v3
+  namespace: platform-v3-quarantine
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: platform-v3
+subjects:
+  - kind: ServiceAccount
+    name: platform-v3
+    namespace: platform-v3-quarantine

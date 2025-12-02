@@ -1,0 +1,59 @@
+---
+# Namespace for V1 Experimentation
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v1-exp
+  labels:
+    environment: experimental
+    version: v1
+
+---
+# Namespace for V2 Production
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v2-stable
+  labels:
+    environment: production
+    version: v2
+
+---
+# Namespace for V3 Quarantine
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v3-quarantine
+  labels:
+    environment: quarantine
+    version: v3
+
+---
+# Namespace for Shared Infrastructure
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-infrastructure
+  labels:
+    environment: shared
+    component: infrastructure
+
+---
+# Namespace for Monitoring
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-monitoring
+  labels:
+    environment: shared
+    component: monitoring
+
+---
+# Namespace for Ingress
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ingress-nginx
+  labels:
+    environment: shared
+    component: ingress

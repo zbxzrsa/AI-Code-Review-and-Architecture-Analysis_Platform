@@ -1,0 +1,35 @@
+---
+# V1 Experimentation Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v1-exp
+  labels:
+    version: v1
+    purpose: experimentation
+  annotations:
+    description: "Experimentation zone for testing new AI models and techniques"
+
+---
+# V2 Production Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v2-stable
+  labels:
+    version: v2
+    purpose: production
+  annotations:
+    description: "Stable production zone - only version accessible to end users"
+
+---
+# V3 Quarantine Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v3-quarantine
+  labels:
+    version: v3
+    purpose: quarantine
+  annotations:
+    description: "Archive for underperforming techniques and blacklisted configurations"

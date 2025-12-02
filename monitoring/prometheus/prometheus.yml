@@ -1,0 +1,46 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: "platform-monitor"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files:
+  - "alerts.yml"
+
+scrape_configs:
+  # V2 Production Metrics
+  - job_name: "platform-v2"
+    static_configs:
+      - targets: ["localhost:9001"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: "v2-production"
+
+  # V1 Experimentation Metrics
+  - job_name: "platform-v1"
+    static_configs:
+      - targets: ["localhost:9002"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: "v1-experimentation"
+
+  # V3 Quarantine Metrics
+  - job_name: "platform-v3"
+    static_configs:
+      - targets: ["localhost:9003"]
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: "v3-quarantine"
+
+  # Prometheus Self-Monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

@@ -1,0 +1,270 @@
+# Traefik Dynamic Configuration
+# Rate limiting, circuit breaking, middleware, and routing rules
+
+http:
+  # Middlewares
+  middlewares:
+    # Rate limiting middleware
+    rate-limit-anonymous:
+      rateLimit:
+        average: 10
+        period: 60s
+        burst: 20
+
+    rate-limit-authenticated:
+      rateLimit:
+        average: 100
+        period: 60s
+        burst: 200
+
+    rate-limit-admin:
+      rateLimit:
+        average: 1000
+        period: 60s
+        burst: 2000
+
+    # Circuit breaker middleware
+    circuit-breaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.5"
+        checkInterval: 100ms
+        fallbackDuration: 60s
+        responseCode: 503
+
+    # Security headers middleware
+    security-headers:
+      headers:
+        customResponseHeaders:
+          Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+          Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
+          X-Frame-Options: "DENY"
+          X-Content-Type-Options: "nosniff"
+          X-XSS-Protection: "1; mode=block"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+          Permissions-Policy: "geolocation=(), microphone=(), camera=()"
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-For: ""
+          X-Real-IP: ""
+
+    # CORS middleware
+    cors:
+      headers:
+        accessControlAllowOriginList:
+          - "https://app.example.com"
+          - "https://admin.example.com"
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+        accessControlAllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+        accessControlMaxAge: 3600
+        accessControlAllowCredentials: true
+
+    # Compression middleware
+    compression:
+      compress:
+        minResponseBodyBytes: 1000
+        excludedContentTypes:
+          - text/event-stream
+
+    # Authentication middleware
+    auth-basic:
+      basicAuth:
+        users:
+          - "admin:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8OU/"
+
+    # Request timeout
+    timeout:
+      forwardauth:
+        address: "http://auth-service:8080/auth"
+        trustForwardHeader: true
+        authResponseHeaders:
+          - X-User-ID
+          - X-User-Role
+
+  # Routers
+  routers:
+    # V2 Production API
+    v2-api:
+      entryPoints:
+        - websecure
+      rule: "Host(`api.example.com`) && PathPrefix(`/api/v2`)"
+      service: v2-api-service
+      middlewares:
+        - security-headers
+        - cors
+        - compression
+        - rate-limit-authenticated
+        - circuit-breaker
+      tls:
+        certResolver: letsencrypt
+
+    # V1 Experimentation API
+    v1-api:
+      entryPoints:
+        - websecure
+      rule: "Host(`api.example.com`) && PathPrefix(`/api/v1`)"
+      service: v1-api-service
+      middlewares:
+        - security-headers
+        - cors
+        - compression
+        - rate-limit-authenticated
+        - circuit-breaker
+      tls:
+        certResolver: letsencrypt
+
+    # V3 Quarantine API
+    v3-api:
+      entryPoints:
+        - websecure
+      rule: "Host(`api.example.com`) && PathPrefix(`/api/v3`)"
+      service: v3-api-service
+      middlewares:
+        - security-headers
+        - cors
+        - compression
+        - auth-basic
+        - rate-limit-admin
+        - circuit-breaker
+      tls:
+        certResolver: letsencrypt
+
+    # Code Review AI Service
+    code-review-ai:
+      entryPoints:
+        - websecure
+      rule: "Host(`api.example.com`) && PathPrefix(`/code-review-ai`)"
+      service: code-review-ai-service
+      middlewares:
+        - security-headers
+        - cors
+        - compression
+        - rate-limit-authenticated
+        - circuit-breaker
+      tls:
+        certResolver: letsencrypt
+
+    # Version Control AI Service
+    version-control-ai:
+      entryPoints:
+        - websecure
+      rule: "Host(`api.example.com`) && PathPrefix(`/version-control-ai`)"
+      service: version-control-ai-service
+      middlewares:
+        - security-headers
+        - cors
+        - compression
+        - auth-basic
+        - rate-limit-admin
+        - circuit-breaker
+      tls:
+        certResolver: letsencrypt
+
+    # Health check endpoint
+    health:
+      entryPoints:
+        - websecure
+      rule: "Host(`api.example.com`) && Path(`/health`)"
+      service: health-service
+      middlewares:
+        - security-headers
+      tls:
+        certResolver: letsencrypt
+
+    # Metrics endpoint
+    metrics:
+      entryPoints:
+        - websecure
+      rule: "Host(`metrics.example.com`)"
+      service: prometheus-service
+      middlewares:
+        - auth-basic
+      tls:
+        certResolver: letsencrypt
+
+  # Services
+  services:
+    v2-api-service:
+      loadBalancer:
+        servers:
+          - url: "http://platform-v2-api:8000"
+        healthCheck:
+          path: /health/ready
+          interval: 10s
+          timeout: 5s
+          scheme: http
+
+    v1-api-service:
+      loadBalancer:
+        servers:
+          - url: "http://platform-v1-api:8000"
+        healthCheck:
+          path: /health/ready
+          interval: 10s
+          timeout: 5s
+          scheme: http
+
+    v3-api-service:
+      loadBalancer:
+        servers:
+          - url: "http://platform-v3-api:8000"
+        healthCheck:
+          path: /health/ready
+          interval: 10s
+          timeout: 5s
+          scheme: http
+
+    code-review-ai-service:
+      loadBalancer:
+        servers:
+          - url: "http://code-review-ai:8000"
+        healthCheck:
+          path: /health/ready
+          interval: 10s
+          timeout: 5s
+          scheme: http
+
+    version-control-ai-service:
+      loadBalancer:
+        servers:
+          - url: "http://version-control-ai:8000"
+        healthCheck:
+          path: /health/ready
+          interval: 10s
+          timeout: 5s
+          scheme: http
+
+    health-service:
+      loadBalancer:
+        servers:
+          - url: "http://platform-v2-api:8000"
+
+    prometheus-service:
+      loadBalancer:
+        servers:
+          - url: "http://prometheus:9090"
+
+tcp:
+  routers:
+    # WebSocket support for collaborative editing
+    websocket:
+      entryPoints:
+        - websecure
+      rule: "HostSNI(`api.example.com`)"
+      service: websocket-service
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    websocket-service:
+      loadBalancer:
+        servers:
+          - address: "platform-v2-api:8001"
