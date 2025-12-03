@@ -234,6 +234,7 @@ export const Sidebar: React.FC = () => {
         { key: 'admin-evolution', label: t('nav.evolution', 'Evolution Cycle'), path: '/admin/evolution', icon: <RocketOutlined /> },
         { key: 'admin-model-testing', label: t('nav.model_testing', 'Model Testing'), path: '/admin/model-testing', icon: <ExperimentOutlined /> },
         { key: 'admin-model-comparison', label: t('nav.model_comparison', 'Model Comparison'), path: '/admin/model-comparison', icon: <BarChartOutlined /> },
+        { key: 'admin-performance', label: t('nav.performance', 'Performance'), path: '/admin/performance', icon: <DashboardOutlined /> },
         { key: 'admin-health', label: t('nav.system_health', 'System Health'), path: '/admin/health', icon: <DesktopOutlined /> },
         { key: 'admin-learning', label: t('nav.learning', 'Learning Cycle'), path: '/admin/learning', icon: <BookOutlined /> },
         { key: 'admin-audit', label: t('nav.audit', 'Audit Logs'), path: '/admin/audit', icon: <AuditOutlined /> },

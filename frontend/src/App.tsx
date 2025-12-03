@@ -98,6 +98,7 @@ const SystemHealth = lazy(() => import('./pages/admin/SystemHealth'));
 const AutoFixDashboard = lazy(() => import('./pages/admin/AutoFixDashboard'));
 const LearningCycleDashboard = lazy(() => import('./pages/admin/LearningCycleDashboard'));
 const ModelComparison = lazy(() => import('./pages/admin/ModelComparison'));
+const PerformanceMonitor = lazy(() => import('./pages/admin/PerformanceMonitor'));
 
 // Query client for React Query
 const queryClient = new QueryClient({
@@ -298,6 +299,11 @@ export default function App() {
                   <Route path="/admin/model-comparison" element={
                     <AdminRoute>
                       <ModelComparison />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/performance" element={
+                    <AdminRoute>
+                      <PerformanceMonitor />
                     </AdminRoute>
                   } />
                 </Route>

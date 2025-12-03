@@ -148,11 +148,12 @@ export const StreamingResponse: React.FC<StreamingResponseProps> = ({
       <div className="streaming-content">
         <ReactMarkdown
           components={{
-            code({ node, inline, className, children, ...props }) {
+            code({ node, className, children, ...props }: any) {
               const match = /language-(\w+)/.exec(className || '');
               const codeString = String(children).replace(/\n$/, '');
+              const isInline = !match;
               
-              return !inline && match ? (
+              return !isInline && match ? (
                 <div className="code-block-wrapper">
                   <div className="code-block-header">
                     <span className="code-language">{match[1]}</span>
@@ -164,10 +165,9 @@ export const StreamingResponse: React.FC<StreamingResponseProps> = ({
                     />
                   </div>
                   <SyntaxHighlighter
-                    style={vscDarkPlus}
+                    style={vscDarkPlus as any}
                     language={match[1]}
                     PreTag="div"
-                    {...props}
                   >
                     {codeString}
                   </SyntaxHighlighter>

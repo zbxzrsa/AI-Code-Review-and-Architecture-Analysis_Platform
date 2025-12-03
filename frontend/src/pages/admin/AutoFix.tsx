@@ -128,7 +128,7 @@ const mockAutoFixes: AutoFix[] = [
     aiModel: 'Claude 3 Opus',
     confidence: 0.98,
     fix: {
-      before: 'API_SECRET = "sk_live_xxxxxxxxxxxx"',
+      before: 'API_SECRET = "hardcoded_secret_value"',
       after: 'API_SECRET = os.environ.get("API_SECRET")',
       explanation: 'Moved secret to environment variable for secure handling.',
     },

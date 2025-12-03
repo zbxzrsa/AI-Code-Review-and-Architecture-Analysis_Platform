@@ -1128,7 +1128,7 @@ async def list_api_keys():
             {
                 "id": "key_1",
                 "name": "Production API Key",
-                "keyPreview": "sk_live_...3f8a",
+                "keyPreview": "crai_prod_...3f8a",
                 "scopes": ["read", "write", "analyze"],
                 "status": "active",
                 "createdAt": (datetime.now() - timedelta(days=45)).isoformat(),
@@ -1140,7 +1140,7 @@ async def list_api_keys():
             {
                 "id": "key_2",
                 "name": "Development Key",
-                "keyPreview": "sk_test_...9b2c",
+                "keyPreview": "crai_test_...9b2c",
                 "scopes": ["read", "analyze"],
                 "status": "active",
                 "createdAt": (datetime.now() - timedelta(days=30)).isoformat(),
@@ -1158,7 +1158,7 @@ async def create_api_key():
     """Create API key / 创建API密钥"""
     return {
         "id": f"key_{secrets.token_hex(4)}",
-        "key": f"sk_live_{secrets.token_hex(24)}",
+        "key": f"crai_{secrets.token_hex(24)}",
         "message": "API key created"
     }
 

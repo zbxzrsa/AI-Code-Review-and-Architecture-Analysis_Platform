@@ -120,8 +120,8 @@ export const FileTree: React.FC<FileTreeProps> = ({
           key: fullPath,
           title: node.name,
           icon: isDirectory 
-            ? ({ expanded }: { expanded: boolean }) => 
-                expanded ? <FolderOpenOutlined /> : <FolderOutlined />
+            ? (props: any) => 
+                props?.expanded ? <FolderOpenOutlined /> : <FolderOutlined />
             : getFileIcon(node.name),
           isLeaf: !isDirectory,
           children: node.children 

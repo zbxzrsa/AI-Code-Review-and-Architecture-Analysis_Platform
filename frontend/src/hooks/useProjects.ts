@@ -223,7 +223,7 @@ export function useUpdateProject() {
         queryClient.setQueryData<Project>(projectKeys.detail(id), {
           ...previousProject,
           ...data,
-        });
+        } as Project);
       }
       
       return { previousProject };

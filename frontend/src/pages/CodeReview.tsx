@@ -317,11 +317,11 @@ export const CodeReview: React.FC = () => {
                     title={
                       <Space>
                         <Text strong>{issue.type}</Text>
-                        <Tag size="small">L{issue.line_start}</Tag>
+                        <Tag>L{issue.line_start}</Tag>
                       </Space>
                     }
                     description={
-                      <Text type="secondary" ellipsis={{ rows: 2 }}>
+                      <Text type="secondary" ellipsis={{ tooltip: issue.description }}>
                         {issue.description}
                       </Text>
                     }

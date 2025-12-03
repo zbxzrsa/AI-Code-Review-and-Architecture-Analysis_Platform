@@ -5,7 +5,7 @@
  */
 
 import '@testing-library/jest-dom';
-import { vi } from 'vitest';
+import { vi, afterEach } from 'vitest';
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
@@ -45,7 +45,7 @@ class IntersectionObserverMock {
 window.IntersectionObserver = IntersectionObserverMock as any;
 
 // Mock scrollTo
-window.scrollTo = vi.fn();
+window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
 
 // Mock clipboard API
 Object.assign(navigator, {

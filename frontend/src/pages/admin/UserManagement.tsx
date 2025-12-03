@@ -204,7 +204,7 @@ const UserStatsSection: React.FC = () => {
                 outerRadius={80}
                 paddingAngle={5}
                 dataKey="value"
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                label={({ name, percent }: any) => `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`}
               >
                 {roleData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />

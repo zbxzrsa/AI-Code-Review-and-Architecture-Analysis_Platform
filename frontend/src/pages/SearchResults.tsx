@@ -24,7 +24,6 @@ import {
   Empty,
   Button,
   Tooltip,
-  Highlight,
 } from 'antd';
 import {
   SearchOutlined,

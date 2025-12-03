@@ -269,8 +269,8 @@ const AuditAnalyticsSection: React.FC = () => {
                 outerRadius={90}
                 paddingAngle={2}
                 dataKey="value"
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                labelLine={{ length: 10, length2: 5 }}
+                label={({ name, percent }: any) => `${name || ''} (${((percent || 0) * 100).toFixed(0)}%)`}
+                labelLine={false}
               >
                 {actionData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />

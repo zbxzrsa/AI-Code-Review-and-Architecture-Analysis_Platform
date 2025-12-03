@@ -12,23 +12,25 @@ interface PendingOperation {
   lastError?: string;
 }
 
+interface CachedResponse {
+  url: string;
+  data: unknown;
+  timestamp: number;
+  expiresAt: number;
+}
+
 interface OfflineDB extends DBSchema {
   'pending-operations': {
     key: number;
     value: PendingOperation;
     indexes: {
-      'by-synced': boolean;
+      'by-synced': number;
       'by-timestamp': number;
     };
   };
   'cached-responses': {
     key: string;
-    value: {
-      url: string;
-      data: unknown;
-      timestamp: number;
-      expiresAt: number;
-    };
+    value: CachedResponse;
   };
 }
 
@@ -80,11 +82,11 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
         });
         setDb(database);
         
-        // Update pending count
+        // Update pending count (0 = not synced, 1 = synced)
         const pending = await database.getAllFromIndex(
           'pending-operations',
           'by-synced',
-          false
+          0
         );
         setPendingCount(pending.length);
       } catch (error) {
@@ -120,7 +122,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
         const operations = await db.getAllFromIndex(
           'pending-operations',
           'by-synced',
-          false
+          0
         );
 
         for (const op of operations) {
@@ -158,7 +160,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
         const remaining = await db.getAllFromIndex(
           'pending-operations',
           'by-synced',
-          false
+          0
         );
         setPendingCount(remaining.length);
       } finally {
@@ -241,7 +243,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
     const synced = await db.getAllFromIndex(
       'pending-operations',
       'by-synced',
-      true
+      1
     );
 
     for (const op of synced) {
@@ -255,7 +257,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
   const getPendingOperations = useCallback(async (): Promise<PendingOperation[]> => {
     if (!db) return [];
 
-    return db.getAllFromIndex('pending-operations', 'by-synced', false);
+    return db.getAllFromIndex('pending-operations', 'by-synced', 0);
   }, [db]);
 
   // Force sync now
@@ -268,7 +270,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
       const operations = await db.getAllFromIndex(
         'pending-operations',
         'by-synced',
-        false
+        0
       );
 
       for (const op of operations) {
@@ -290,7 +292,7 @@ export function useOfflineSync(options: OfflineSyncOptions = {}) {
       const remaining = await db.getAllFromIndex(
         'pending-operations',
         'by-synced',
-        false
+        0
       );
       setPendingCount(remaining.length);
     } finally {

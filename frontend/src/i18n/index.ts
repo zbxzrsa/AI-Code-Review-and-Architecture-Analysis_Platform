@@ -112,8 +112,6 @@ i18n
       lookupLocalStorage: LANGUAGE_STORAGE_KEY,
       // Query string key / 查询字符串键
       lookupQuerystring: 'lang',
-      // Check whitelist / 检查白名单
-      checkWhitelist: true,
     },
     
     // Backend configuration for dynamic loading

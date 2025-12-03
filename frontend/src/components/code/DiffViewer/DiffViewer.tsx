@@ -75,8 +75,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
       matching: 'lines',
       outputFormat: outputFormat === 'side-by-side' ? 'side-by-side' : 'line-by-line',
       renderNothingWhenEmpty: false,
-      highlightCode: true
-    });
+    } as any);
   }, [unifiedDiff, outputFormat]);
 
   // Copy diff to clipboard

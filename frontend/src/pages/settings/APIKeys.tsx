@@ -69,8 +69,8 @@ const mockKeys: APIKey[] = [
   {
     id: 'key_1',
     name: 'Production API Key',
-    key: 'sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    keyPreview: 'sk_live_...3f8a',
+    key: 'crai_prod_EXAMPLE_KEY_NOT_REAL_12345',
+    keyPreview: 'crai_prod_...2345',
     scopes: ['read', 'write', 'analyze'],
     status: 'active',
     createdAt: '2024-01-15T10:00:00Z',
@@ -83,8 +83,8 @@ const mockKeys: APIKey[] = [
   {
     id: 'key_2',
     name: 'Development Key',
-    key: 'sk_test_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    keyPreview: 'sk_test_...9b2c',
+    key: 'crai_test_EXAMPLE_KEY_NOT_REAL_67890',
+    keyPreview: 'crai_test_...7890',
     scopes: ['read', 'analyze'],
     status: 'active',
     createdAt: '2024-02-01T10:00:00Z',
@@ -97,8 +97,8 @@ const mockKeys: APIKey[] = [
   {
     id: 'key_3',
     name: 'CI/CD Integration',
-    key: 'sk_ci_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
-    keyPreview: 'sk_ci_...1e4d',
+    key: 'crai_ci_EXAMPLE_KEY_NOT_REAL_11111',
+    keyPreview: 'crai_ci_...1111',
     scopes: ['read', 'analyze'],
     status: 'revoked',
     createdAt: '2024-01-01T10:00:00Z',
@@ -141,7 +141,7 @@ export const APIKeys: React.FC = () => {
   const handleCreate = async (values: any) => {
     try {
       const response = await api.post('/api/user/api-keys', values);
-      const generatedKey = response.data?.key || `sk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      const generatedKey = response.data?.key || `crai_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
       
       setNewKey(generatedKey);
       setCreateModalOpen(false);
@@ -150,7 +150,7 @@ export const APIKeys: React.FC = () => {
       message.success('API key created successfully');
     } catch (error) {
       // Mock success
-      const generatedKey = `sk_live_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+      const generatedKey = `crai_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
       setNewKey(generatedKey);
       setCreateModalOpen(false);
       setNewKeyModalOpen(true);

@@ -98,6 +98,7 @@ export const Projects: React.FC = () => {
             updated_at: new Date().toISOString(),
             owner_id: '1',
             is_public: false,
+            status: 'active' as const,
             settings: {
               auto_review: true,
               review_on_push: true,
@@ -118,6 +119,7 @@ export const Projects: React.FC = () => {
             updated_at: new Date().toISOString(),
             owner_id: '1',
             is_public: true,
+            status: 'active' as const,
             settings: {
               auto_review: false,
               review_on_push: false,

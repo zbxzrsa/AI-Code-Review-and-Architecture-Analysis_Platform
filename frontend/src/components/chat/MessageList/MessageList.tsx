@@ -79,16 +79,16 @@ export const MessageList: React.FC<MessageListProps> = ({
               <>
                 <ReactMarkdown
                   components={{
-                    code({ node, inline, className, children, ...props }) {
+                    code({ node, className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || '');
                       const codeString = String(children).replace(/\n$/, '');
+                      const isInline = !match;
                       
-                      return !inline && match ? (
+                      return !isInline && match ? (
                         <SyntaxHighlighter
-                          style={vscDarkPlus}
+                          style={vscDarkPlus as any}
                           language={match[1]}
                           PreTag="div"
-                          {...props}
                         >
                           {codeString}
                         </SyntaxHighlighter>
@@ -107,16 +107,16 @@ export const MessageList: React.FC<MessageListProps> = ({
             ) : (
               <ReactMarkdown
                 components={{
-                  code({ node, inline, className, children, ...props }) {
+                  code({ node, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '');
                     const codeString = String(children).replace(/\n$/, '');
+                    const isInline = !match;
                     
-                    return !inline && match ? (
+                    return !isInline && match ? (
                       <SyntaxHighlighter
-                        style={vscDarkPlus}
+                        style={vscDarkPlus as any}
                         language={match[1]}
                         PreTag="div"
-                        {...props}
                       >
                         {codeString}
                       </SyntaxHighlighter>

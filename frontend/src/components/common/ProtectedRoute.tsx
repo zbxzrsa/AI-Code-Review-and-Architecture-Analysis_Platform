@@ -82,7 +82,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
       const roleCheck = requiredRoles.length === 0 || requiredRoles.includes(user.role);
-      const permCheck = hasPermissions(user.permissions, requiredPermissions, requireAll);
+      // Permissions are optional on User - use empty array if not present
+      const userPermissions = (user as any).permissions || [];
+      const permCheck = hasPermissions(userPermissions, requiredPermissions, requireAll);
       
       if (!roleCheck || !permCheck) {
         onAccessDenied?.();
@@ -122,8 +124,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Check role-based access
   const hasRequiredRole = requiredRoles.length === 0 || requiredRoles.includes(user.role);
   
-  // Check permission-based access
-  const hasRequiredPermissions = hasPermissions(user.permissions, requiredPermissions, requireAll);
+  // Check permission-based access (permissions are optional on User)
+  const userPerms = (user as any).permissions || [];
+  const hasRequiredPermissions = hasPermissions(userPerms, requiredPermissions, requireAll);
 
   if (!hasRequiredRole || !hasRequiredPermissions) {
     return (

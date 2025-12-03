@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Modal, Input, List, Tag, Typography, Space, Kbd } from 'antd';
+import { Modal, Input, List, Tag, Typography, Space } from 'antd';
 import {
   SearchOutlined,
   FileOutlined,
@@ -18,6 +18,24 @@ import { useAuth } from '../../../hooks/useAuth';
 import './CommandPalette.css';
 
 const { Text } = Typography;
+
+// Simple keyboard shortcut display component
+const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span style={{
+    display: 'inline-block',
+    padding: '2px 6px',
+    fontSize: '11px',
+    fontFamily: 'monospace',
+    lineHeight: '1.4',
+    color: '#666',
+    backgroundColor: '#f5f5f5',
+    border: '1px solid #d9d9d9',
+    borderRadius: '3px',
+    boxShadow: '0 1px 0 rgba(0,0,0,0.1)',
+  }}>
+    {children}
+  </span>
+);
 
 interface Command {
   id: string;
@@ -308,7 +326,7 @@ export const CommandPalette: React.FC = () => {
                     </div>
                   </Space>
                   <Space>
-                    <Tag size="small">{getCategoryLabel(cmd.category)}</Tag>
+                    <Tag>{getCategoryLabel(cmd.category)}</Tag>
                     {cmd.shortcut && (
                       <span className="command-shortcut">
                         {cmd.shortcut.map((key, i) => (

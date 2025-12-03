@@ -165,7 +165,7 @@ export const IssueList: React.FC<IssueListProps> = ({
           title={
             <Space>
               <span className="issue-type">{issue.type}</span>
-              <Tag size="small">L{issue.line_start}</Tag>
+              <Tag>L{issue.line_start}</Tag>
               {showFileColumn && issue.file && (
                 <span className="issue-file">{issue.file}</span>
               )}

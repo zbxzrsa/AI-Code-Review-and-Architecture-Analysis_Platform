@@ -90,7 +90,6 @@ export default function CodeEditor({
             value={value}
             onChange={handleEditorChange}
             onMount={() => setIsMonacoReady(true)}
-            onError={handleMonacoError}
             options={{
               minimap: { enabled: false },
               readOnly,
@@ -112,12 +111,7 @@ export default function CodeEditor({
             onChange={handleEditorChange}
             extensions={[getLanguageExtension()]}
             height={height}
-            options={{
-              lineNumbers: true,
-              lineWrapping: true,
-              indentUnit: 2,
-              readOnly,
-            }}
+            readOnly={readOnly}
             className="codemirror-editor"
           />
         </div>

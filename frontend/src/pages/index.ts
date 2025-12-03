@@ -16,13 +16,13 @@ export { Notifications } from './Notifications';
 export { Help } from './Help';
 
 // Profile pages / 个人资料页面
-export { Profile } from './profile';
+export { Profile } from './Profile';
 
 // Settings pages / 设置页面
-export { Settings } from './settings';
+export { Settings } from './Settings';
 
-// Projects pages / 项目页面
-export { ProjectList, NewProject, ProjectSettings } from './projects';
+// Re-export Projects (already exported above)
+// Additional project components can be added here if needed
 
 // Admin pages / 管理员页面
 export { 

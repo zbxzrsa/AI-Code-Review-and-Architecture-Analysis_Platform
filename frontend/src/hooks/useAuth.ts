@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore, type UserRole } from '../store/authStore';
 import { api } from '../services/api';
 
 interface LoginCredentials {
@@ -25,7 +25,7 @@ interface AuthResponse {
     id: string;
     email: string;
     name: string;
-    role: string;
+    role: UserRole;
   };
 }
 
