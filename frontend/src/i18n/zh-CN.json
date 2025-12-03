@@ -189,5 +189,33 @@
     "not_found": "请求的资源未找到。",
     "server": "服务器错误，请稍后重试。",
     "validation": "请检查您的输入并重试。"
+  },
+  "changelog": {
+    "title": "更新日志",
+    "subtitle": "平台的新功能和改进",
+    "view_roadmap": "查看路线图",
+    "subscribe": "订阅更新",
+    "latest_release": "最新版本",
+    "see_whats_new": "查看新内容",
+    "roadmap": "路线图",
+    "release_stats": "版本统计",
+    "current_version": "当前版本",
+    "total_releases": "发布总数",
+    "last_updated": "最后更新",
+    "quick_links": "快速链接",
+    "release_notes": "版本说明",
+    "report_issue": "报告问题",
+    "request_feature": "功能请求",
+    "collapse": "收起",
+    "expand": "展开",
+    "in_progress": "进行中",
+    "planned": "计划中",
+    "new": "新增",
+    "improved": "改进",
+    "fixed": "修复",
+    "security": "安全",
+    "major": "重大更新",
+    "minor": "次要更新",
+    "patch": "补丁"
   }
 }

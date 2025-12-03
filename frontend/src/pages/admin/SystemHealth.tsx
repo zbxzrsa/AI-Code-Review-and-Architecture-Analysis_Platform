@@ -84,7 +84,7 @@ const statusConfig = {
 };
 
 const SystemHealth: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   
   // State
   const [services, setServices] = useState<ServiceHealth[]>([]);

@@ -10,7 +10,7 @@
  * - Rollback capability
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -22,15 +22,11 @@ import {
   Typography,
   Modal,
   Progress,
-  Timeline,
   Alert,
   Statistic,
-  Badge,
   Tooltip,
   Switch,
   Tabs,
-  List,
-  Avatar,
   Descriptions,
   message,
   Popconfirm,
@@ -48,13 +44,10 @@ import {
   ClockCircleOutlined,
   HistoryOutlined,
   PlayCircleOutlined,
-  PauseCircleOutlined,
   RollbackOutlined,
   EyeOutlined,
   CodeOutlined,
-  FileTextOutlined,
   ExclamationCircleOutlined,
-  SettingOutlined,
   ReloadOutlined,
   CheckOutlined,
   WarningOutlined,

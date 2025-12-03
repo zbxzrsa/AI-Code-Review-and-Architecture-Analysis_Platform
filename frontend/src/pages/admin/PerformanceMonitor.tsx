@@ -27,13 +27,11 @@ import {
 import {
   DashboardOutlined,
   ThunderboltOutlined,
-  ApiOutlined,
   ClockCircleOutlined,
   WarningOutlined,
   CheckCircleOutlined,
   SyncOutlined,
   ArrowUpOutlined,
-  ArrowDownOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
@@ -69,7 +67,7 @@ interface TimeSeriesData {
 }
 
 const PerformanceMonitor: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [timeRange, setTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('1h');
   const [refreshing, setRefreshing] = useState(false);
   const [services, setServices] = useState<ServiceMetric[]>([]);

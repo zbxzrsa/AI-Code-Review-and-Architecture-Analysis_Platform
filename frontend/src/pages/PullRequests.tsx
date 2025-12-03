@@ -201,7 +201,7 @@ const mockPullRequests: PullRequest[] = [
 ];
 
 export const PullRequests: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [pullRequests, setPullRequests] = useState<PullRequest[]>(mockPullRequests);
   const [selectedPR, setSelectedPR] = useState<PullRequest | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -382,7 +382,7 @@ export const PullRequests: React.FC = () => {
                         <Text type="secondary">{pr.author.name}</Text>
                       </Space>
                       <Text type="secondary">
-                        <BranchesOutlined /> {pr.sourceBranch} â†’ {pr.targetBranch}
+                        <BranchesOutlined /> {pr.sourceBranch} â†?{pr.targetBranch}
                       </Text>
                       <Text type="secondary">
                         <ClockCircleOutlined /> {new Date(pr.createdAt).toLocaleDateString()}

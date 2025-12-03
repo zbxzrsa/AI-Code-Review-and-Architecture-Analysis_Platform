@@ -36,7 +36,6 @@ import {
   ReloadOutlined,
   MoreOutlined,
   FolderOutlined,
-  CodeOutlined,
   ClockCircleOutlined,
   PlayCircleOutlined,
   EditOutlined,
@@ -44,15 +43,10 @@ import {
   SettingOutlined,
   AppstoreOutlined,
   UnorderedListOutlined,
-  ExportOutlined,
   InboxOutlined,
-  SortAscendingOutlined,
-  SortDescendingOutlined,
   FilterOutlined,
   CheckCircleOutlined,
   PauseCircleOutlined,
-  StopOutlined,
-  BranchesOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore, type Project, type ProjectStatus, type ViewMode } from '../../store/projectStore';
@@ -240,8 +234,8 @@ export const ProjectList: React.FC = () => {
   const archiveProject = useArchiveProject();
   const restoreProject = useRestoreProject();
   
-  // Computed values
-  const projects = data?.items || [];
+  // Computed values - memoize to prevent unnecessary re-renders
+  const projects = useMemo(() => data?.items || [], [data?.items]);
   const total = data?.total || 0;
   
   // Get unique languages for filter

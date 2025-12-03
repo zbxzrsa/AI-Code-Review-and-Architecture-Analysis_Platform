@@ -21,7 +21,6 @@ import {
   Space,
   Button,
   Alert,
-  Badge,
   Timeline,
   Tabs,
   Switch,
@@ -80,7 +79,7 @@ interface ComplianceStatus {
 }
 
 const SecurityScanner: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [scanning, setScanning] = useState(false);
   const [autoFixEnabled, setAutoFixEnabled] = useState(true);
   const [vulnerabilities, setVulnerabilities] = useState<Vulnerability[]>([]);

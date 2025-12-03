@@ -17,16 +17,12 @@ import {
   Progress,
   Tabs,
   Statistic,
-  Modal,
   Typography,
-  Select,
   Input,
   Spin,
-  Tooltip,
   Alert,
   Form,
   Slider,
-  Switch,
   Divider,
   message,
 } from 'antd';
@@ -41,7 +37,6 @@ import {
   CodeOutlined,
   ThunderboltOutlined,
   LineChartOutlined,
-  SettingOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';

@@ -43,7 +43,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
     const maxLines = Math.max(oldLines.length, newLines.length);
     let hunkStart = -1;
     // Track hunk state
-    let _hunkLines: string[] = [];
+    const _hunkLines: string[] = [];
     
     for (let i = 0; i < maxLines; i++) {
       const oldLine = oldLines[i] || '';

@@ -34,11 +34,9 @@ import {
   UserOutlined,
   SettingOutlined,
   BugOutlined,
-  SafetyCertificateOutlined,
   RocketOutlined,
   ClockCircleOutlined,
   RightOutlined,
-  FilterOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
@@ -137,7 +135,7 @@ const typeConfig = {
 };
 
 export const SearchResults: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const [searchQuery, setSearchQuery] = useState(query);
@@ -180,7 +178,7 @@ export const SearchResults: React.FC = () => {
           </Title>
           {searchQuery && (
             <Text type="secondary">
-              Found {filteredResults.length} results for "{searchQuery}"
+              Found {filteredResults.length} results for &quot;{searchQuery}&quot;
             </Text>
           )}
         </div>

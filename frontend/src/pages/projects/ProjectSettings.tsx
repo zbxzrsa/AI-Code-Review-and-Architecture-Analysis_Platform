@@ -11,7 +11,7 @@
  * - Danger zone (archive/delete)
  */
 
-import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card,
@@ -25,7 +25,6 @@ import {
   Row,
   Col,
   Switch,
-  InputNumber,
   Table,
   Tag,
   Modal,
@@ -40,8 +39,6 @@ import {
   message,
   Descriptions,
   Empty,
-  List,
-  Spin,
   Collapse,
 } from 'antd';
 import type { TabsProps, TableProps } from 'antd';
@@ -50,7 +47,6 @@ import {
   SaveOutlined,
   UserOutlined,
   SettingOutlined,
-  BellOutlined,
   LinkOutlined,
   KeyOutlined,
   DeleteOutlined,
@@ -63,13 +59,10 @@ import {
   CloseCircleOutlined,
   HistoryOutlined,
   WarningOutlined,
-  InfoCircleOutlined,
   TeamOutlined,
   ApiOutlined,
   InboxOutlined,
   SendOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore, type TeamMember, type Webhook, type APIKey, type ActivityLog } from '../../store/projectStore';

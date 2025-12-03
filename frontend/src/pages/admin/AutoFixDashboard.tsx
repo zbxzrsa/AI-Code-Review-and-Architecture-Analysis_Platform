@@ -8,7 +8,7 @@
  * - History and metrics
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -27,7 +27,6 @@ import {
   Badge,
   Tooltip,
   Spin,
-  message,
   Popconfirm,
 } from 'antd';
 import {
@@ -36,13 +35,11 @@ import {
   SyncOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  WarningOutlined,
   SafetyOutlined,
   BugOutlined,
   ThunderboltOutlined,
   EyeOutlined,
   RollbackOutlined,
-  CodeOutlined,
   HistoryOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';

@@ -8,7 +8,7 @@
  * - Export functionality
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -28,23 +28,19 @@ import {
   Dropdown,
   Tabs,
   List,
-  Alert,
   Descriptions,
   Empty,
   Skeleton,
-  Timeline,
 } from 'antd';
 import type { TableProps, TabsProps, MenuProps } from 'antd';
 import {
   AuditOutlined,
-  SearchOutlined,
   FilterOutlined,
   DownloadOutlined,
   ReloadOutlined,
   ExclamationCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  WarningOutlined,
   UserOutlined,
   LoginOutlined,
   LogoutOutlined,
@@ -54,7 +50,6 @@ import {
   EyeOutlined,
   SettingOutlined,
   KeyOutlined,
-  LockOutlined,
   UnlockOutlined,
   GlobalOutlined,
   EnvironmentOutlined,
@@ -64,7 +59,6 @@ import {
   FileTextOutlined,
   BarChartOutlined,
   PieChartOutlined,
-  HeatMapOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
@@ -80,13 +74,11 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import {
   useAdminStore,
   type AuditLog,
   type AuditAction,
-  type AuditResource,
   type AuditStatus,
   type SecurityAlert,
 } from '../../store/adminStore';
@@ -343,6 +335,7 @@ const SecurityAlertsSection: React.FC = () => {
         <List.Item
           actions={[
             <Button
+              key="resolve"
               size="small"
               onClick={() => resolveAlert.mutate({ alertId: alert.id })}
               loading={resolveAlert.isPending}

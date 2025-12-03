@@ -18,13 +18,11 @@ import {
   Space,
   Progress,
   Tabs,
-  Badge,
   Statistic,
   Timeline,
   Typography,
   Select,
   Spin,
-  Tooltip,
   Descriptions,
   Alert,
   message,
@@ -37,13 +35,8 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined,
   ReloadOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
-  ClockCircleOutlined,
   SyncOutlined,
   ThunderboltOutlined,
-  SafetyOutlined,
-  BulbOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';
@@ -139,7 +132,7 @@ const statusColors: Record<string, string> = {
 };
 
 const EvolutionCycleDashboard: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
 
   // State
   const [technologies, setTechnologies] = useState<Technology[]>([]);
@@ -594,7 +587,7 @@ const EvolutionCycleDashboard: React.FC = () => {
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
-              title="Promotions (V1→V2)"
+              title="Promotions (V1âV2)"
               value={cycleStatus?.promotions || 0}
               prefix={<ArrowUpOutlined />}
               valueStyle={{ color: '#52c41a' }}
@@ -604,7 +597,7 @@ const EvolutionCycleDashboard: React.FC = () => {
         <Col xs={24} sm={12} md={6}>
           <Card>
             <Statistic
-              title="Degradations (V2→V3)"
+              title="Degradations (V2âV3)"
               value={cycleStatus?.degradations || 0}
               prefix={<ArrowDownOutlined />}
               valueStyle={{ color: '#ff4d4f' }}
@@ -705,7 +698,7 @@ const EvolutionCycleDashboard: React.FC = () => {
                       <Tag color={versionColors[record.from_version]}>
                         {record.from_version.toUpperCase()}
                       </Tag>
-                      →
+                      â?
                       <Tag color={versionColors[record.to_version]}>
                         {record.to_version.toUpperCase()}
                       </Tag>

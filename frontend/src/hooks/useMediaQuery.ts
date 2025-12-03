@@ -91,8 +91,13 @@ export function useBreakpointUp(breakpoint: Breakpoint): boolean {
 
 export function useBreakpointDown(breakpoint: Breakpoint): boolean {
   const nextBreakpoint = getNextBreakpoint(breakpoint);
-  if (!nextBreakpoint) return true;
-  return useMediaQuery(`(max-width: ${breakpoints[nextBreakpoint] - 1}px)`);
+  // Always call the hook with a valid query to satisfy Rules of Hooks
+  const query = nextBreakpoint
+    ? `(max-width: ${breakpoints[nextBreakpoint] - 1}px)`
+    : "(min-width: 0px)";
+  const matches = useMediaQuery(query);
+  // If no next breakpoint, always return true (largest breakpoint)
+  return nextBreakpoint ? matches : true;
 }
 
 function getNextBreakpoint(breakpoint: Breakpoint): Breakpoint | null {

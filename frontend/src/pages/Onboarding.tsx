@@ -20,18 +20,12 @@ import {
   Steps,
   Progress,
   Checkbox,
-  Input,
-  Select,
-  Alert,
-  Divider,
   Avatar,
-  Tag,
 } from 'antd';
 import {
   RocketOutlined,
   CheckCircleOutlined,
   GithubOutlined,
-  GitlabOutlined,
   CodeOutlined,
   SafetyCertificateOutlined,
   TeamOutlined,
@@ -134,7 +128,7 @@ const features = [
 ];
 
 export const Onboarding: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const navigate = useNavigate();
   const [steps, setSteps] = useState(setupSteps);
   const [currentStep, setCurrentStep] = useState(0);
@@ -166,7 +160,7 @@ export const Onboarding: React.FC = () => {
                 Welcome to AI Code Review Platform! 🎉
               </Title>
               <Paragraph style={{ color: 'rgba(255,255,255,0.9)', fontSize: 16, margin: 0 }}>
-                Let's get you set up in just a few minutes. Follow the steps below to unlock
+                Let&apos;s get you set up in just a few minutes. Follow the steps below to unlock
                 the full power of AI-powered code review.
               </Paragraph>
               <Space>

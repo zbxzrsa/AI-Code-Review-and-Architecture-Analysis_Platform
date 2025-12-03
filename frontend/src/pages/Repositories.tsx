@@ -16,23 +16,18 @@ import {
   Col,
   Typography,
   Space,
-  Avatar,
   Tag,
   Button,
   Input,
   Select,
-  Table,
   Tooltip,
-  Badge,
   Progress,
   Modal,
   Form,
   Dropdown,
-  Empty,
   Statistic,
   Divider,
 } from 'antd';
-import type { TableProps, MenuProps } from 'antd';
 import {
   GithubOutlined,
   GitlabOutlined,
@@ -47,7 +42,6 @@ import {
   UnlockOutlined,
   SettingOutlined,
   PlusOutlined,
-  SearchOutlined,
   SyncOutlined,
   CheckCircleOutlined,
   WarningOutlined,
@@ -56,7 +50,6 @@ import {
   CopyOutlined,
   DeleteOutlined,
   SafetyCertificateOutlined,
-  FileTextOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';

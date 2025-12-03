@@ -37,7 +37,6 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   UserOutlined,
-  ClockCircleOutlined,
   FileTextOutlined,
   LockOutlined,
   EyeOutlined,
@@ -157,7 +156,7 @@ const actionConfig = {
 };
 
 export const AuditLogs: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [selectedEvent, setSelectedEvent] = useState<AuditEvent | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [filters, setFilters] = useState({ entity: '', action: '', search: '' });

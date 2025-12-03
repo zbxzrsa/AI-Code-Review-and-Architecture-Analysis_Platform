@@ -200,7 +200,7 @@ export const Notifications: React.FC = () => {
               <List.Item
                 className={`notification-item ${!item.read ? 'unread' : ''}`}
                 actions={[
-                  <Dropdown menu={{ items: getItemActions(item) }} trigger={['click']}>
+                  <Dropdown key="actions" menu={{ items: getItemActions(item) }} trigger={['click']}>
                     <Button type="text" icon={<MoreOutlined />} />
                   </Dropdown>
                 ]}

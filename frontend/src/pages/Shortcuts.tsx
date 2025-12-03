@@ -18,7 +18,6 @@ import {
   Tag,
   Input,
   Collapse,
-  Divider,
   Alert,
 } from 'antd';
 import {
@@ -26,17 +25,12 @@ import {
   SearchOutlined,
   CodeOutlined,
   FileOutlined,
-  SettingOutlined,
   BranchesOutlined,
-  CommentOutlined,
   SaveOutlined,
   UndoOutlined,
   RedoOutlined,
   CopyOutlined,
   ScissorOutlined,
-  EnterOutlined,
-  ArrowUpOutlined,
-  ArrowDownOutlined,
   HomeOutlined,
   GlobalOutlined,
 } from '@ant-design/icons';
@@ -154,7 +148,7 @@ const KeyboardKey: React.FC<{ children: string }> = ({ children }) => (
 );
 
 export const Shortcuts: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredCategories = shortcutCategories.map(category => ({

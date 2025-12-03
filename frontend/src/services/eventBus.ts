@@ -1,6 +1,6 @@
 /**
  * Enhanced Event Bus
- * 
+ *
  * Centralized event handling with:
  * - Type-safe events
  * - Event history
@@ -14,7 +14,7 @@
 // Types
 // ============================================
 
-export type EventPriority = 'low' | 'normal' | 'high' | 'critical';
+export type EventPriority = "low" | "normal" | "high" | "critical";
 
 export interface EventOptions {
   priority?: EventPriority;
@@ -48,50 +48,50 @@ export type Middleware = (
 
 export interface EventMap {
   // Analysis events
-  'analysis:started': { id: string; file: string };
-  'analysis:progress': { id: string; progress: number; file?: string };
-  'analysis:completed': { id: string; result: any };
-  'analysis:failed': { id: string; error: any };
-  'analysis:cancelled': { id: string };
+  "analysis:started": { id: string; file: string };
+  "analysis:progress": { id: string; progress: number; file?: string };
+  "analysis:completed": { id: string; result: any };
+  "analysis:failed": { id: string; error: any };
+  "analysis:cancelled": { id: string };
 
   // Project events
-  'project:created': { id: string; name: string };
-  'project:updated': { id: string; changes: any };
-  'project:deleted': { id: string };
-  'project:selected': { id: string };
+  "project:created": { id: string; name: string };
+  "project:updated": { id: string; changes: any };
+  "project:deleted": { id: string };
+  "project:selected": { id: string };
 
   // AI events
-  'ai:response:started': { requestId: string };
-  'ai:response:chunk': { requestId: string; chunk: string };
-  'ai:response:completed': { requestId: string; response: string };
-  'ai:response:error': { requestId: string; error: any };
+  "ai:response:started": { requestId: string };
+  "ai:response:chunk": { requestId: string; chunk: string };
+  "ai:response:completed": { requestId: string; response: string };
+  "ai:response:error": { requestId: string; error: any };
 
   // Auto-fix events
-  'fix:suggested': { issueId: string; suggestion: string };
-  'fix:applied': { issueId: string; success: boolean };
-  'fix:rejected': { issueId: string; reason: string };
+  "fix:suggested": { issueId: string; suggestion: string };
+  "fix:applied": { issueId: string; success: boolean };
+  "fix:rejected": { issueId: string; reason: string };
 
   // Security events
-  'security:scan:started': { scanId: string };
-  'security:scan:completed': { scanId: string; issues: number };
-  'security:vulnerability:found': { vulnerability: any };
+  "security:scan:started": { scanId: string };
+  "security:scan:completed": { scanId: string; issues: number };
+  "security:vulnerability:found": { vulnerability: any };
 
   // User events
-  'user:login': { userId: string };
-  'user:logout': { userId: string };
-  'user:preferences:changed': { changes: any };
+  "user:login": { userId: string };
+  "user:logout": { userId: string };
+  "user:preferences:changed": { changes: any };
 
   // System events
-  'system:online': {};
-  'system:offline': {};
-  'system:error': { error: any };
-  'system:notification': { type: string; message: string };
+  "system:online": Record<string, never>;
+  "system:offline": Record<string, never>;
+  "system:error": { error: any };
+  "system:notification": { type: string; message: string };
 
   // WebSocket events
-  'ws:connected': {};
-  'ws:disconnected': { reason?: string };
-  'ws:message': { type: string; data: any };
-  'ws:error': { error: any };
+  "ws:connected": Record<string, never>;
+  "ws:disconnected": { reason?: string };
+  "ws:message": { type: string; data: any };
+  "ws:error": { error: any };
 }
 
 // ============================================
@@ -128,17 +128,19 @@ class EventBus {
     const listener: EventListener<EventMap[K]> = {
       id: this.generateId(),
       callback: callback as any,
-      priority: options.priority || 'normal',
+      priority: options.priority || "normal",
       once: options.once || false,
       filter: options.filter,
     };
 
     const listeners = this.listeners.get(eventType) || [];
     listeners.push(listener);
-    
+
     // Sort by priority (highest first)
-    listeners.sort((a, b) => priorityValues[b.priority] - priorityValues[a.priority]);
-    
+    listeners.sort(
+      (a, b) => priorityValues[b.priority] - priorityValues[a.priority]
+    );
+
     this.listeners.set(eventType, listeners);
 
     // Return unsubscribe function
@@ -153,7 +155,10 @@ class EventBus {
     return this.on(eventType, callback, { ...options, once: true });
   }
 
-  public off<K extends keyof EventMap>(eventType: K, listenerId?: string): void {
+  public off<K extends keyof EventMap>(
+    eventType: K,
+    listenerId?: string
+  ): void {
     if (!listenerId) {
       this.listeners.delete(eventType);
       return;
@@ -161,7 +166,7 @@ class EventBus {
 
     const listeners = this.listeners.get(eventType);
     if (listeners) {
-      const index = listeners.findIndex(l => l.id === listenerId);
+      const index = listeners.findIndex((l) => l.id === listenerId);
       if (index !== -1) {
         listeners.splice(index, 1);
       }
@@ -188,7 +193,7 @@ class EventBus {
     this.addToHistory(event);
 
     // Notify global listeners
-    this.globalListeners.forEach(listener => listener(event));
+    this.globalListeners.forEach((listener) => listener(event));
 
     // Run through middlewares
     await this.runMiddlewares(event, async () => {
@@ -230,7 +235,7 @@ class EventBus {
     }
 
     // Remove one-time listeners
-    toRemove.forEach(id => this.off(eventType, id));
+    toRemove.forEach((id) => this.off(eventType, id));
   }
 
   // ============================================
@@ -287,7 +292,7 @@ class EventBus {
 
   public getHistory(eventType?: keyof EventMap): EventEntry[] {
     if (eventType) {
-      return this.history.filter(e => e.type === eventType);
+      return this.history.filter((e) => e.type === eventType);
     }
     return [...this.history];
   }
@@ -330,7 +335,10 @@ class EventBus {
   // Event Batching
   // ============================================
 
-  private batchedEvents: Map<string, { events: any[]; timeout: ReturnType<typeof setTimeout> }> = new Map();
+  private batchedEvents: Map<
+    string,
+    { events: any[]; timeout: ReturnType<typeof setTimeout> }
+  > = new Map();
 
   public emitBatched<K extends keyof EventMap>(
     eventType: K,
@@ -354,9 +362,9 @@ class EventBus {
     batch.timeout = setTimeout(() => {
       const events = batch.events;
       this.batchedEvents.delete(key);
-      
+
       // Emit all batched events
-      events.forEach(event => {
+      events.forEach((event) => {
         this.emit(eventType, event);
       });
     }, debounceMs);
@@ -374,9 +382,9 @@ class EventBus {
     if (eventType) {
       return this.listeners.get(eventType)?.length || 0;
     }
-    
+
     let total = 0;
-    this.listeners.forEach(listeners => {
+    this.listeners.forEach((listeners) => {
       total += listeners.length;
     });
     return total;
@@ -400,7 +408,7 @@ export const eventBus = new EventBus();
 // React Hook
 // ============================================
 
-import { useEffect, useCallback as useReactCallback } from 'react';
+import { useEffect, useCallback as useReactCallback } from "react";
 
 export function useEvent<K extends keyof EventMap>(
   eventType: K,
@@ -410,16 +418,19 @@ export function useEvent<K extends keyof EventMap>(
   useEffect(() => {
     const unsubscribe = eventBus.on(eventType, callback);
     return unsubscribe;
+    // callback is intentionally excluded to prevent re-subscription on every render
+    // deps spread is intentional for custom dependency control
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventType, ...deps]);
 }
 
 export function useEventEmitter() {
-  return useReactCallback(<K extends keyof EventMap>(
-    eventType: K,
-    payload: EventMap[K]
-  ) => {
-    eventBus.emit(eventType, payload);
-  }, []);
+  return useReactCallback(
+    <K extends keyof EventMap>(eventType: K, payload: EventMap[K]) => {
+      eventBus.emit(eventType, payload);
+    },
+    []
+  );
 }
 
 export default eventBus;

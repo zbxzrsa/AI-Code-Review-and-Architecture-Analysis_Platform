@@ -101,6 +101,8 @@ export function useSecureAuth() {
     return () => {
       sessionSecurity.stopInactivityTimer();
     };
+    // Note: logout and notify are stable refs from stores
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
   /**
@@ -126,6 +128,8 @@ export function useSecureAuth() {
     };
 
     verifySession();
+    // Intentionally run only on mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -211,6 +215,8 @@ export function useSecureAuth() {
         setLoading(false);
       }
     },
+    // Note: logout is excluded to avoid circular dependency - it's stable
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       location,
       navigate,

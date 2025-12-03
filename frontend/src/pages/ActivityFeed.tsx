@@ -204,7 +204,7 @@ const formatTimeAgo = (timestamp: string): string => {
 
 export const ActivityFeed: React.FC = () => {
   const { t } = useTranslation();
-  const [activities, _setActivities] = useState<Activity[]>(mockActivities);
+  const [activities] = useState<Activity[]>(mockActivities);
   const [filter, setFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [starred, setStarred] = useState<Set<string>>(new Set());
@@ -418,7 +418,7 @@ export const ActivityFeed: React.FC = () => {
         <Col xs={24} lg={8}>
           {/* Activity Summary */}
           <Card 
-            title={<><ClockCircleOutlined /> Today's Summary</>}
+            title={<><ClockCircleOutlined /> Today&apos;s Summary</>}
             style={{ marginBottom: 16, borderRadius: 16 }}
           >
             <Space direction="vertical" style={{ width: '100%' }} size={12}>

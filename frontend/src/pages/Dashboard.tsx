@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Row,
@@ -12,7 +12,12 @@ import {
   Tag,
   Progress,
   List,
-  Avatar
+  Avatar,
+  Skeleton,
+  Empty,
+  Alert,
+  Tooltip,
+  Dropdown,
 } from 'antd';
 import {
   ProjectOutlined,
@@ -21,11 +26,18 @@ import {
   ClockCircleOutlined,
   PlusOutlined,
   ArrowUpOutlined,
-  ArrowDownOutlined
+  ArrowDownOutlined,
+  ReloadOutlined,
+  MoreOutlined,
+  EyeOutlined,
+  SettingOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/api';
+import { useAsyncData } from '../hooks/useAsyncData';
+import { getRelativeTime } from '../utils/formatters';
 import { SelfEvolutionWidget, CodeQualityWidget, QuickActionsWidget } from '../components/dashboard';
 import './Dashboard.css';
 
@@ -69,42 +81,78 @@ export const Dashboard: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
-  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
-  const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const [metricsRes, projectsRes] = await Promise.all([
-          apiService.metrics.getDashboard(),
-          apiService.projects.list({ limit: 5 })
-        ]);
+  // ============================================
+  // Data Fetching with useAsyncData
+  // ============================================
+  
+  const {
+    data: metrics,
+    loading: metricsLoading,
+    error: metricsError,
+    refresh: refreshMetrics,
+  } = useAsyncData<DashboardMetrics>(
+    async () => {
+      const response = await apiService.metrics.getDashboard();
+      return response.data;
+    },
+    { immediate: true, retryCount: 2 }
+  );
 
-        setMetrics(metricsRes.data);
-        setRecentProjects(projectsRes.data.items || []);
-        
-        // Mock activity data for now
-        setRecentActivity([
-          {
-            id: '1',
-            type: 'analysis',
-            project: 'backend-api',
-            description: 'Completed security analysis',
-            timestamp: new Date().toISOString(),
-            user: { name: user?.name || 'User' }
-          }
-        ]);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const {
+    data: recentProjects,
+    loading: projectsLoading,
+    error: projectsError,
+    refresh: refreshProjects,
+  } = useAsyncData<RecentProject[]>(
+    async () => {
+      const response = await apiService.projects.list({ limit: 5 });
+      return response.data.items || [];
+    },
+    { immediate: true, retryCount: 2 }
+  );
 
-    fetchDashboardData();
-  }, [user]);
+  // Mock activity data (replace with real API when available)
+  const recentActivity = useMemo<RecentActivity[]>(() => [
+    {
+      id: '1',
+      type: 'analysis',
+      project: 'backend-api',
+      description: 'Completed security analysis',
+      timestamp: new Date().toISOString(),
+      user: { name: user?.name || 'User' }
+    },
+    {
+      id: '2',
+      type: 'fix',
+      project: 'frontend-app',
+      description: 'Applied 3 security fixes',
+      timestamp: new Date(Date.now() - 3600000).toISOString(),
+      user: { name: user?.name || 'User' }
+    },
+    {
+      id: '3',
+      type: 'review',
+      project: 'api-gateway',
+      description: 'Code review completed',
+      timestamp: new Date(Date.now() - 7200000).toISOString(),
+      user: { name: 'Jane Smith' }
+    },
+  ], [user?.name]);
+
+  // Combined loading state
+  const loading = metricsLoading || projectsLoading;
+
+  // Refresh all data
+  const handleRefreshAll = useCallback(async () => {
+    await Promise.all([refreshMetrics(), refreshProjects()]);
+  }, [refreshMetrics, refreshProjects]);
+
+  // Calculate resolution rate
+  const resolutionRate = useMemo(() => {
+    if (!metrics?.issues_found) return 0;
+    return Math.round((metrics.issues_resolved / metrics.issues_found) * 100);
+  }, [metrics]);
 
   const projectColumns = [
     {
@@ -162,71 +210,122 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // Error state
+  const hasError = metricsError || projectsError;
+
   return (
     <div className="dashboard-container">
+      {/* Error Alert */}
+      {hasError && (
+        <Alert
+          type="warning"
+          message={t('dashboard.data_error', 'Some data could not be loaded')}
+          description={t('dashboard.data_error_desc', 'Click refresh to try again')}
+          showIcon
+          icon={<ExclamationCircleOutlined />}
+          action={
+            <Button size="small" onClick={handleRefreshAll} icon={<ReloadOutlined />}>
+              {t('common.retry', 'Retry')}
+            </Button>
+          }
+          style={{ marginBottom: 16 }}
+          closable
+        />
+      )}
+
       <div className="dashboard-header">
         <div>
-          <Title level={2}>
+          <Title level={2} style={{ marginBottom: 4 }}>
             {t('dashboard.welcome', 'Welcome back')}, {user?.name}!
           </Title>
           <Text type="secondary">
             {t('dashboard.subtitle', "Here's what's happening with your projects")}
           </Text>
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => navigate('/projects/new')}
-        >
-          {t('dashboard.new_project', 'New Project')}
-        </Button>
+        <Space>
+          <Tooltip title={t('dashboard.refresh', 'Refresh data')}>
+            <Button
+              icon={<ReloadOutlined spin={loading} />}
+              onClick={handleRefreshAll}
+              disabled={loading}
+            />
+          </Tooltip>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/projects/new')}
+          >
+            {t('dashboard.new_project', 'New Project')}
+          </Button>
+        </Space>
       </div>
 
       {/* Metrics Cards */}
       <Row gutter={[16, 16]} className="dashboard-metrics">
         <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title={t('dashboard.total_projects', 'Total Projects')}
-              value={metrics?.total_projects || 0}
-              prefix={<ProjectOutlined />}
-              suffix={
-                metrics?.trend?.projects ? (
-                  <span className={`trend ${metrics.trend.projects > 0 ? 'up' : 'down'}`}>
-                    {metrics.trend.projects > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
-                    {Math.abs(metrics.trend.projects)}%
-                  </span>
-                ) : null
-              }
-            />
+          <Card hoverable>
+            <Skeleton loading={metricsLoading} active paragraph={false}>
+              <Statistic
+                title={t('dashboard.total_projects', 'Total Projects')}
+                value={metrics?.total_projects || 0}
+                prefix={<ProjectOutlined style={{ color: '#1890ff' }} />}
+                suffix={
+                  metrics?.trend?.projects ? (
+                    <Tooltip title={`${metrics.trend.projects > 0 ? '+' : ''}${metrics.trend.projects}% from last month`}>
+                      <span className={`trend ${metrics.trend.projects > 0 ? 'up' : 'down'}`}>
+                        {metrics.trend.projects > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                        {Math.abs(metrics.trend.projects)}%
+                      </span>
+                    </Tooltip>
+                  ) : null
+                }
+              />
+            </Skeleton>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title={t('dashboard.total_analyses', 'Total Analyses')}
-              value={metrics?.total_analyses || 0}
-              prefix={<BugOutlined />}
-            />
+          <Card hoverable>
+            <Skeleton loading={metricsLoading} active paragraph={false}>
+              <Statistic
+                title={t('dashboard.total_analyses', 'Total Analyses')}
+                value={metrics?.total_analyses || 0}
+                prefix={<BugOutlined style={{ color: '#722ed1' }} />}
+                suffix={
+                  metrics?.trend?.analyses ? (
+                    <Tooltip title={`${metrics.trend.analyses > 0 ? '+' : ''}${metrics.trend.analyses}% from last month`}>
+                      <span className={`trend ${metrics.trend.analyses > 0 ? 'up' : 'down'}`}>
+                        {metrics.trend.analyses > 0 ? <ArrowUpOutlined /> : <ArrowDownOutlined />}
+                        {Math.abs(metrics.trend.analyses)}%
+                      </span>
+                    </Tooltip>
+                  ) : null
+                }
+              />
+            </Skeleton>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title={t('dashboard.issues_found', 'Issues Found')}
-              value={metrics?.issues_found || 0}
-              valueStyle={{ color: '#cf1322' }}
-            />
+          <Card hoverable>
+            <Skeleton loading={metricsLoading} active paragraph={false}>
+              <Statistic
+                title={t('dashboard.issues_found', 'Issues Found')}
+                value={metrics?.issues_found || 0}
+                valueStyle={{ color: '#cf1322' }}
+                prefix={<ExclamationCircleOutlined style={{ color: '#cf1322' }} />}
+              />
+            </Skeleton>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title={t('dashboard.issues_resolved', 'Issues Resolved')}
-              value={metrics?.issues_resolved || 0}
-              valueStyle={{ color: '#3f8600' }}
-              prefix={<CheckCircleOutlined />}
-            />
+          <Card hoverable>
+            <Skeleton loading={metricsLoading} active paragraph={false}>
+              <Statistic
+                title={t('dashboard.issues_resolved', 'Issues Resolved')}
+                value={metrics?.issues_resolved || 0}
+                valueStyle={{ color: '#3f8600' }}
+                prefix={<CheckCircleOutlined style={{ color: '#3f8600' }} />}
+              />
+            </Skeleton>
           </Card>
         </Col>
       </Row>
@@ -235,45 +334,97 @@ export const Dashboard: React.FC = () => {
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={16}>
           <Card
-            title={t('dashboard.recent_projects', 'Recent Projects')}
+            title={
+              <Space>
+                <ProjectOutlined />
+                {t('dashboard.recent_projects', 'Recent Projects')}
+              </Space>
+            }
             extra={
-              <Button type="link" onClick={() => navigate('/projects')}>
-                {t('dashboard.view_all', 'View All')}
-              </Button>
+              <Space>
+                <Button 
+                  type="link" 
+                  icon={<ReloadOutlined spin={projectsLoading} />}
+                  onClick={refreshProjects}
+                  disabled={projectsLoading}
+                >
+                  {t('common.refresh', 'Refresh')}
+                </Button>
+                <Button type="link" onClick={() => navigate('/projects')}>
+                  {t('dashboard.view_all', 'View All')} →
+                </Button>
+              </Space>
             }
           >
-            <Table
-              columns={projectColumns}
-              dataSource={recentProjects}
-              rowKey="id"
-              pagination={false}
-              loading={loading}
-              locale={{ emptyText: t('dashboard.no_projects', 'No projects yet') }}
-            />
+            {projectsError ? (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description={
+                  <Space direction="vertical">
+                    <Text type="secondary">{t('dashboard.load_error', 'Failed to load projects')}</Text>
+                    <Button size="small" onClick={refreshProjects} icon={<ReloadOutlined />}>
+                      {t('common.retry', 'Retry')}
+                    </Button>
+                  </Space>
+                }
+              />
+            ) : (
+              <Table
+                columns={projectColumns}
+                dataSource={recentProjects || []}
+                rowKey="id"
+                pagination={false}
+                loading={projectsLoading}
+                locale={{ emptyText: t('dashboard.no_projects', 'No projects yet. Create your first project!') }}
+                size="middle"
+              />
+            )}
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title={t('dashboard.resolution_rate', 'Resolution Rate')}>
-            <div className="resolution-progress">
-              <Progress
-                type="circle"
-                percent={
-                  metrics?.issues_found
-                    ? Math.round((metrics.issues_resolved / metrics.issues_found) * 100)
-                    : 0
-                }
-                strokeColor={{
-                  '0%': '#108ee9',
-                  '100%': '#87d068'
-                }}
-              />
-              <div className="resolution-stats">
-                <Text>
-                  {metrics?.issues_resolved || 0} / {metrics?.issues_found || 0}{' '}
-                  {t('dashboard.issues_resolved_label', 'issues resolved')}
-                </Text>
+          <Card 
+            title={
+              <Space>
+                <CheckCircleOutlined />
+                {t('dashboard.resolution_rate', 'Resolution Rate')}
+              </Space>
+            }
+          >
+            <Skeleton loading={metricsLoading} active>
+              <div className="resolution-progress" style={{ textAlign: 'center', padding: '20px 0' }}>
+                <Progress
+                  type="circle"
+                  percent={resolutionRate}
+                  strokeColor={{
+                    '0%': '#108ee9',
+                    '100%': '#87d068'
+                  }}
+                  format={percent => (
+                    <div>
+                      <div style={{ fontSize: 24, fontWeight: 600 }}>{percent}%</div>
+                      <div style={{ fontSize: 12, color: '#8c8c8c' }}>Resolved</div>
+                    </div>
+                  )}
+                  size={150}
+                />
+                <div className="resolution-stats" style={{ marginTop: 16 }}>
+                  <Space split={<span style={{ color: '#d9d9d9' }}>|</span>}>
+                    <Tooltip title="Issues found">
+                      <Text type="secondary">
+                        <ExclamationCircleOutlined style={{ color: '#cf1322', marginRight: 4 }} />
+                        {metrics?.issues_found || 0}
+                      </Text>
+                    </Tooltip>
+                    <Tooltip title="Issues resolved">
+                      <Text type="secondary">
+                        <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+                        {metrics?.issues_resolved || 0}
+                      </Text>
+                    </Tooltip>
+                  </Space>
+                </div>
               </div>
-            </div>
+            </Skeleton>
           </Card>
         </Col>
       </Row>
@@ -281,32 +432,82 @@ export const Dashboard: React.FC = () => {
       {/* Recent Activity */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={12}>
-          <Card title={t('dashboard.recent_activity', 'Recent Activity')}>
+          <Card 
+            title={
+              <Space>
+                <ClockCircleOutlined />
+                {t('dashboard.recent_activity', 'Recent Activity')}
+              </Space>
+            }
+            extra={
+              <Button type="link" onClick={() => navigate('/activity')}>
+                {t('dashboard.view_all', 'View All')} →
+              </Button>
+            }
+          >
             <List
               itemLayout="horizontal"
               dataSource={recentActivity}
-              loading={loading}
-              locale={{ emptyText: t('dashboard.no_activity', 'No recent activity') }}
+              locale={{ 
+                emptyText: (
+                  <Empty 
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={t('dashboard.no_activity', 'No recent activity')}
+                  />
+                )
+              }}
               renderItem={(item) => (
-                <List.Item>
+                <List.Item
+                  actions={[
+                    <Dropdown
+                      key="more"
+                      menu={{
+                        items: [
+                          { key: 'view', icon: <EyeOutlined />, label: 'View Details' },
+                          { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
+                        ]
+                      }}
+                      trigger={['click']}
+                    >
+                      <Button type="text" size="small" icon={<MoreOutlined />} />
+                    </Dropdown>
+                  ]}
+                >
                   <List.Item.Meta
                     avatar={
-                      <Avatar icon={getActivityIcon(item.type)} />
+                      <Avatar 
+                        icon={getActivityIcon(item.type)} 
+                        style={{ 
+                          backgroundColor: 
+                            item.type === 'analysis' ? '#e6f7ff' :
+                            item.type === 'fix' ? '#f6ffed' :
+                            item.type === 'review' ? '#f9f0ff' : '#f5f5f5'
+                        }}
+                      />
                     }
                     title={
                       <Space>
-                        <Text strong>{item.project}</Text>
+                        <Text 
+                          strong 
+                          style={{ cursor: 'pointer', color: '#1890ff' }}
+                          onClick={() => navigate(`/projects/${item.project}`)}
+                        >
+                          {item.project}
+                        </Text>
                         <Text type="secondary">•</Text>
-                        <Text type="secondary">{item.description}</Text>
+                        <Text>{item.description}</Text>
                       </Space>
                     }
                     description={
                       <Space>
+                        <Avatar size="small" style={{ backgroundColor: '#87d068' }}>
+                          {item.user.name.charAt(0)}
+                        </Avatar>
                         <Text type="secondary">{item.user.name}</Text>
                         <Text type="secondary">•</Text>
-                        <Text type="secondary">
-                          {new Date(item.timestamp).toLocaleString()}
-                        </Text>
+                        <Tooltip title={new Date(item.timestamp).toLocaleString()}>
+                          <Text type="secondary">{getRelativeTime(item.timestamp)}</Text>
+                        </Tooltip>
                       </Space>
                     }
                   />

@@ -864,5 +864,33 @@
       "no_alerts": "No active security alerts",
       "resolve": "Resolve"
     }
+  },
+  "changelog": {
+    "title": "Changelog",
+    "subtitle": "What's new and improved in the platform",
+    "view_roadmap": "View Roadmap",
+    "subscribe": "Subscribe to Updates",
+    "latest_release": "Latest Release",
+    "see_whats_new": "See What's New",
+    "roadmap": "Roadmap",
+    "release_stats": "Release Stats",
+    "current_version": "Current Version",
+    "total_releases": "Total Releases",
+    "last_updated": "Last Updated",
+    "quick_links": "Quick Links",
+    "release_notes": "Release Notes",
+    "report_issue": "Report an Issue",
+    "request_feature": "Request a Feature",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "in_progress": "In Progress",
+    "planned": "Planned",
+    "new": "New",
+    "improved": "Improved",
+    "fixed": "Fixed",
+    "security": "Security",
+    "major": "MAJOR",
+    "minor": "MINOR",
+    "patch": "PATCH"
   }
 }

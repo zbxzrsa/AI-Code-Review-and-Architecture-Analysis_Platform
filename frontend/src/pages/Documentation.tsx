@@ -29,18 +29,14 @@ import {
 } from 'antd';
 import {
   BookOutlined,
-  SearchOutlined,
   RocketOutlined,
   ApiOutlined,
-  CodeOutlined,
   SafetyCertificateOutlined,
   QuestionCircleOutlined,
   BulbOutlined,
   FileTextOutlined,
   PlayCircleOutlined,
-  ThunderboltOutlined,
   TeamOutlined,
-  SettingOutlined,
   LinkOutlined,
   RightOutlined,
   HomeOutlined,
@@ -147,7 +143,7 @@ const faqs = [
 ];
 
 export const Documentation: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSection, setSelectedSection] = useState('getting-started');
 
@@ -306,7 +302,7 @@ export const Documentation: React.FC = () => {
             message="Need more help?"
             description={
               <Space>
-                <Text>Can't find what you're looking for?</Text>
+                <Text>Can&apos;t find what you&apos;re looking for?</Text>
                 <Button type="primary" size="small">Contact Support</Button>
                 <Button size="small">Join Community</Button>
               </Space>

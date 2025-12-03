@@ -23,7 +23,6 @@ import {
   Form,
   Input,
   Select,
-  Switch,
   Tabs,
   Badge,
   Tooltip,
@@ -41,17 +40,13 @@ import {
   PlayCircleOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  SyncOutlined,
-  ClockCircleOutlined,
   LinkOutlined,
   KeyOutlined,
   BellOutlined,
   CodeOutlined,
   SecurityScanOutlined,
   RocketOutlined,
-  ReloadOutlined,
   EyeOutlined,
-  CopyOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
@@ -162,7 +157,7 @@ const availableEvents = [
 ];
 
 export const Webhooks: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [webhooks, setWebhooks] = useState<Webhook[]>(mockWebhooks);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedWebhook, setSelectedWebhook] = useState<Webhook | null>(null);
@@ -183,7 +178,7 @@ export const Webhooks: React.FC = () => {
     message.success('Webhook created successfully');
   };
 
-  const handleTest = async (webhook: Webhook) => {
+  const handleTest = async (_webhook: Webhook) => {
     message.loading('Sending test request...');
     setTimeout(() => {
       message.success('Test webhook delivered successfully');

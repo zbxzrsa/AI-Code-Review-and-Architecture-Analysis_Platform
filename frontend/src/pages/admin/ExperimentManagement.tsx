@@ -66,9 +66,10 @@ export const ExperimentManagement: React.FC = () => {
   const [selectedExperiment, setSelectedExperiment] = useState<Experiment | null>(null);
   const [form] = Form.useForm();
 
-  // Fetch experiments
+  // Fetch experiments on mount
   useEffect(() => {
     fetchExperiments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchExperiments = async () => {

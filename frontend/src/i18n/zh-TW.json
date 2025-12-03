@@ -161,5 +161,33 @@
     "not_found": "請求的資源未找到。",
     "server": "伺服器錯誤，請稍後重試。",
     "validation": "請檢查您的輸入並重試。"
+  },
+  "changelog": {
+    "title": "更新日誌",
+    "subtitle": "平台的新功能和改進",
+    "view_roadmap": "查看路線圖",
+    "subscribe": "訂閱更新",
+    "latest_release": "最新版本",
+    "see_whats_new": "查看新內容",
+    "roadmap": "路線圖",
+    "release_stats": "版本統計",
+    "current_version": "當前版本",
+    "total_releases": "發布總數",
+    "last_updated": "最後更新",
+    "quick_links": "快速連結",
+    "release_notes": "版本說明",
+    "report_issue": "回報問題",
+    "request_feature": "功能請求",
+    "collapse": "收起",
+    "expand": "展開",
+    "in_progress": "進行中",
+    "planned": "計劃中",
+    "new": "新增",
+    "improved": "改進",
+    "fixed": "修復",
+    "security": "安全",
+    "major": "重大更新",
+    "minor": "次要更新",
+    "patch": "補丁"
   }
 }

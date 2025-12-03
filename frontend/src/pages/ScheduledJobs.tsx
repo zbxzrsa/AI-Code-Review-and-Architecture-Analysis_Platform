@@ -24,19 +24,15 @@ import {
   Form,
   Input,
   Select,
-  TimePicker,
   Statistic,
   Badge,
   Tooltip,
-  Timeline,
-  Progress,
   message,
 } from 'antd';
 import type { TableProps } from 'antd';
 import {
   ClockCircleOutlined,
   PlayCircleOutlined,
-  PauseCircleOutlined,
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
@@ -45,10 +41,9 @@ import {
   SyncOutlined,
   HistoryOutlined,
   ScheduleOutlined,
-  CodeOutlined,
   SafetyCertificateOutlined,
-  ThunderboltOutlined,
   CalendarOutlined,
+  CodeOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 

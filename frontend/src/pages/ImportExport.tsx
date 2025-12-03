@@ -24,7 +24,6 @@ import {
   Alert,
   Progress,
   Steps,
-  Divider,
   message,
   Modal,
 } from 'antd';
@@ -80,7 +79,7 @@ const mockBackups: BackupItem[] = [
 ];
 
 export const ImportExport: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [selectedExports, setSelectedExports] = useState<string[]>(['rules', 'webhooks', 'security']);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -204,7 +203,7 @@ export const ImportExport: React.FC = () => {
             <Upload.Dragger
               accept=".json,.zip"
               showUploadList={false}
-              beforeUpload={file => {
+              beforeUpload={_file => {
                 message.loading('Validating import file...');
                 setTimeout(() => {
                   setImportModalOpen(true);
@@ -236,8 +235,8 @@ export const ImportExport: React.FC = () => {
           renderItem={backup => (
             <List.Item
               actions={[
-                <Button size="small" icon={<DownloadOutlined />}>Download</Button>,
-                <Button size="small" icon={<ImportOutlined />}>Restore</Button>,
+                <Button key="download" size="small" icon={<DownloadOutlined />}>Download</Button>,
+                <Button key="restore" size="small" icon={<ImportOutlined />}>Restore</Button>,
               ]}
             >
               <List.Item.Meta

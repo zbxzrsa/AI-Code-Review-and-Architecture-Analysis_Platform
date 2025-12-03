@@ -313,6 +313,7 @@ export const Sidebar: React.FC = () => {
   }, [location.pathname]);
 
   // Handle favorite toggle (reserved for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _toggleFavorite = useCallback((item: NavItem) => {
     const existingFavorite = sidebar.favorites.find(f => f.path === item.path);
     if (existingFavorite) {
@@ -327,6 +328,7 @@ export const Sidebar: React.FC = () => {
   }, [sidebar.favorites, addFavorite, removeFavorite]);
 
   // Check if item is favorited (reserved for future use)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _isFavorite = useCallback((path?: string) => {
     if (!path) return false;
     return sidebar.favorites.some(f => f.path === path);

@@ -45,7 +45,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    editorRef.current = monaco.editor.create(containerRef.current, {
+    const editor = monaco.editor.create(containerRef.current, {
       value,
       language,
       theme,
@@ -71,27 +71,31 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
         showSnippets: true
       }
     });
+    
+    editorRef.current = editor;
 
     // Listen for changes
     if (onChange) {
-      editorRef.current.onDidChangeModelContent(() => {
-        onChange(editorRef.current!.getValue());
+      editor.onDidChangeModelContent(() => {
+        onChange(editor.getValue());
       });
     }
 
     // Add save command (Ctrl+S / Cmd+S)
     if (onSave) {
-      editorRef.current.addCommand(
+      editor.addCommand(
         monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
         () => {
-          onSave(editorRef.current!.getValue());
+          onSave(editor.getValue());
         }
       );
     }
 
     return () => {
-      editorRef.current?.dispose();
+      editor.dispose();
     };
+    // onChange, onSave, value are intentionally excluded to prevent editor recreation
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [language, theme, readOnly]);
 
   // Update value when prop changes
@@ -187,6 +191,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   }, [issues, language, t]);
 
   // Jump to specific line (exposed for parent components)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _jumpToLine = useCallback((line: number) => {
     if (editorRef.current) {
       editorRef.current.revealLineInCenter(line);
@@ -196,6 +201,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
   }, []);
 
   // Format document (exposed for parent components)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const _formatDocument = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.getAction('editor.action.formatDocument')?.run();

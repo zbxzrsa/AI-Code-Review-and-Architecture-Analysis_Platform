@@ -23,21 +23,18 @@ import {
   Statistic,
   List,
   Avatar,
-  Modal,
   Form,
   Input,
   InputNumber,
   Select,
   Switch,
   Table,
-  Tooltip,
   Alert,
   Divider,
   Tabs,
   Skeleton,
   Empty,
   Descriptions,
-  message,
 } from 'antd';
 import type { TableProps, TabsProps } from 'antd';
 import {
@@ -45,25 +42,19 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExclamationCircleOutlined,
-  WarningOutlined,
   ThunderboltOutlined,
   DollarOutlined,
-  ClockCircleOutlined,
   ReloadOutlined,
   SettingOutlined,
   EditOutlined,
-  PlayCircleOutlined,
   PauseCircleOutlined,
   KeyOutlined,
-  LinkOutlined,
   RobotOutlined,
   ExperimentOutlined,
   DatabaseOutlined,
   CloudOutlined,
   DesktopOutlined,
   LineChartOutlined,
-  SyncOutlined,
-  SafetyOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
@@ -76,7 +67,6 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import {
   useAdminStore,
@@ -95,7 +85,6 @@ import {
   useProviderMetrics,
   useProviderModels,
   useUpdateProviderModel,
-  useSetFallbackOrder,
 } from '../../hooks/useAdmin';
 import './ProviderManagement.css';
 

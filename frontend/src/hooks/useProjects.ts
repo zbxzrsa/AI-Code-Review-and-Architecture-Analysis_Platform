@@ -83,9 +83,10 @@ export function useProject(
   options?: Omit<UseQueryOptions<Project>, "queryKey" | "queryFn">
 ) {
   return useQuery({
-    queryKey: projectKeys.detail(id!),
+    queryKey: projectKeys.detail(id ?? ""),
     queryFn: async () => {
-      const response = await apiService.projects.get(id!);
+      if (!id) throw new Error("Project ID is required");
+      const response = await apiService.projects.get(id);
       return response.data as Project;
     },
     enabled: !!id,
@@ -99,9 +100,10 @@ export function useProject(
  */
 export function useProjectStats(id: string | undefined) {
   return useQuery({
-    queryKey: projectKeys.stats(id!),
+    queryKey: projectKeys.stats(id ?? ""),
     queryFn: async () => {
-      const response = await apiService.projects.getStats(id!);
+      if (!id) throw new Error("Project ID is required");
+      const response = await apiService.projects.getStats(id);
       return response.data;
     },
     enabled: !!id,
@@ -117,9 +119,10 @@ export function useProjectActivity(
   params?: { page?: number; limit?: number }
 ) {
   return useQuery({
-    queryKey: [...projectKeys.activity(id!), params],
+    queryKey: [...projectKeys.activity(id ?? ""), params],
     queryFn: async () => {
-      const response = await apiService.projects.getActivity(id!, params);
+      if (!id) throw new Error("Project ID is required");
+      const response = await apiService.projects.getActivity(id, params);
       return response.data as PaginatedResponse<ActivityLog>;
     },
     enabled: !!id,
@@ -132,9 +135,10 @@ export function useProjectActivity(
  */
 export function useProjectTeam(id: string | undefined) {
   return useQuery({
-    queryKey: projectKeys.team(id!),
+    queryKey: projectKeys.team(id ?? ""),
     queryFn: async () => {
-      const response = await apiService.projects.getTeam(id!);
+      if (!id) throw new Error("Project ID is required");
+      const response = await apiService.projects.getTeam(id);
       return response.data as TeamMember[];
     },
     enabled: !!id,
@@ -146,9 +150,10 @@ export function useProjectTeam(id: string | undefined) {
  */
 export function useProjectWebhooks(id: string | undefined) {
   return useQuery({
-    queryKey: projectKeys.webhooks(id!),
+    queryKey: projectKeys.webhooks(id ?? ""),
     queryFn: async () => {
-      const response = await apiService.projects.getWebhooks(id!);
+      if (!id) throw new Error("Project ID is required");
+      const response = await apiService.projects.getWebhooks(id);
       return response.data as Webhook[];
     },
     enabled: !!id,
@@ -160,9 +165,10 @@ export function useProjectWebhooks(id: string | undefined) {
  */
 export function useProjectApiKeys(id: string | undefined) {
   return useQuery({
-    queryKey: projectKeys.apiKeys(id!),
+    queryKey: projectKeys.apiKeys(id ?? ""),
     queryFn: async () => {
-      const response = await apiService.projects.getApiKeys(id!);
+      if (!id) throw new Error("Project ID is required");
+      const response = await apiService.projects.getApiKeys(id);
       return response.data as APIKey[];
     },
     enabled: !!id,

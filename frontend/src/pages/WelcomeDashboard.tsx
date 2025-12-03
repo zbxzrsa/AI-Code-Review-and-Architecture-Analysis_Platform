@@ -36,7 +36,7 @@ import {
 const { Title, Text, Paragraph } = Typography;
 
 const WelcomeDashboard: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const [greeting, setGreeting] = useState('');

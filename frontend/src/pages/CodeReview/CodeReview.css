@@ -1,59 +1,207 @@
+/* ================================================
+   Code Review Page - Professional IDE-like Design
+   ================================================ */
+
 .code-review-page {
     min-height: calc(100vh - 64px);
+    background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
 }
 
 .code-review-content {
     padding: 0;
 }
 
+/* Header */
 .code-review-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    padding: 16px 24px;
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     flex-wrap: wrap;
     gap: 12px;
 }
 
-.code-editor-card,
-.issues-card {
-    height: calc(100vh - 200px);
-    overflow: hidden;
+.code-review-header .ant-typography {
+    color: #f1f5f9 !important;
 }
 
-.code-editor-card .ant-card-body,
-.issues-card .ant-card-body {
+.code-review-header .ant-btn {
+    border-radius: 8px;
+}
+
+.code-review-header .ant-btn-primary {
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+    border: none;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+}
+
+.code-review-header .ant-btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.code-review-header .ant-btn-default {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #f1f5f9;
+}
+
+.code-review-header .ant-btn-default:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+/* Editor Card */
+.code-editor-card {
+    height: calc(100vh - 180px);
+    overflow: hidden;
+    background: #1e1e1e;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.code-editor-card .ant-card-head {
+    background: #252526;
+    border-bottom: 1px solid #3c3c3c;
+    padding: 12px 16px;
+}
+
+.code-editor-card .ant-card-head-title {
+    color: #cccccc;
+    font-weight: 500;
+}
+
+.code-editor-card .ant-card-body {
     height: calc(100% - 57px);
     overflow: auto;
-    padding: 12px;
+    padding: 0;
+    background: #1e1e1e;
 }
 
 .code-editor-card textarea {
     background: #1e1e1e;
     color: #d4d4d4;
     border: none;
-    border-radius: 8px;
+    border-radius: 0;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Menlo', monospace;
+    font-size: 14px;
+    line-height: 1.6;
 }
 
+/* Issues Card */
+.issues-card {
+    height: calc(100vh - 180px);
+    overflow: hidden;
+    background: #1e293b;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.issues-card .ant-card-head {
+    background: linear-gradient(135deg, #334155 0%, #475569 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 12px 16px;
+}
+
+.issues-card .ant-card-head-title {
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+.issues-card .ant-card-body {
+    height: calc(100% - 57px);
+    overflow: auto;
+    padding: 16px;
+    background: #1e293b;
+}
+
+/* Issues Summary */
 .issues-summary {
-    padding: 8px 0;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
+.issues-summary .ant-tag {
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-weight: 500;
+    border: none;
+}
+
+/* Issues List */
 .issues-list {
     max-height: calc(100vh - 380px);
     overflow-y: auto;
 }
 
+.issues-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.issues-list::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+}
+
+.issues-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+}
+
+.issues-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
 .issues-list .ant-list-item {
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    background: rgba(0, 0, 0, 0.02);
-    border: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 16px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.2s ease;
+    cursor: pointer;
 }
 
 .issues-list .ant-list-item:hover {
-    background: rgba(0, 0, 0, 0.04);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(59, 130, 246, 0.5);
+    transform: translateX(4px);
+}
+
+.issues-list .ant-list-item-meta-title {
+    color: #f1f5f9;
+    font-weight: 500;
+}
+
+.issues-list .ant-list-item-meta-description {
+    color: #94a3b8;
+}
+
+/* Issue severity badges */
+.issue-severity-error {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
+}
+
+.issue-severity-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    box-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
+}
+
+.issue-severity-info {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
 }
 
 /* Chat Drawer */

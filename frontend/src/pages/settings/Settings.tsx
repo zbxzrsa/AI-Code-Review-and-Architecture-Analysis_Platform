@@ -1005,16 +1005,18 @@ const IntegrationsSection: React.FC = () => {
           <List.Item
             actions={[
               <Button 
+                key="test"
                 type="text" 
                 icon={<ThunderboltOutlined />} 
                 onClick={() => testWebhook.mutate(webhook.id)}
               >
                 Test
               </Button>,
-              <Button type="text" icon={<EditOutlined />} onClick={() => handleEditWebhook(webhook)}>
+              <Button key="edit" type="text" icon={<EditOutlined />} onClick={() => handleEditWebhook(webhook)}>
                 Edit
               </Button>,
               <Popconfirm
+                key="delete"
                 title={t('settings.delete_webhook_confirm', 'Delete this webhook?')}
                 onConfirm={() => deleteWebhook.mutate(webhook.id)}
               >

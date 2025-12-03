@@ -12,8 +12,6 @@
 import React, { useState } from 'react';
 import {
   Card,
-  Row,
-  Col,
   Typography,
   Space,
   Button,
@@ -23,18 +21,12 @@ import {
   Badge,
   Tabs,
   Empty,
-  Tooltip,
   Checkbox,
   Dropdown,
   message,
-  Divider,
 } from 'antd';
 import {
   BellOutlined,
-  CheckCircleOutlined,
-  WarningOutlined,
-  InfoCircleOutlined,
-  CloseCircleOutlined,
   SecurityScanOutlined,
   CodeOutlined,
   TeamOutlined,
@@ -43,7 +35,6 @@ import {
   DeleteOutlined,
   CheckOutlined,
   MoreOutlined,
-  FilterOutlined,
   ClearOutlined,
   ClockCircleOutlined,
   BulbOutlined,
@@ -182,7 +173,7 @@ const formatTimeAgo = (timestamp: string): string => {
 };
 
 export const NotificationCenter: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [notifications, setNotifications] = useState<Notification[]>(mockNotifications);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState('all');
@@ -303,11 +294,11 @@ export const NotificationCenter: React.FC = () => {
                   }}
                   actions={[
                     notification.actionUrl && (
-                      <Button type="link" size="small">
+                      <Button key="action" type="link" size="small">
                         {notification.actionLabel}
                       </Button>
                     ),
-                    <Dropdown
+                    <Dropdown key="dropdown"
                       menu={{
                         items: [
                           {

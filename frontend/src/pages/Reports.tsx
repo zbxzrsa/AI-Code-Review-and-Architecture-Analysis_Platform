@@ -30,15 +30,11 @@ import {
   Popconfirm,
   Progress,
   Tabs,
-  List,
   Badge,
-  Dropdown,
-  Divider,
-  Empty,
   Switch,
   Radio,
 } from 'antd';
-import type { TableProps, MenuProps } from 'antd';
+import type { TableProps } from 'antd';
 import {
   FileTextOutlined,
   PlusOutlined,
@@ -52,16 +48,14 @@ import {
   CheckCircleOutlined,
   SyncOutlined,
   MailOutlined,
-  MoreOutlined,
   BarChartOutlined,
   SafetyCertificateOutlined,
   BugOutlined,
   PlayCircleOutlined,
-  PauseCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
-import dayjs from 'dayjs';
+// import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;

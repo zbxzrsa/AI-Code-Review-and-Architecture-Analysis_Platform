@@ -115,7 +115,7 @@ const MetricCard: React.FC<{
 );
 
 export const CodeMetrics: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [selectedProject, setSelectedProject] = useState('all');
   const [timeRange, setTimeRange] = useState('7d');
 

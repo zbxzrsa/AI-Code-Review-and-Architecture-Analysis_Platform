@@ -1,9 +1,9 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 /**
  * Auth Store
- * 
+ *
  * SECURITY NOTE:
  * - Tokens are NOT stored in localStorage (vulnerable to XSS)
  * - Authentication is handled via httpOnly cookies set by the server
@@ -12,10 +12,10 @@ import { persist, createJSONStorage } from 'zustand/middleware';
  */
 
 /** User role types */
-export type UserRole = 'admin' | 'user' | 'viewer' | 'guest';
+export type UserRole = "admin" | "user" | "viewer" | "guest";
 
 /** OAuth provider types */
-export type OAuthProvider = 'github' | 'gitlab' | 'google' | 'microsoft';
+export type OAuthProvider = "github" | "gitlab" | "google" | "microsoft";
 
 /**
  * User profile entity
@@ -94,7 +94,7 @@ export interface ApiActivity {
  * User privacy settings
  */
 export interface PrivacySettings {
-  profileVisibility: 'public' | 'private' | 'connections';
+  profileVisibility: "public" | "private" | "connections";
   showEmail: boolean;
   showActivity: boolean;
   showProjects: boolean;
@@ -113,20 +113,20 @@ export interface NotificationPreferences {
   emailWeeklyDigest: boolean;
   emailSecurityAlerts: boolean;
   emailProductUpdates: boolean;
-  
+
   // Notification frequency
-  digestFrequency: 'immediate' | 'daily' | 'weekly' | 'none';
-  
+  digestFrequency: "immediate" | "daily" | "weekly" | "none";
+
   // Channels
   inAppNotifications: boolean;
   desktopNotifications: boolean;
   slackNotifications: boolean;
   teamsNotifications: boolean;
-  
+
   // Do Not Disturb
   dndEnabled: boolean;
   dndStart?: string; // HH:MM format
-  dndEnd?: string;   // HH:MM format
+  dndEnd?: string; // HH:MM format
   dndDays?: number[]; // 0-6, Sunday-Saturday
 }
 
@@ -135,24 +135,24 @@ export interface NotificationPreferences {
  */
 export interface UserSettings {
   // Appearance
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
   language: string;
-  
+
   // Editor
   editorFontSize: number;
   editorTabSize: number;
   editorLineNumbers: boolean;
   editorMinimap: boolean;
   editorWordWrap: boolean;
-  
+
   // Analysis defaults
   defaultAiModel: string;
-  defaultAnalysisDepth: 'quick' | 'standard' | 'deep';
+  defaultAnalysisDepth: "quick" | "standard" | "deep";
   autoAnalyzeOnPush: boolean;
-  
+
   // Privacy
   privacy: PrivacySettings;
-  
+
   // Notifications
   notifications: NotificationPreferences;
 }
@@ -171,13 +171,13 @@ export interface TwoFactorSetup {
  */
 export interface Integration {
   id: string;
-  type: 'slack' | 'teams' | 'webhook';
+  type: "slack" | "teams" | "webhook";
   name: string;
   connected: boolean;
   connectedAt?: string;
   config?: Record<string, unknown>;
   lastSync?: string;
-  status: 'active' | 'error' | 'disconnected';
+  status: "active" | "error" | "disconnected";
 }
 
 /**
@@ -192,7 +192,7 @@ export interface UserWebhook {
   isActive: boolean;
   createdAt: string;
   lastTriggered?: string;
-  lastStatus?: 'success' | 'failure';
+  lastStatus?: "success" | "failure";
 }
 
 /**
@@ -220,7 +220,7 @@ export interface TwoFactorState {
 
 /**
  * Auth State Interface
- * 
+ *
  * NOTE: No token/refreshToken fields - these are stored in httpOnly cookies
  */
 interface AuthState {
@@ -229,16 +229,16 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  
+
   // 2FA state
   twoFactor: TwoFactorState;
-  
+
   // User settings (cached)
   settings: UserSettings | null;
-  
+
   // Permissions (derived from user role)
   permissions: string[];
-  
+
   // Actions
   setUser: (user: User | null) => void;
   updateUser: (updates: Partial<User>) => void;
@@ -249,7 +249,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   logout: () => void;
-  
+
   // Deprecated - kept for backward compatibility, but tokens are in httpOnly cookies
   /** @deprecated Use httpOnly cookies instead */
   token: string | null;
@@ -266,7 +266,7 @@ export const defaultNotificationPreferences: NotificationPreferences = {
   emailWeeklyDigest: false,
   emailSecurityAlerts: true,
   emailProductUpdates: false,
-  digestFrequency: 'immediate',
+  digestFrequency: "immediate",
   inAppNotifications: true,
   desktopNotifications: true,
   slackNotifications: false,
@@ -276,7 +276,7 @@ export const defaultNotificationPreferences: NotificationPreferences = {
 
 /** Default privacy settings */
 export const defaultPrivacySettings: PrivacySettings = {
-  profileVisibility: 'public',
+  profileVisibility: "public",
   showEmail: false,
   showActivity: true,
   showProjects: true,
@@ -287,15 +287,15 @@ export const defaultPrivacySettings: PrivacySettings = {
 
 /** Default user settings */
 export const defaultUserSettings: UserSettings = {
-  theme: 'system',
-  language: 'en',
+  theme: "system",
+  language: "en",
   editorFontSize: 14,
   editorTabSize: 2,
   editorLineNumbers: true,
   editorMinimap: true,
   editorWordWrap: true,
-  defaultAiModel: 'gpt-4',
-  defaultAnalysisDepth: 'standard',
+  defaultAiModel: "gpt-4",
+  defaultAnalysisDepth: "standard",
   autoAnalyzeOnPush: false,
   privacy: defaultPrivacySettings,
   notifications: defaultNotificationPreferences,
@@ -306,9 +306,14 @@ export const defaultUserSettings: UserSettings = {
  */
 function getPermissionsForRole(role: UserRole): string[] {
   const permissions: Record<UserRole, string[]> = {
-    admin: ['admin:all', 'read:*', 'write:*', 'delete:*'],
-    user: ['read:projects', 'write:projects', 'read:analyses', 'write:analyses'],
-    viewer: ['read:projects', 'read:analyses'],
+    admin: ["admin:all", "read:*", "write:*", "delete:*"],
+    user: [
+      "read:projects",
+      "write:projects",
+      "read:analyses",
+      "write:analyses",
+    ],
+    viewer: ["read:projects", "read:analyses"],
     guest: [],
   };
   return permissions[role] || [];
@@ -316,7 +321,7 @@ function getPermissionsForRole(role: UserRole): string[] {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       // State
       user: null,
       isAuthenticated: false,
@@ -324,54 +329,63 @@ export const useAuthStore = create<AuthState>()(
       error: null,
       settings: null,
       permissions: [],
-      
+
       // 2FA state
       twoFactor: {
         required: false,
         verified: false,
         setupComplete: false,
       },
-      
+
       // Deprecated token fields (kept for backward compatibility)
       token: null,
       refreshToken: null,
 
       // Actions
-      setUser: (user) => set({ 
-        user, 
-        isAuthenticated: !!user,
-        permissions: user ? getPermissionsForRole(user.role) : [],
-      }),
+      setUser: (user) =>
+        set({
+          user,
+          isAuthenticated: !!user,
+          permissions: user ? getPermissionsForRole(user.role) : [],
+        }),
 
-      updateUser: (updates) => set((state) => {
-        const updatedUser = state.user ? { ...state.user, ...updates } : null;
-        return {
-          user: updatedUser,
-          permissions: updatedUser ? getPermissionsForRole(updatedUser.role) : [],
-        };
-      }),
+      updateUser: (updates) =>
+        set((state) => {
+          const updatedUser = state.user ? { ...state.user, ...updates } : null;
+          return {
+            user: updatedUser,
+            permissions: updatedUser
+              ? getPermissionsForRole(updatedUser.role)
+              : [],
+          };
+        }),
 
-      setAuthenticated: (authenticated) => set({ isAuthenticated: authenticated }),
+      setAuthenticated: (authenticated) =>
+        set({ isAuthenticated: authenticated }),
 
-      setTwoFactorState: (twoFactorUpdates) => set((state) => ({
-        twoFactor: { ...state.twoFactor, ...twoFactorUpdates },
-      })),
+      setTwoFactorState: (twoFactorUpdates) =>
+        set((state) => ({
+          twoFactor: { ...state.twoFactor, ...twoFactorUpdates },
+        })),
 
       /** @deprecated - Tokens are now stored in httpOnly cookies */
       setTokens: (_token, _refreshToken) => {
         // No-op: Tokens are now handled via httpOnly cookies
         // This method is kept for backward compatibility
-        console.warn('setTokens is deprecated. Tokens are now stored in httpOnly cookies.');
+        console.warn(
+          "setTokens is deprecated. Tokens are now stored in httpOnly cookies."
+        );
         set({ isAuthenticated: true });
       },
 
       setSettings: (settings) => set({ settings }),
 
-      updateSettings: (updates) => set((state) => ({
-        settings: state.settings 
-          ? { ...state.settings, ...updates }
-          : { ...defaultUserSettings, ...updates },
-      })),
+      updateSettings: (updates) =>
+        set((state) => ({
+          settings: state.settings
+            ? { ...state.settings, ...updates }
+            : { ...defaultUserSettings, ...updates },
+        })),
 
       setLoading: (isLoading) => set({ isLoading }),
 
@@ -379,11 +393,13 @@ export const useAuthStore = create<AuthState>()(
 
       logout: () => {
         // Clear CSRF token from security service
-        import('../services/security').then(({ csrfManager, sessionSecurity }) => {
-          csrfManager.clearToken();
-          sessionSecurity.stopInactivityTimer();
-        }).catch(() => {});
-        
+        import("../services/security")
+          .then(({ csrfManager, sessionSecurity }) => {
+            csrfManager.clearToken();
+            sessionSecurity.stopInactivityTimer();
+          })
+          .catch(() => {});
+
         set({
           user: null,
           isAuthenticated: false,
@@ -399,28 +415,30 @@ export const useAuthStore = create<AuthState>()(
           token: null,
           refreshToken: null,
         });
-      }
+      },
     }),
     {
-      name: 'auth-storage',
+      name: "auth-storage",
       storage: createJSONStorage(() => localStorage),
       // SECURITY: Only persist non-sensitive user data for UX
       // Tokens are NOT stored in localStorage - they're in httpOnly cookies
       partialize: (state) => ({
         // Only persist user info for displaying name/avatar on page load
-        user: state.user ? {
-          id: state.user.id,
-          email: state.user.email,
-          name: state.user.name,
-          avatar: state.user.avatar,
-          role: state.user.role,
-        } : null,
+        user: state.user
+          ? {
+              id: state.user.id,
+              email: state.user.email,
+              name: state.user.name,
+              avatar: state.user.avatar,
+              role: state.user.role,
+            }
+          : null,
         // Don't persist:
         // - tokens (httpOnly cookies)
         // - isAuthenticated (will be verified on mount)
         // - settings (fetched from server)
         // - permissions (derived from role)
-      })
+      }),
     }
   )
 );

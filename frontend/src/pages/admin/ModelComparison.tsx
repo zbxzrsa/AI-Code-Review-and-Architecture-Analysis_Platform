@@ -22,19 +22,14 @@ import {
   Progress,
   Select,
   Radio,
-  Tooltip,
   Spin,
-  Divider,
-  Badge,
 } from 'antd';
 import {
   BarChartOutlined,
-  LineChartOutlined,
   SwapOutlined,
-  ThunderboltOutlined,
   DollarOutlined,
-  CheckCircleOutlined,
   ClockCircleOutlined,
+  CheckCircleOutlined,
   TrophyOutlined,
   ExperimentOutlined,
   RobotOutlined,
@@ -70,7 +65,7 @@ interface ComparisonResult {
 }
 
 const ModelComparison: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [models, setModels] = useState<ModelMetrics[]>([]);
   const [selectedModel1, setSelectedModel1] = useState<string>('');

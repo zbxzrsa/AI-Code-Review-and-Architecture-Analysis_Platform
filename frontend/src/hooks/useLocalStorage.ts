@@ -1,6 +1,6 @@
 /**
  * Local Storage Hook
- * 
+ *
  * Persistent storage with:
  * - Type safety
  * - Default values
@@ -9,7 +9,7 @@
  * - Compression option
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from "react";
 
 // ============================================
 // Types
@@ -36,7 +36,11 @@ interface StoredValue<T> {
 export function useLocalStorage<T>(
   key: string,
   options: StorageOptions<T> = {}
-): [T | undefined, (value: T | ((prev: T | undefined) => T)) => void, () => void] {
+): [
+  T | undefined,
+  (value: T | ((prev: T | undefined) => T)) => void,
+  () => void
+] {
   const {
     defaultValue,
     expiration,
@@ -56,7 +60,10 @@ export function useLocalStorage<T>(
       const parsed: StoredValue<T> = deserialize(item);
 
       // Check expiration
-      if (parsed.expiration && Date.now() > parsed.timestamp + parsed.expiration) {
+      if (
+        parsed.expiration &&
+        Date.now() > parsed.timestamp + parsed.expiration
+      ) {
         localStorage.removeItem(prefixedKey);
         return defaultValue;
       }
@@ -69,31 +76,37 @@ export function useLocalStorage<T>(
   });
 
   // Set value
-  const setValue = useCallback((value: T | ((prev: T | undefined) => T)) => {
-    try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
+  const setValue = useCallback(
+    (value: T | ((prev: T | undefined) => T)) => {
+      try {
+        const valueToStore =
+          value instanceof Function ? value(storedValue) : value;
 
-      setStoredValue(valueToStore);
+        setStoredValue(valueToStore);
 
-      const stored: StoredValue<T> = {
-        value: valueToStore,
-        timestamp: Date.now(),
-        expiration,
-      };
+        const stored: StoredValue<T> = {
+          value: valueToStore,
+          timestamp: Date.now(),
+          expiration,
+        };
 
-      localStorage.setItem(prefixedKey, serialize(stored));
+        localStorage.setItem(prefixedKey, serialize(stored));
 
-      // Dispatch event for cross-tab sync
-      if (sync) {
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: prefixedKey,
-          newValue: serialize(stored),
-        }));
+        // Dispatch event for cross-tab sync
+        if (sync) {
+          window.dispatchEvent(
+            new StorageEvent("storage", {
+              key: prefixedKey,
+              newValue: serialize(stored),
+            })
+          );
+        }
+      } catch (error) {
+        console.error(`[useLocalStorage] Error writing ${key}:`, error);
       }
-    } catch (error) {
-      console.error(`[useLocalStorage] Error writing ${key}:`, error);
-    }
-  }, [prefixedKey, storedValue, expiration, serialize, sync]);
+    },
+    [key, prefixedKey, storedValue, expiration, serialize, sync]
+  );
 
   // Remove value
   const removeValue = useCallback(() => {
@@ -103,7 +116,7 @@ export function useLocalStorage<T>(
     } catch (error) {
       console.error(`[useLocalStorage] Error removing ${key}:`, error);
     }
-  }, [prefixedKey, defaultValue]);
+  }, [key, prefixedKey, defaultValue]);
 
   // Cross-tab sync
   useEffect(() => {
@@ -124,9 +137,9 @@ export function useLocalStorage<T>(
       }
     };
 
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [prefixedKey, deserialize, defaultValue, sync]);
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [key, prefixedKey, deserialize, defaultValue, sync]);
 
   return [storedValue, setValue, removeValue];
 }
@@ -138,7 +151,11 @@ export function useLocalStorage<T>(
 export function useSessionStorage<T>(
   key: string,
   defaultValue?: T
-): [T | undefined, (value: T | ((prev: T | undefined) => T)) => void, () => void] {
+): [
+  T | undefined,
+  (value: T | ((prev: T | undefined) => T)) => void,
+  () => void
+] {
   const prefixedKey = `crai_${key}`;
 
   const [storedValue, setStoredValue] = useState<T | undefined>(() => {
@@ -150,15 +167,19 @@ export function useSessionStorage<T>(
     }
   });
 
-  const setValue = useCallback((value: T | ((prev: T | undefined) => T)) => {
-    try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      sessionStorage.setItem(prefixedKey, JSON.stringify(valueToStore));
-    } catch (error) {
-      console.error(`[useSessionStorage] Error writing ${key}:`, error);
-    }
-  }, [prefixedKey, storedValue]);
+  const setValue = useCallback(
+    (value: T | ((prev: T | undefined) => T)) => {
+      try {
+        const valueToStore =
+          value instanceof Function ? value(storedValue) : value;
+        setStoredValue(valueToStore);
+        sessionStorage.setItem(prefixedKey, JSON.stringify(valueToStore));
+      } catch (error) {
+        console.error(`[useSessionStorage] Error writing ${key}:`, error);
+      }
+    },
+    [key, prefixedKey, storedValue]
+  );
 
   const removeValue = useCallback(() => {
     try {
@@ -167,7 +188,7 @@ export function useSessionStorage<T>(
     } catch (error) {
       console.error(`[useSessionStorage] Error removing ${key}:`, error);
     }
-  }, [prefixedKey, defaultValue]);
+  }, [key, prefixedKey, defaultValue]);
 
   return [storedValue, setValue, removeValue];
 }
@@ -188,9 +209,12 @@ export function useStorageMap<V>(
   has: (id: string) => boolean;
   size: number;
 } {
-  const [stored, setStored, removeStored] = useLocalStorage<[string, V][]>(key, {
-    defaultValue: Array.from(defaultValue),
-  });
+  const [stored, setStored, removeStored] = useLocalStorage<[string, V][]>(
+    key,
+    {
+      defaultValue: Array.from(defaultValue),
+    }
+  );
 
   const map = new Map<string, V>(stored || []);
 
@@ -230,16 +254,22 @@ export function useRecentItems<T extends { id: string }>(
     defaultValue: [],
   });
 
-  const add = useCallback((item: T) => {
-    setItems(prev => {
-      const filtered = (prev || []).filter(i => i.id !== item.id);
-      return [item, ...filtered].slice(0, maxItems);
-    });
-  }, [setItems, maxItems]);
+  const add = useCallback(
+    (item: T) => {
+      setItems((prev) => {
+        const filtered = (prev || []).filter((i) => i.id !== item.id);
+        return [item, ...filtered].slice(0, maxItems);
+      });
+    },
+    [setItems, maxItems]
+  );
 
-  const remove = useCallback((id: string) => {
-    setItems(prev => (prev || []).filter(i => i.id !== id));
-  }, [setItems]);
+  const remove = useCallback(
+    (id: string) => {
+      setItems((prev) => (prev || []).filter((i) => i.id !== id));
+    },
+    [setItems]
+  );
 
   const clear = useCallback(() => {
     setItems([]);
@@ -258,9 +288,9 @@ export function useRecentItems<T extends { id: string }>(
 // ============================================
 
 export interface UserPreferences {
-  theme: 'light' | 'dark' | 'system';
+  theme: "light" | "dark" | "system";
   language: string;
-  fontSize: 'small' | 'medium' | 'large';
+  fontSize: "small" | "medium" | "large";
   sidebarCollapsed: boolean;
   showLineNumbers: boolean;
   autoSave: boolean;
@@ -272,9 +302,9 @@ export interface UserPreferences {
 }
 
 const defaultPreferences: UserPreferences = {
-  theme: 'system',
-  language: 'en',
-  fontSize: 'medium',
+  theme: "system",
+  language: "en",
+  fontSize: "medium",
   sidebarCollapsed: false,
   showLineNumbers: true,
   autoSave: true,
@@ -290,20 +320,23 @@ export function usePreferences(): [
   <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => void,
   () => void
 ] {
-  const [preferences, setPreferences, resetPreferences] = useLocalStorage<UserPreferences>(
-    'user_preferences',
-    { defaultValue: defaultPreferences, sync: true }
+  const [preferences, setPreferences] = useLocalStorage<UserPreferences>(
+    "user_preferences",
+    {
+      defaultValue: defaultPreferences,
+      sync: true,
+    }
   );
 
-  const updatePreference = useCallback(<K extends keyof UserPreferences>(
-    key: K,
-    value: UserPreferences[K]
-  ) => {
-    setPreferences(prev => ({
-      ...(prev || defaultPreferences),
-      [key]: value,
-    }));
-  }, [setPreferences]);
+  const updatePreference = useCallback(
+    <K extends keyof UserPreferences>(key: K, value: UserPreferences[K]) => {
+      setPreferences((prev) => ({
+        ...(prev || defaultPreferences),
+        [key]: value,
+      }));
+    },
+    [setPreferences]
+  );
 
   const reset = useCallback(() => {
     setPreferences(defaultPreferences);

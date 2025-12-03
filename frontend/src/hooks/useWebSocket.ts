@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useAuthStore } from "../store/authStore";
 
 interface WebSocketState<T> {
@@ -29,8 +29,14 @@ export function useWebSocket<T>(
   url: string,
   options: WebSocketOptions = {}
 ): WebSocketState<T> {
-  const opts = { ...defaultOptions, ...options };
   const { token } = useAuthStore();
+
+  // Memoize options to prevent unnecessary re-renders
+  const opts = useMemo(
+    () => ({ ...defaultOptions, ...options }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [options.reconnect, options.reconnectAttempts, options.reconnectInterval]
+  );
 
   const [state, setState] = useState<
     Omit<WebSocketState<T>, "send" | "reconnect">

@@ -17,7 +17,6 @@ import {
   Modal
 } from 'antd';
 import {
-  UserOutlined,
   LockOutlined,
   BellOutlined,
   GlobalOutlined,
@@ -350,8 +349,8 @@ export const Settings: React.FC = () => {
             ]}
             renderItem={(item: any) => (
               <List.Item
-                actions={item.current ? [<Tag color="green">Current</Tag>] : [
-                  <Button type="link" danger>Revoke</Button>
+                actions={item.current ? [<Tag key="current" color="green">Current</Tag>] : [
+                  <Button key="revoke" type="link" danger>Revoke</Button>
                 ]}
               >
                 <List.Item.Meta
@@ -391,6 +390,7 @@ export const Settings: React.FC = () => {
               <List.Item
                 actions={[
                   <Button
+                    key="delete"
                     type="text"
                     danger
                     icon={<DeleteOutlined />}

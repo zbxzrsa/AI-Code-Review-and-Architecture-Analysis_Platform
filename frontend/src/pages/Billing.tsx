@@ -1,6 +1,6 @@
 /**
  * Billing & Usage Page
- * 账单与使用页面
+ * 账单与使用页�?
  * 
  * Features:
  * - Usage statistics and quotas
@@ -115,7 +115,7 @@ const plans = [
 ];
 
 export const Billing: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
 
   const tokenPercentage = Math.round((currentPlan.tokensUsed / currentPlan.tokensIncluded) * 100);
   const analysisPercentage = Math.round((currentPlan.analysesUsed / currentPlan.analysesIncluded) * 100);

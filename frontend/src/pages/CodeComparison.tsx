@@ -86,7 +86,7 @@ const aiSummary = {
 };
 
 export const CodeComparison: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [viewMode, setViewMode] = useState<'split' | 'unified'>('split');
   const [expandedContext, setExpandedContext] = useState(false);
 

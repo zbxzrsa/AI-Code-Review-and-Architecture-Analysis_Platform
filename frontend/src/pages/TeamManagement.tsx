@@ -9,7 +9,7 @@
  * - Team activity tracking
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -24,10 +24,7 @@ import {
   Select,
   Tag,
   Avatar,
-  Tooltip,
   message,
-  Popconfirm,
-  Tabs,
   List,
   Badge,
   Dropdown,
@@ -47,7 +44,6 @@ import {
   UserOutlined,
   SettingOutlined,
   MoreOutlined,
-  CheckCircleOutlined,
   ClockCircleOutlined,
   ProjectOutlined,
   SafetyCertificateOutlined,

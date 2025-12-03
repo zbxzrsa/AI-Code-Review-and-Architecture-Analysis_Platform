@@ -5,9 +5,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { BrowserRouter, MemoryRouter } from 'react-router-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import { Sidebar } from '../Sidebar';
+import { useUIStore } from '../../../../store/uiStore';
 
 // Mock stores
 const mockToggleSidebar = vi.fn();
@@ -146,8 +147,7 @@ describe('Sidebar Component', () => {
 describe('Sidebar Collapsed State', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const { useUIStore } = require('../../../../store/uiStore');
-    useUIStore.mockReturnValue({
+    vi.mocked(useUIStore).mockReturnValue({
       sidebar: {
         isOpen: false,
         width: 80,
@@ -186,8 +186,7 @@ describe('Sidebar Collapsed State', () => {
 describe('Sidebar Mobile Drawer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const { useUIStore } = require('../../../../store/uiStore');
-    useUIStore.mockReturnValue({
+    vi.mocked(useUIStore).mockReturnValue({
       sidebar: {
         isOpen: true,
         width: 280,
@@ -237,8 +236,7 @@ describe('Sidebar Accessibility', () => {
 describe('Sidebar Favorites', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    const { useUIStore } = require('../../../../store/uiStore');
-    useUIStore.mockReturnValue({
+    vi.mocked(useUIStore).mockReturnValue({
       sidebar: {
         isOpen: true,
         width: 280,

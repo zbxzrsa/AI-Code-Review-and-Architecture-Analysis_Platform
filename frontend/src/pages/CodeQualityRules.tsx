@@ -24,14 +24,10 @@ import {
   Form,
   Input,
   Select,
-  Tabs,
-  Badge,
   Tooltip,
   Collapse,
-  Alert,
   Statistic,
   message,
-  Divider,
 } from 'antd';
 import type { TableProps } from 'antd';
 import {
@@ -43,21 +39,16 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  CopyOutlined,
   ImportOutlined,
   ExportOutlined,
-  SearchOutlined,
-  FilterOutlined,
   SafetyCertificateOutlined,
   CodeOutlined,
   ThunderboltOutlined,
-  BugOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
-const { Title, Text, Paragraph } = Typography;
-const { Panel } = Collapse;
+const { Title, Text } = Typography;
 
 interface Rule {
   id: string;
@@ -191,12 +182,12 @@ const severityConfig = {
 };
 
 export const CodeQualityRules: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [rules, setRules] = useState<Rule[]>(mockRules);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [editingRule, setEditingRule] = useState<Rule | null>(null);
+  const [_editingRule, setEditingRule] = useState<Rule | null>(null);
   const [form] = Form.useForm();
 
   const filteredRules = rules.filter(rule => {

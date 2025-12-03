@@ -19,31 +19,22 @@ import {
   Space,
   Modal,
   Form,
-  Input,
-  Select,
   InputNumber,
   Tabs,
   Statistic,
-  Progress,
   Row,
   Col,
   Typography,
-  Tooltip,
-  Badge,
   Dropdown,
   message,
   Alert,
   Descriptions,
-  Timeline,
-  Popconfirm,
-  Switch,
 } from 'antd';
 import type { TableProps, MenuProps } from 'antd';
 import {
   RobotOutlined,
   PlusOutlined,
   SettingOutlined,
-  HistoryOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   SyncOutlined,
@@ -52,16 +43,10 @@ import {
   WarningOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
-  PlayCircleOutlined,
   PauseCircleOutlined,
-  DeleteOutlined,
   EyeOutlined,
-  EditOutlined,
   MoreOutlined,
   ReloadOutlined,
-  ThunderboltOutlined,
-  DollarOutlined,
-  ClockCircleOutlined,
   LineChartOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -97,7 +82,7 @@ interface AIModel {
   last_evaluation?: string;
 }
 
-interface ModelVersion {
+interface _ModelVersion {
   id: string;
   model_id: string;
   version: string;

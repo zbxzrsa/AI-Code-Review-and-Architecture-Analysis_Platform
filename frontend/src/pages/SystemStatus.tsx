@@ -1,6 +1,6 @@
 /**
  * System Status Page
- * 系统状态页面
+ * 系统状态页�?
  * 
  * Features:
  * - Service health monitoring
@@ -169,7 +169,7 @@ const statusConfig = {
 };
 
 export const SystemStatus: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {

@@ -1,48 +1,312 @@
+/* ================================================
+   Projects Page - Cool Light Theme with Pixel Art Style
+   ================================================ */
+
 .projects-container {
   padding: 24px;
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 50%, #eef2ff 100%);
 }
 
+/* Header - Cool Teal/Indigo Gradient */
 .projects-header {
-  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, #14b8a6 0%, #6366f1 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 10px 40px rgba(20, 184, 166, 0.25);
+  position: relative;
+  overflow: hidden;
 }
 
+/* Pixel art corner decoration */
+.projects-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 64px;
+  height: 64px;
+  background:
+    linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.1) 50%);
+}
+
+.projects-header::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  width: 6px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.4);
+  box-shadow:
+    10px 0 0 rgba(255, 255, 255, 0.3),
+    20px 0 0 rgba(255, 255, 255, 0.2),
+    0 -10px 0 rgba(255, 255, 255, 0.3);
+}
+
+.projects-header h2.ant-typography {
+  color: white !important;
+  margin-bottom: 0;
+}
+
+.projects-header .ant-btn-primary {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(10px);
+  height: 40px;
+  font-weight: 500;
+}
+
+.projects-header .ant-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Stats Cards */
 .projects-stats {
   margin-bottom: 24px;
 }
 
-.projects-filters {
-  margin-bottom: 16px;
+.projects-stats .ant-card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.projects-table {
-  background: var(--bg-color, #fff);
-  border-radius: 8px;
+.projects-stats .ant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
 }
 
-.project-name {
+.projects-stats .ant-statistic-title {
   font-weight: 500;
+  color: #64748b;
+}
+
+.projects-stats .ant-statistic-content-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Filters Section */
+.projects-filters {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.projects-filters .ant-input-search {
+  max-width: 320px;
+}
+
+.projects-filters .ant-input-affix-wrapper {
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.projects-filters .ant-select-selector {
+  border-radius: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* Projects Table */
+.projects-table {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.projects-table .ant-table {
+  background: transparent;
+}
+
+.projects-table .ant-table-thead>tr>th {
+  background: #f8fafc;
+  font-weight: 600;
+  color: #64748b;
+  border-bottom: 2px solid #e2e8f0;
+  padding: 16px 20px;
+}
+
+.projects-table .ant-table-tbody>tr>td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.projects-table .ant-table-tbody>tr:hover>td {
+  background: #f8fafc;
+}
+
+/* Project Name */
+.project-name {
+  font-weight: 600;
+  color: #1e293b;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .project-name:hover {
-  color: var(--primary-color, #1890ff);
+  color: #3b82f6;
   cursor: pointer;
 }
 
+/* Project Avatar */
 .project-avatar {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  font-weight: 600;
 }
 
+/* Language Tags */
 .language-tag {
   text-transform: capitalize;
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 2px 10px;
 }
 
-/* Dark mode */
+/* Status Tags */
+.projects-container .ant-tag {
+  border-radius: 6px;
+  font-weight: 500;
+  padding: 4px 12px;
+}
+
+/* Project Cards (Grid View) */
+.project-card {
+  border: none;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.project-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+}
+
+.project-card .ant-card-body {
+  padding: 20px;
+}
+
+.project-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.project-card-stats {
+  display: flex;
+  gap: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 16px;
+}
+
+/* Pagination */
+.projects-container .ant-pagination {
+  margin-top: 24px;
+  text-align: right;
+}
+
+.projects-container .ant-pagination-item {
+  border-radius: 8px;
+}
+
+.projects-container .ant-pagination-item-active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+/* Empty State */
+.projects-container .ant-empty {
+  padding: 60px 20px;
+}
+
+.projects-container .ant-empty-description {
+  color: #64748b;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.projects-table .ant-table-tbody>tr {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .projects-container {
+    padding: 16px;
+  }
+
+  .projects-header {
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .projects-filters {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .projects-filters .ant-input-search {
+    max-width: 100%;
+  }
+}
+
+/* Dark Mode */
 :root[data-theme='dark'] .projects-container {
-  color: #fff;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
 }
 
-:root[data-theme='dark'] .projects-table {
-  background: #1f1f1f;
+:root[data-theme='dark'] .projects-table,
+:root[data-theme='dark'] .projects-filters,
+:root[data-theme='dark'] .project-card {
+  background: #1e293b;
+}
+
+:root[data-theme='dark'] .ant-table-thead>tr>th {
+  background: #334155 !important;
+  color: #94a3b8;
+}
+
+:root[data-theme='dark'] .ant-table-tbody>tr>td {
+  border-bottom-color: #334155;
+}
+
+:root[data-theme='dark'] .project-name {
+  color: #f1f5f9;
 }

@@ -76,7 +76,7 @@ export const Analytics: React.FC = () => {
     dayjs(),
   ]);
   const [selectedProject, setSelectedProject] = useState<string>('all');
-  const [_loading, _setLoading] = useState(false);
+  // const [loading, setLoading] = useState(false);
 
   // Mock analytics data
   const overviewStats = {
@@ -94,7 +94,7 @@ export const Analytics: React.FC = () => {
     securityChange: -22.4,
   };
 
-  const _weeklyData = [45, 52, 38, 65, 72, 58, 81];
+  // const weeklyData = [45, 52, 38, 65, 72, 58, 81];
   const monthlyTrend = [120, 135, 128, 145, 162, 158, 175, 190, 185, 210, 225, 240];
 
   const issuesByCategory = [

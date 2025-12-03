@@ -8,7 +8,7 @@
  * - User detail modal
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Card,
   Table,
@@ -21,7 +21,6 @@ import {
   Avatar,
   Modal,
   Form,
-  Popconfirm,
   Dropdown,
   Statistic,
   Row,
@@ -29,18 +28,14 @@ import {
   Badge,
   Tooltip,
   Upload,
-  message,
   Skeleton,
   Empty,
   Descriptions,
   Divider,
-  Alert,
 } from 'antd';
 import type { TableProps, MenuProps, UploadProps } from 'antd';
 import {
   UserOutlined,
-  SearchOutlined,
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   DownloadOutlined,
@@ -49,19 +44,13 @@ import {
   TeamOutlined,
   UserAddOutlined,
   LockOutlined,
-  UnlockOutlined,
   MailOutlined,
   ReloadOutlined,
   FilterOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
-  ExclamationCircleOutlined,
   StopOutlined,
   PlayCircleOutlined,
   KeyOutlined,
-  CalendarOutlined,
-  ClockCircleOutlined,
-  ProjectOutlined,
   ExperimentOutlined,
   CrownOutlined,
   EyeOutlined,
@@ -78,7 +67,6 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
 import {
   useAdminStore,

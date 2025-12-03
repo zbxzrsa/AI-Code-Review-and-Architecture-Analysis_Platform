@@ -10,12 +10,10 @@ import {
   Input,
   Upload,
   Space,
-  Divider,
   Statistic,
   Tag,
   message,
   List,
-  Badge,
   Tooltip
 } from 'antd';
 import {

@@ -3,9 +3,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { NotificationCenter, useNotification } from '../NotificationCenter';
+import { NotificationCenter } from '../NotificationCenter';
 import { useUIStore } from '../../../../store/uiStore';
 
 // Mock the UI store

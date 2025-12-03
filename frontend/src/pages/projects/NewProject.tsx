@@ -37,14 +37,11 @@ import {
   ArrowRightOutlined,
   SaveOutlined,
   CheckCircleOutlined,
-  InfoCircleOutlined,
   FolderOutlined,
   SettingOutlined,
   BellOutlined,
   FileSearchOutlined,
   GithubOutlined,
-  GitlabOutlined,
-  CloudOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useProjectStore, type ProjectDraft, defaultDraft } from '../../store/projectStore';
@@ -569,6 +566,8 @@ export const NewProject: React.FC = () => {
     if (!draft) {
       setDraft({ ...defaultDraft });
     }
+    // Intentionally run only on mount to initialize draft
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
   // Set current step from draft

@@ -1,6 +1,6 @@
 /**
  * Rate Limiter Hook
- * 
+ *
  * Provides:
  * - Cooldown timer display
  * - Form submission blocking when rate limited
@@ -8,8 +8,8 @@
  * - 429 response handling
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { rateLimiter, RateLimitConfig } from '../services/security';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { rateLimiter, RateLimitConfig } from "../services/security";
 
 /**
  * Rate limit status
@@ -41,7 +41,7 @@ const defaultBackoffConfig: BackoffConfig = {
 
 /**
  * Rate Limiter Hook
- * 
+ *
  * @param key - Unique key for the rate limit (e.g., endpoint path)
  * @param config - Rate limit configuration
  */
@@ -62,12 +62,13 @@ export function useRateLimiter(key: string, config?: RateLimitConfig) {
    */
   useEffect(() => {
     if (status.resetTime && status.isLimited) {
+      const resetTime = status.resetTime; // Capture for closure
       timerRef.current = setInterval(() => {
         const now = Date.now();
-        const remaining = Math.max(0, Math.ceil((status.resetTime! - now) / 1000));
-        
+        const remaining = Math.max(0, Math.ceil((resetTime - now) / 1000));
+
         if (remaining <= 0) {
-          setStatus(prev => ({
+          setStatus((prev) => ({
             ...prev,
             isLimited: false,
             cooldownSeconds: 0,
@@ -78,7 +79,7 @@ export function useRateLimiter(key: string, config?: RateLimitConfig) {
             clearInterval(timerRef.current);
           }
         } else {
-          setStatus(prev => ({
+          setStatus((prev) => ({
             ...prev,
             cooldownSeconds: remaining,
           }));
@@ -106,11 +107,13 @@ export function useRateLimiter(key: string, config?: RateLimitConfig) {
         isLimited: true,
         remaining: 0,
         resetTime,
-        cooldownSeconds: resetTime ? Math.ceil((resetTime - Date.now()) / 1000) : 0,
+        cooldownSeconds: resetTime
+          ? Math.ceil((resetTime - Date.now()) / 1000)
+          : 0,
         canRetry: false,
       });
     } else {
-      setStatus(prev => ({
+      setStatus((prev) => ({
         ...prev,
         isLimited: false,
         remaining,
@@ -124,79 +127,90 @@ export function useRateLimiter(key: string, config?: RateLimitConfig) {
   /**
    * Handle 429 response from server
    */
-  const handleRateLimitResponse = useCallback((
-    retryAfterSeconds?: number,
-    resetTime?: number
-  ) => {
-    const actualResetTime = resetTime || (retryAfterSeconds 
-      ? Date.now() + retryAfterSeconds * 1000 
-      : Date.now() + 60000);
+  const handleRateLimitResponse = useCallback(
+    (retryAfterSeconds?: number, resetTime?: number) => {
+      const actualResetTime =
+        resetTime ||
+        (retryAfterSeconds
+          ? Date.now() + retryAfterSeconds * 1000
+          : Date.now() + 60000);
 
-    setStatus({
-      isLimited: true,
-      remaining: 0,
-      resetTime: actualResetTime,
-      cooldownSeconds: retryAfterSeconds || 60,
-      canRetry: false,
-    });
+      setStatus({
+        isLimited: true,
+        remaining: 0,
+        resetTime: actualResetTime,
+        cooldownSeconds: retryAfterSeconds || 60,
+        canRetry: false,
+      });
 
-    setRetryCount(prev => prev + 1);
-  }, []);
+      setRetryCount((prev) => prev + 1);
+    },
+    []
+  );
 
   /**
    * Calculate exponential backoff delay
    */
-  const getBackoffDelay = useCallback((
-    attempt: number,
-    backoffConfig: BackoffConfig = defaultBackoffConfig
-  ): number => {
-    const delay = backoffConfig.initialDelayMs * 
-      Math.pow(backoffConfig.multiplier, attempt);
-    
-    // Add jitter (±10%)
-    const jitter = delay * 0.1 * (Math.random() * 2 - 1);
-    
-    return Math.min(delay + jitter, backoffConfig.maxDelayMs);
-  }, []);
+  const getBackoffDelay = useCallback(
+    (
+      attempt: number,
+      backoffConfig: BackoffConfig = defaultBackoffConfig
+    ): number => {
+      const delay =
+        backoffConfig.initialDelayMs *
+        Math.pow(backoffConfig.multiplier, attempt);
+
+      // Add jitter (±10%)
+      const jitter = delay * 0.1 * (Math.random() * 2 - 1);
+
+      return Math.min(delay + jitter, backoffConfig.maxDelayMs);
+    },
+    []
+  );
 
   /**
    * Execute with exponential backoff
    */
-  const executeWithBackoff = useCallback(async <T>(
-    fn: () => Promise<T>,
-    backoffConfig: BackoffConfig = defaultBackoffConfig
-  ): Promise<T> => {
-    let lastError: Error | null = null;
+  const executeWithBackoff = useCallback(
+    async <T>(
+      fn: () => Promise<T>,
+      backoffConfig: BackoffConfig = defaultBackoffConfig
+    ): Promise<T> => {
+      let lastError: Error | null = null;
 
-    for (let attempt = 0; attempt < backoffConfig.maxRetries; attempt++) {
-      // Check client-side rate limit
-      if (checkLimit()) {
-        throw new Error('Rate limited');
-      }
-
-      try {
-        return await fn();
-      } catch (error: any) {
-        lastError = error;
-
-        // Check if rate limited (429)
-        if (error.response?.status === 429) {
-          const retryAfter = parseInt(error.response.headers['retry-after'] || '60');
-          handleRateLimitResponse(retryAfter);
-          
-          // Wait for backoff delay
-          const delay = getBackoffDelay(attempt, backoffConfig);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
+      for (let attempt = 0; attempt < backoffConfig.maxRetries; attempt++) {
+        // Check client-side rate limit
+        if (checkLimit()) {
+          throw new Error("Rate limited");
         }
 
-        // For other errors, don't retry
-        throw error;
-      }
-    }
+        try {
+          return await fn();
+        } catch (error: any) {
+          lastError = error;
 
-    throw lastError || new Error('Max retries exceeded');
-  }, [checkLimit, handleRateLimitResponse, getBackoffDelay]);
+          // Check if rate limited (429)
+          if (error.response?.status === 429) {
+            const retryAfter = parseInt(
+              error.response.headers["retry-after"] || "60"
+            );
+            handleRateLimitResponse(retryAfter);
+
+            // Wait for backoff delay
+            const delay = getBackoffDelay(attempt, backoffConfig);
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            continue;
+          }
+
+          // For other errors, don't retry
+          throw error;
+        }
+      }
+
+      throw lastError || new Error("Max retries exceeded");
+    },
+    [checkLimit, handleRateLimitResponse, getBackoffDelay]
+  );
 
   /**
    * Reset the rate limiter
@@ -239,7 +253,7 @@ export function useRateLimiter(key: string, config?: RateLimitConfig) {
     getBackoffDelay,
     reset,
     formatCooldown,
-    
+
     // Convenience properties
     isLimited: status.isLimited,
     cooldownText: formatCooldown(status.cooldownSeconds),
@@ -251,13 +265,13 @@ export function useRateLimiter(key: string, config?: RateLimitConfig) {
  * Pre-configured rate limiters for common endpoints
  */
 export const rateLimitConfigs = {
-  login: { maxRequests: 5, windowMs: 15 * 60 * 1000 },      // 5 per 15 min
+  login: { maxRequests: 5, windowMs: 15 * 60 * 1000 }, // 5 per 15 min
   passwordChange: { maxRequests: 3, windowMs: 24 * 60 * 60 * 1000 }, // 3 per 24h
-  apiKeyGeneration: { maxRequests: 10, windowMs: 60 * 60 * 1000 },   // 10 per hour
-  generalApi: { maxRequests: 100, windowMs: 60 * 1000 },    // 100 per min
-  register: { maxRequests: 3, windowMs: 60 * 1000 },        // 3 per min
+  apiKeyGeneration: { maxRequests: 10, windowMs: 60 * 60 * 1000 }, // 10 per hour
+  generalApi: { maxRequests: 100, windowMs: 60 * 1000 }, // 100 per min
+  register: { maxRequests: 3, windowMs: 60 * 1000 }, // 3 per min
   passwordReset: { maxRequests: 3, windowMs: 5 * 60 * 1000 }, // 3 per 5 min
-  twoFactor: { maxRequests: 5, windowMs: 60 * 1000 },       // 5 per min
+  twoFactor: { maxRequests: 5, windowMs: 60 * 1000 }, // 5 per min
 };
 
 export default useRateLimiter;

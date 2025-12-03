@@ -177,6 +177,8 @@ export const FileTree: React.FC<FileTreeProps> = ({
   const treeData = useMemo(() => {
     const data = convertToTreeData(files);
     return filterTree(data, searchValue);
+    // convertToTreeData and filterTree are stable functions defined above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, searchValue]);
 
   // Auto-expand when searching

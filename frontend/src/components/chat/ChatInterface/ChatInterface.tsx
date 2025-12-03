@@ -86,11 +86,13 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const decoder = new TextDecoder();
         let content = '';
 
-        while (true) {
-          const { done, value } = await reader.read();
+        let done = false;
+        while (!done) {
+          const result = await reader.read();
+          done = result.done;
           if (done) break;
 
-          const chunk = decoder.decode(value, { stream: true });
+          const chunk = decoder.decode(result.value, { stream: true });
           content += chunk;
 
           setMessages((prev) =>

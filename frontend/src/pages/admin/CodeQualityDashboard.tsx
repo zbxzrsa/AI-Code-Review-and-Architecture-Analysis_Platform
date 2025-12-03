@@ -24,11 +24,9 @@ import {
   Tabs,
   List,
   Avatar,
-  Tooltip,
 } from 'antd';
 import {
   CodeOutlined,
-  CheckCircleOutlined,
   WarningOutlined,
   FileTextOutlined,
   BranchesOutlined,
@@ -36,7 +34,6 @@ import {
   RiseOutlined,
   FallOutlined,
   BugOutlined,
-  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import {
@@ -77,7 +74,7 @@ interface FileMetric {
 }
 
 const CodeQualityDashboard: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d'>('30d');
   const [selectedProject, setSelectedProject] = useState<string>('all');
 

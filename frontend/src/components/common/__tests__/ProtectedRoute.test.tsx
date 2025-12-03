@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
-import { ProtectedRoute, PublicRoute, AdminRoute, UserRoute } from '../ProtectedRoute';
+import { ProtectedRoute, PublicRoute, AdminRoute } from '../ProtectedRoute';
 
 // Mock auth store
 const mockUseAuthStore = vi.fn();

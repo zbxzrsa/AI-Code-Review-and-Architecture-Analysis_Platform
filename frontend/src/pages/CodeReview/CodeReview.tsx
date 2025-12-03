@@ -18,14 +18,12 @@ import {
   Select,
   Space,
   Typography,
-  Tabs,
   List,
   Tag,
   Badge,
   Tooltip,
   Input,
   Spin,
-  Alert,
   Drawer,
   message,
   Collapse,
@@ -40,14 +38,10 @@ import {
   PlayCircleOutlined,
   CodeOutlined,
   BugOutlined,
-  SafetyCertificateOutlined,
-  ThunderboltOutlined,
   MessageOutlined,
   RobotOutlined,
   SendOutlined,
   ClearOutlined,
-  HistoryOutlined,
-  SettingOutlined,
   FileTextOutlined,
   CheckCircleOutlined,
   WarningOutlined,
@@ -55,9 +49,7 @@ import {
   InfoCircleOutlined,
   BulbOutlined,
   CopyOutlined,
-  DownloadOutlined,
   ReloadOutlined,
-  ExpandOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
@@ -363,6 +355,8 @@ export const CodeReview: React.FC = () => {
     } finally {
       setIsChatLoading(false);
     }
+    // getMockResponse is a stable function defined below
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chatInput, code, language, selectedModel, issues]);
 
   // Mock AI response

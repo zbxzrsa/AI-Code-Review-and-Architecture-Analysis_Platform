@@ -20,11 +20,9 @@ import {
   Space,
   Typography,
   Avatar,
-  Badge,
   Tooltip,
   Select,
   Timeline,
-  Progress,
   Modal,
   Statistic,
   Steps,
@@ -169,7 +167,7 @@ const statusConfig = {
 };
 
 export const Deployments: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [deployments, setDeployments] = useState<Deployment[]>(mockDeployments);
   const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);

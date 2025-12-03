@@ -20,10 +20,8 @@ import {
   Typography,
   Statistic,
   Progress,
-  Timeline,
   Alert,
   Badge,
-  Tooltip,
   Spin,
   Switch,
   List,
@@ -33,7 +31,6 @@ import {
   BookOutlined,
   CloudDownloadOutlined,
   SyncOutlined,
-  CheckCircleOutlined,
   ClockCircleOutlined,
   DatabaseOutlined,
   BranchesOutlined,
@@ -76,7 +73,7 @@ interface LearningMetrics {
 }
 
 const LearningCycleDashboard: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [sources, setSources] = useState<LearningSource[]>([]);
   const [updates, setUpdates] = useState<KnowledgeUpdate[]>([]);

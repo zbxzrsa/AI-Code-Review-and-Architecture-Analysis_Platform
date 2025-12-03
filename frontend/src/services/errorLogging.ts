@@ -1,6 +1,6 @@
 /**
  * Error Logging Service
- * 
+ *
  * Centralized error handling and logging with:
  * - Error categorization (client, server, network)
  * - Logging to external providers
@@ -12,23 +12,23 @@
  * Error categories for classification
  */
 export enum ErrorCategory {
-  CLIENT = 'client',
-  SERVER = 'server',
-  NETWORK = 'network',
-  AUTHENTICATION = 'authentication',
-  AUTHORIZATION = 'authorization',
-  VALIDATION = 'validation',
-  UNKNOWN = 'unknown',
+  CLIENT = "client",
+  SERVER = "server",
+  NETWORK = "network",
+  AUTHENTICATION = "authentication",
+  AUTHORIZATION = "authorization",
+  VALIDATION = "validation",
+  UNKNOWN = "unknown",
 }
 
 /**
  * Error severity levels
  */
 export enum ErrorSeverity {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 /**
@@ -54,7 +54,7 @@ export interface ErrorLogEntry {
  * Recovery strategy definition
  */
 export interface RecoveryStrategy {
-  type: 'retry' | 'fallback' | 'redirect' | 'refresh' | 'ignore';
+  type: "retry" | "fallback" | "redirect" | "refresh" | "ignore";
   maxRetries?: number;
   fallbackValue?: unknown;
   redirectUrl?: string;
@@ -65,13 +65,14 @@ export interface RecoveryStrategy {
  * User-friendly error messages
  */
 const userFriendlyMessages: Record<ErrorCategory, string> = {
-  [ErrorCategory.CLIENT]: 'Something went wrong. Please try again.',
-  [ErrorCategory.SERVER]: 'Server error. Please try again later.',
-  [ErrorCategory.NETWORK]: 'Network error. Please check your connection.',
-  [ErrorCategory.AUTHENTICATION]: 'Please log in to continue.',
-  [ErrorCategory.AUTHORIZATION]: 'You don\'t have permission to perform this action.',
-  [ErrorCategory.VALIDATION]: 'Please check your input and try again.',
-  [ErrorCategory.UNKNOWN]: 'An unexpected error occurred.',
+  [ErrorCategory.CLIENT]: "Something went wrong. Please try again.",
+  [ErrorCategory.SERVER]: "Server error. Please try again later.",
+  [ErrorCategory.NETWORK]: "Network error. Please check your connection.",
+  [ErrorCategory.AUTHENTICATION]: "Please log in to continue.",
+  [ErrorCategory.AUTHORIZATION]:
+    "You don't have permission to perform this action.",
+  [ErrorCategory.VALIDATION]: "Please check your input and try again.",
+  [ErrorCategory.UNKNOWN]: "An unexpected error occurred.",
 };
 
 /**
@@ -85,30 +86,50 @@ const generateErrorId = (): string => {
  * Categorize error based on its properties
  */
 const categorizeError = (error: Error | unknown): ErrorCategory => {
-  if (error instanceof TypeError || error instanceof SyntaxError || error instanceof ReferenceError) {
+  if (
+    error instanceof TypeError ||
+    error instanceof SyntaxError ||
+    error instanceof ReferenceError
+  ) {
     return ErrorCategory.CLIENT;
   }
 
   if (error instanceof Error) {
     const message = error.message.toLowerCase();
-    
-    if (message.includes('network') || message.includes('fetch') || message.includes('connection')) {
+
+    if (
+      message.includes("network") ||
+      message.includes("fetch") ||
+      message.includes("connection")
+    ) {
       return ErrorCategory.NETWORK;
     }
-    
-    if (message.includes('401') || message.includes('unauthorized') || message.includes('unauthenticated')) {
+
+    if (
+      message.includes("401") ||
+      message.includes("unauthorized") ||
+      message.includes("unauthenticated")
+    ) {
       return ErrorCategory.AUTHENTICATION;
     }
-    
-    if (message.includes('403') || message.includes('forbidden') || message.includes('permission')) {
+
+    if (
+      message.includes("403") ||
+      message.includes("forbidden") ||
+      message.includes("permission")
+    ) {
       return ErrorCategory.AUTHORIZATION;
     }
-    
-    if (message.includes('400') || message.includes('validation') || message.includes('invalid')) {
+
+    if (
+      message.includes("400") ||
+      message.includes("validation") ||
+      message.includes("invalid")
+    ) {
       return ErrorCategory.VALIDATION;
     }
-    
-    if (message.includes('500') || message.includes('server')) {
+
+    if (message.includes("500") || message.includes("server")) {
       return ErrorCategory.SERVER;
     }
   }
@@ -119,7 +140,10 @@ const categorizeError = (error: Error | unknown): ErrorCategory => {
 /**
  * Determine error severity
  */
-const determineSeverity = (category: ErrorCategory, error: Error | unknown): ErrorSeverity => {
+const determineSeverity = (
+  category: ErrorCategory,
+  _error: Error | unknown
+): ErrorSeverity => {
   switch (category) {
     case ErrorCategory.AUTHENTICATION:
     case ErrorCategory.AUTHORIZATION:
@@ -149,15 +173,15 @@ class ErrorLoggingService {
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    this.isProduction = process.env.NODE_ENV === 'production';
-    this.logEndpoint = '/api/errors';
-    
+    this.isProduction = process.env.NODE_ENV === "production";
+    this.logEndpoint = "/api/errors";
+
     // Start flush timer
     this.startFlushTimer();
-    
+
     // Flush on page unload
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => this.flush());
+    if (typeof window !== "undefined") {
+      window.addEventListener("beforeunload", () => this.flush());
     }
   }
 
@@ -181,7 +205,7 @@ class ErrorLoggingService {
     componentStack?: string
   ): ErrorLogEntry {
     const errorObj = error instanceof Error ? error : new Error(String(error));
-    
+
     return {
       id: generateErrorId(),
       timestamp: new Date().toISOString(),
@@ -190,8 +214,8 @@ class ErrorLoggingService {
       message: errorObj.message,
       stack: errorObj.stack,
       componentStack,
-      url: typeof window !== 'undefined' ? window.location.href : '',
-      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
+      url: typeof window !== "undefined" ? window.location.href : "",
+      userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "",
       userId: this.getCurrentUserId(),
       sessionId: this.getSessionId(),
       metadata,
@@ -203,7 +227,7 @@ class ErrorLoggingService {
    */
   private getCurrentUserId(): string | undefined {
     try {
-      const authData = localStorage.getItem('auth-storage');
+      const authData = localStorage.getItem("auth-storage");
       if (authData) {
         const parsed = JSON.parse(authData);
         return parsed?.state?.user?.id;
@@ -218,10 +242,12 @@ class ErrorLoggingService {
    * Get or create session ID
    */
   private getSessionId(): string {
-    let sessionId = sessionStorage.getItem('error-session-id');
+    let sessionId = sessionStorage.getItem("error-session-id");
     if (!sessionId) {
-      sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      sessionStorage.setItem('error-session-id', sessionId);
+      sessionId = `session_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+      sessionStorage.setItem("error-session-id", sessionId);
     }
     return sessionId;
   }
@@ -236,18 +262,25 @@ class ErrorLoggingService {
     componentStack?: string
   ): ErrorLogEntry {
     const resolvedCategory = category || categorizeError(error);
-    const entry = this.createLogEntry(error, resolvedCategory, metadata, componentStack);
+    const entry = this.createLogEntry(
+      error,
+      resolvedCategory,
+      metadata,
+      componentStack
+    );
 
     // Always log to console in development
     if (!this.isProduction) {
+      /* eslint-disable no-console */
       console.group(`🚨 Error [${entry.category}] - ${entry.id}`);
-      console.error('Message:', entry.message);
-      console.error('Stack:', entry.stack);
+      console.error("Message:", entry.message);
+      console.error("Stack:", entry.stack);
       if (entry.componentStack) {
-        console.error('Component Stack:', entry.componentStack);
+        console.error("Component Stack:", entry.componentStack);
       }
-      console.error('Metadata:', entry.metadata);
+      console.error("Metadata:", entry.metadata);
       console.groupEnd();
+      /* eslint-enable no-console */
     }
 
     // Add to queue
@@ -286,13 +319,14 @@ class ErrorLoggingService {
     method: string,
     statusCode?: number
   ): ErrorLogEntry {
-    const category = statusCode && statusCode >= 500 
-      ? ErrorCategory.SERVER 
-      : statusCode === 401 
+    const category =
+      statusCode && statusCode >= 500
+        ? ErrorCategory.SERVER
+        : statusCode === 401
         ? ErrorCategory.AUTHENTICATION
         : statusCode === 403
-          ? ErrorCategory.AUTHORIZATION
-          : ErrorCategory.NETWORK;
+        ? ErrorCategory.AUTHORIZATION
+        : ErrorCategory.NETWORK;
 
     return this.log(error, category, {
       endpoint,
@@ -313,8 +347,8 @@ class ErrorLoggingService {
     if (this.isProduction) {
       try {
         await fetch(this.logEndpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ errors }),
           keepalive: true,
         });
@@ -328,7 +362,10 @@ class ErrorLoggingService {
   /**
    * Get user-friendly error message
    */
-  public getUserMessage(error: Error | unknown, category?: ErrorCategory): string {
+  public getUserMessage(
+    error: Error | unknown,
+    category?: ErrorCategory
+  ): string {
     const resolvedCategory = category || categorizeError(error);
     return userFriendlyMessages[resolvedCategory];
   }
@@ -336,22 +373,25 @@ class ErrorLoggingService {
   /**
    * Get recovery strategy for error
    */
-  public getRecoveryStrategy(error: Error | unknown, category?: ErrorCategory): RecoveryStrategy {
+  public getRecoveryStrategy(
+    error: Error | unknown,
+    category?: ErrorCategory
+  ): RecoveryStrategy {
     const resolvedCategory = category || categorizeError(error);
 
     switch (resolvedCategory) {
       case ErrorCategory.NETWORK:
-        return { type: 'retry', maxRetries: 3, delayMs: 1000 };
+        return { type: "retry", maxRetries: 3, delayMs: 1000 };
       case ErrorCategory.AUTHENTICATION:
-        return { type: 'redirect', redirectUrl: '/login' };
+        return { type: "redirect", redirectUrl: "/login" };
       case ErrorCategory.AUTHORIZATION:
-        return { type: 'redirect', redirectUrl: '/dashboard' };
+        return { type: "redirect", redirectUrl: "/dashboard" };
       case ErrorCategory.SERVER:
-        return { type: 'retry', maxRetries: 2, delayMs: 2000 };
+        return { type: "retry", maxRetries: 2, delayMs: 2000 };
       case ErrorCategory.VALIDATION:
-        return { type: 'ignore' };
+        return { type: "ignore" };
       default:
-        return { type: 'refresh' };
+        return { type: "refresh" };
     }
   }
 
@@ -363,11 +403,13 @@ class ErrorLoggingService {
     retryFn?: () => Promise<unknown>
   ): Promise<{ success: boolean; result?: unknown }> {
     switch (strategy.type) {
-      case 'retry':
+      case "retry":
         if (retryFn && strategy.maxRetries) {
           for (let i = 0; i < strategy.maxRetries; i++) {
             try {
-              await new Promise(resolve => setTimeout(resolve, strategy.delayMs || 1000));
+              await new Promise((resolve) =>
+                setTimeout(resolve, strategy.delayMs || 1000)
+              );
               const result = await retryFn();
               return { success: true, result };
             } catch {
@@ -379,24 +421,24 @@ class ErrorLoggingService {
         }
         return { success: false };
 
-      case 'redirect':
-        if (strategy.redirectUrl && typeof window !== 'undefined') {
+      case "redirect":
+        if (strategy.redirectUrl && typeof window !== "undefined") {
           window.location.href = strategy.redirectUrl;
           return { success: true };
         }
         return { success: false };
 
-      case 'refresh':
-        if (typeof window !== 'undefined') {
+      case "refresh":
+        if (typeof window !== "undefined") {
           window.location.reload();
           return { success: true };
         }
         return { success: false };
 
-      case 'fallback':
+      case "fallback":
         return { success: true, result: strategy.fallbackValue };
 
-      case 'ignore':
+      case "ignore":
       default:
         return { success: true };
     }
@@ -412,10 +454,14 @@ export const errorLoggingService = new ErrorLoggingService();
 export const useErrorLogging = () => {
   return {
     log: errorLoggingService.log.bind(errorLoggingService),
-    logNetworkError: errorLoggingService.logNetworkError.bind(errorLoggingService),
-    getUserMessage: errorLoggingService.getUserMessage.bind(errorLoggingService),
-    getRecoveryStrategy: errorLoggingService.getRecoveryStrategy.bind(errorLoggingService),
-    executeRecovery: errorLoggingService.executeRecovery.bind(errorLoggingService),
+    logNetworkError:
+      errorLoggingService.logNetworkError.bind(errorLoggingService),
+    getUserMessage:
+      errorLoggingService.getUserMessage.bind(errorLoggingService),
+    getRecoveryStrategy:
+      errorLoggingService.getRecoveryStrategy.bind(errorLoggingService),
+    executeRecovery:
+      errorLoggingService.executeRecovery.bind(errorLoggingService),
   };
 };
 

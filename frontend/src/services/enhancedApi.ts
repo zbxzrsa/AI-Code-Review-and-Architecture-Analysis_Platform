@@ -1,6 +1,6 @@
 /**
  * Enhanced API Service
- * 
+ *
  * Improved API mechanisms with:
  * - Automatic retry with exponential backoff
  * - Request deduplication
@@ -17,7 +17,7 @@ import axios, {
   AxiosResponse,
   AxiosError,
   InternalAxiosRequestConfig,
-} from 'axios';
+} from "axios";
 
 // ============================================
 // Types
@@ -39,7 +39,7 @@ export interface RequestOptions extends AxiosRequestConfig {
   cache?: boolean;
   cacheTTL?: number;
   dedupe?: boolean;
-  priority?: 'low' | 'normal' | 'high';
+  priority?: "low" | "normal" | "high";
   offline?: boolean;
 }
 
@@ -63,69 +63,69 @@ interface PendingRequest {
 // ============================================
 
 export const ErrorCodes = {
-  NETWORK_ERROR: 'NETWORK_ERROR',
-  TIMEOUT: 'TIMEOUT',
-  UNAUTHORIZED: 'UNAUTHORIZED',
-  FORBIDDEN: 'FORBIDDEN',
-  NOT_FOUND: 'NOT_FOUND',
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-  RATE_LIMITED: 'RATE_LIMITED',
-  SERVER_ERROR: 'SERVER_ERROR',
-  SERVICE_UNAVAILABLE: 'SERVICE_UNAVAILABLE',
-  UNKNOWN: 'UNKNOWN',
+  NETWORK_ERROR: "NETWORK_ERROR",
+  TIMEOUT: "TIMEOUT",
+  UNAUTHORIZED: "UNAUTHORIZED",
+  FORBIDDEN: "FORBIDDEN",
+  NOT_FOUND: "NOT_FOUND",
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+  RATE_LIMITED: "RATE_LIMITED",
+  SERVER_ERROR: "SERVER_ERROR",
+  SERVICE_UNAVAILABLE: "SERVICE_UNAVAILABLE",
+  UNKNOWN: "UNKNOWN",
 } as const;
 
 function classifyError(error: AxiosError): ApiError {
   const status = error.response?.status || 0;
   const data = error.response?.data as any;
-  
+
   let code: string = ErrorCodes.UNKNOWN;
-  let message = 'An unexpected error occurred';
+  let message = "An unexpected error occurred";
   let retryable = false;
 
   if (!error.response) {
-    if (error.code === 'ECONNABORTED') {
+    if (error.code === "ECONNABORTED") {
       code = ErrorCodes.TIMEOUT;
-      message = 'Request timed out';
+      message = "Request timed out";
       retryable = true;
     } else {
       code = ErrorCodes.NETWORK_ERROR;
-      message = 'Network error. Please check your connection.';
+      message = "Network error. Please check your connection.";
       retryable = true;
     }
   } else {
     switch (status) {
       case 401:
         code = ErrorCodes.UNAUTHORIZED;
-        message = 'Authentication required';
+        message = "Authentication required";
         break;
       case 403:
         code = ErrorCodes.FORBIDDEN;
-        message = 'Access denied';
+        message = "Access denied";
         break;
       case 404:
         code = ErrorCodes.NOT_FOUND;
-        message = 'Resource not found';
+        message = "Resource not found";
         break;
       case 422:
         code = ErrorCodes.VALIDATION_ERROR;
-        message = data?.message || 'Validation failed';
+        message = data?.message || "Validation failed";
         break;
       case 429:
         code = ErrorCodes.RATE_LIMITED;
-        message = 'Too many requests. Please slow down.';
+        message = "Too many requests. Please slow down.";
         retryable = true;
         break;
       case 500:
       case 502:
       case 504:
         code = ErrorCodes.SERVER_ERROR;
-        message = 'Server error. Please try again later.';
+        message = "Server error. Please try again later.";
         retryable = true;
         break;
       case 503:
         code = ErrorCodes.SERVICE_UNAVAILABLE;
-        message = 'Service temporarily unavailable';
+        message = "Service temporarily unavailable";
         retryable = true;
         break;
     }
@@ -153,12 +153,12 @@ class EnhancedApi {
   private isOnline: boolean = navigator.onLine;
   private retryDelays: number[] = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff
 
-  constructor(baseURL: string = '/api') {
+  constructor(baseURL: string = "/api") {
     this.client = axios.create({
       baseURL,
       timeout: 30000,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -175,11 +175,11 @@ class EnhancedApi {
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         // Add request ID for tracking
-        config.headers['X-Request-ID'] = this.generateRequestId();
-        
+        config.headers["X-Request-ID"] = this.generateRequestId();
+
         // Add timestamp
-        config.headers['X-Request-Time'] = Date.now().toString();
-        
+        config.headers["X-Request-Time"] = Date.now().toString();
+
         return config;
       },
       (error) => Promise.reject(error)
@@ -189,10 +189,14 @@ class EnhancedApi {
     this.client.interceptors.response.use(
       (response: AxiosResponse) => {
         // Log response time
-        const requestTime = response.config.headers['X-Request-Time'];
+        const requestTime = response.config.headers["X-Request-Time"];
         if (requestTime) {
           const duration = Date.now() - parseInt(requestTime as string);
-          console.debug(`[API] ${response.config.method?.toUpperCase()} ${response.config.url} - ${duration}ms`);
+          console.debug(
+            `[API] ${response.config.method?.toUpperCase()} ${
+              response.config.url
+            } - ${duration}ms`
+          );
         }
         return response;
       },
@@ -209,19 +213,24 @@ class EnhancedApi {
   // ============================================
 
   private setupOnlineListener(): void {
-    window.addEventListener('online', () => {
+    window.addEventListener("online", () => {
       this.isOnline = true;
       this.processOfflineQueue();
     });
 
-    window.addEventListener('offline', () => {
+    window.addEventListener("offline", () => {
       this.isOnline = false;
     });
   }
 
   private async processOfflineQueue(): Promise<void> {
-    console.log(`[API] Processing ${this.offlineQueue.length} queued requests`);
-    
+    // Debug: Processing offline queue
+    if (import.meta.env.DEV) {
+      console.debug(
+        `[API] Processing ${this.offlineQueue.length} queued requests`
+      );
+    }
+
     const queue = [...this.offlineQueue];
     this.offlineQueue = [];
 
@@ -240,7 +249,9 @@ class EnhancedApi {
   // ============================================
 
   private getCacheKey(config: RequestOptions): string {
-    return `${config.method || 'GET'}:${config.url}:${JSON.stringify(config.params || {})}`;
+    return `${config.method || "GET"}:${config.url}:${JSON.stringify(
+      config.params || {}
+    )}`;
   }
 
   private getFromCache(key: string): any | null {
@@ -294,20 +305,27 @@ class EnhancedApi {
     retryCount: number
   ): Promise<any> {
     const maxRetries = config.maxRetries ?? 3;
-    
+
     if (!error.retryable || retryCount >= maxRetries) {
       throw error;
     }
 
     const delay = config.retryDelay ?? this.retryDelays[retryCount] ?? 16000;
-    
+
     // Add jitter to prevent thundering herd
     const jitter = Math.random() * 1000;
-    
-    console.log(`[API] Retrying request (${retryCount + 1}/${maxRetries}) in ${delay + jitter}ms`);
-    
+
+    // Debug: Retry logging
+    if (import.meta.env.DEV) {
+      console.debug(
+        `[API] Retrying request (${retryCount + 1}/${maxRetries}) in ${
+          delay + jitter
+        }ms`
+      );
+    }
+
     await this.sleep(delay + jitter);
-    
+
     return this.executeRequest(config, retryCount + 1);
   }
 
@@ -315,7 +333,10 @@ class EnhancedApi {
   // Core Request Method
   // ============================================
 
-  private async executeRequest(config: RequestOptions, retryCount: number = 0): Promise<any> {
+  private async executeRequest(
+    config: RequestOptions,
+    retryCount: number = 0
+  ): Promise<any> {
     try {
       const response = await this.client.request(config);
       return response.data;
@@ -343,7 +364,7 @@ class EnhancedApi {
     }
 
     // Check cache for GET requests
-    if (config.method?.toUpperCase() === 'GET' && config.cache !== false) {
+    if (config.method?.toUpperCase() === "GET" && config.cache !== false) {
       const cacheKey = this.getCacheKey(config);
       const cached = this.getFromCache(cacheKey);
       if (cached) {
@@ -353,7 +374,7 @@ class EnhancedApi {
     }
 
     // Deduplicate concurrent identical requests
-    if (config.dedupe !== false && config.method?.toUpperCase() === 'GET') {
+    if (config.dedupe !== false && config.method?.toUpperCase() === "GET") {
       const dedupeKey = this.getDedupeKey(config);
       const pending = this.pendingRequests.get(dedupeKey);
       if (pending) {
@@ -366,13 +387,13 @@ class EnhancedApi {
 
       try {
         const result = await promise;
-        
+
         // Cache successful GET requests
         if (config.cache !== false) {
           const cacheKey = this.getCacheKey(config);
           this.setCache(cacheKey, result, config.cacheTTL ?? 60000);
         }
-        
+
         return result;
       } finally {
         this.pendingRequests.delete(dedupeKey);
@@ -387,23 +408,38 @@ class EnhancedApi {
   // ============================================
 
   public async get<T = any>(url: string, options?: RequestOptions): Promise<T> {
-    return this.request<T>({ ...options, method: 'GET', url });
+    return this.request<T>({ ...options, method: "GET", url });
   }
 
-  public async post<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
-    return this.request<T>({ ...options, method: 'POST', url, data });
+  public async post<T = any>(
+    url: string,
+    data?: any,
+    options?: RequestOptions
+  ): Promise<T> {
+    return this.request<T>({ ...options, method: "POST", url, data });
   }
 
-  public async put<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
-    return this.request<T>({ ...options, method: 'PUT', url, data });
+  public async put<T = any>(
+    url: string,
+    data?: any,
+    options?: RequestOptions
+  ): Promise<T> {
+    return this.request<T>({ ...options, method: "PUT", url, data });
   }
 
-  public async patch<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
-    return this.request<T>({ ...options, method: 'PATCH', url, data });
+  public async patch<T = any>(
+    url: string,
+    data?: any,
+    options?: RequestOptions
+  ): Promise<T> {
+    return this.request<T>({ ...options, method: "PATCH", url, data });
   }
 
-  public async delete<T = any>(url: string, options?: RequestOptions): Promise<T> {
-    return this.request<T>({ ...options, method: 'DELETE', url });
+  public async delete<T = any>(
+    url: string,
+    options?: RequestOptions
+  ): Promise<T> {
+    return this.request<T>({ ...options, method: "DELETE", url });
   }
 
   // ============================================
@@ -415,7 +451,7 @@ class EnhancedApi {
   }
 
   private sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   public getQueueLength(): number {
