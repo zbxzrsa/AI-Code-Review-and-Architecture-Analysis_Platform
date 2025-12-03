@@ -99,6 +99,7 @@ const AutoFixDashboard = lazy(() => import('./pages/admin/AutoFixDashboard'));
 const LearningCycleDashboard = lazy(() => import('./pages/admin/LearningCycleDashboard'));
 const ModelComparison = lazy(() => import('./pages/admin/ModelComparison'));
 const PerformanceMonitor = lazy(() => import('./pages/admin/PerformanceMonitor'));
+const SecurityScanner = lazy(() => import('./pages/admin/SecurityScanner'));
 
 // Query client for React Query
 const queryClient = new QueryClient({
@@ -304,6 +305,11 @@ export default function App() {
                   <Route path="/admin/performance" element={
                     <AdminRoute>
                       <PerformanceMonitor />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/security" element={
+                    <AdminRoute>
+                      <SecurityScanner />
                     </AdminRoute>
                   } />
                 </Route>

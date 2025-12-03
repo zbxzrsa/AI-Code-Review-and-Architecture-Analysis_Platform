@@ -231,6 +231,7 @@ export const Sidebar: React.FC = () => {
         { key: 'admin-providers', label: t('nav.providers', 'AI Providers'), path: '/admin/providers', icon: <ApiOutlined /> },
         { key: 'admin-experiments', label: t('nav.experiments', 'Experiments'), path: '/admin/experiments', icon: <ExperimentOutlined /> },
         { key: 'admin-vulnerabilities', label: t('nav.vulnerabilities', 'Vulnerabilities'), path: '/admin/vulnerabilities', icon: <SafetyCertificateOutlined /> },
+        { key: 'admin-security', label: t('nav.security', 'Security Scanner'), path: '/admin/security', icon: <SafetyCertificateOutlined /> },
         { key: 'admin-evolution', label: t('nav.evolution', 'Evolution Cycle'), path: '/admin/evolution', icon: <RocketOutlined /> },
         { key: 'admin-model-testing', label: t('nav.model_testing', 'Model Testing'), path: '/admin/model-testing', icon: <ExperimentOutlined /> },
         { key: 'admin-model-comparison', label: t('nav.model_comparison', 'Model Comparison'), path: '/admin/model-comparison', icon: <BarChartOutlined /> },

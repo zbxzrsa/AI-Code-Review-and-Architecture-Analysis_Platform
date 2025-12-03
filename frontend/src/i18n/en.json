@@ -68,6 +68,7 @@
     "providers": "AI Providers",
     "audit": "Audit Logs",
     "vulnerabilities": "Vulnerabilities",
+    "security": "Security Scanner",
     "evolution": "Evolution Cycle",
     "model_testing": "Model Testing",
     "model_comparison": "Model Comparison",

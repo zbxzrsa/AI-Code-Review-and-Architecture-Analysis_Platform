@@ -50,6 +50,7 @@
     "settings": "设置",
     "admin": "管理",
     "vulnerabilities": "漏洞",
+    "security": "安全扫描器",
     "evolution": "演进周期",
     "model_testing": "模型测试",
     "model_comparison": "模型比较",

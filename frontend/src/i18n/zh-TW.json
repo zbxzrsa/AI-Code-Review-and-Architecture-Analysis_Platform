@@ -50,6 +50,7 @@
     "settings": "設定",
     "admin": "管理",
     "vulnerabilities": "漏洞",
+    "security": "安全掃描器",
     "evolution": "演進週期",
     "model_testing": "模型測試",
     "model_comparison": "模型比較",
