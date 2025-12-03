@@ -148,7 +148,7 @@ export const StreamingResponse: React.FC<StreamingResponseProps> = ({
       <div className="streaming-content">
         <ReactMarkdown
           components={{
-            code({ node, className, children, ...props }: any) {
+            code({ node: _node, className, children, ...props }: any) {
               const match = /language-(\w+)/.exec(className || '');
               const codeString = String(children).replace(/\n$/, '');
               const isInline = !match;

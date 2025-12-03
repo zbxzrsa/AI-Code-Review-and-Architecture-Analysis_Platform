@@ -104,7 +104,7 @@ const NotificationItem = memo<{
   dismissible?: boolean;
   action?: NotificationAction;
   onClose: () => void;
-}>(({ id, type, message, dismissible = true, action, onClose }) => {
+}>(({ id: _id, type, message, dismissible = true, action, onClose }) => {
   const itemRef = useRef<HTMLDivElement>(null);
 
   // Focus management for accessibility

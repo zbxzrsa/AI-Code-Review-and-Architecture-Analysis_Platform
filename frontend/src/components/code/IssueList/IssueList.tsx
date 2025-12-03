@@ -5,7 +5,6 @@ import {
   WarningOutlined,
   InfoCircleOutlined,
   CheckCircleOutlined,
-  FilterOutlined,
   SortAscendingOutlined,
   ThunderboltOutlined
 } from '@ant-design/icons';

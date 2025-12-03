@@ -9,7 +9,7 @@
  * - Plan management
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Card,
   Row,
@@ -24,9 +24,7 @@ import {
   Alert,
   Tabs,
   List,
-  Tooltip,
   Divider,
-  Badge,
 } from 'antd';
 import type { TableProps } from 'antd';
 import {
@@ -34,11 +32,9 @@ import {
   ThunderboltOutlined,
   ApiOutlined,
   CloudOutlined,
-  RocketOutlined,
   CheckCircleOutlined,
   WarningOutlined,
   CrownOutlined,
-  HistoryOutlined,
   DownloadOutlined,
   BarChartOutlined,
   RiseOutlined,
@@ -46,7 +42,7 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface UsageRecord {
   id: string;

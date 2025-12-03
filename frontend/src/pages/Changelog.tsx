@@ -32,12 +32,10 @@ import {
   ThunderboltOutlined,
   SafetyCertificateOutlined,
   StarOutlined,
-  CheckCircleOutlined,
   ClockCircleOutlined,
   GiftOutlined,
   BulbOutlined,
   ToolOutlined,
-  EyeOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 

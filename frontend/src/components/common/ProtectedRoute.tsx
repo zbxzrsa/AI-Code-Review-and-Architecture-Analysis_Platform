@@ -1,10 +1,9 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Spin, Result, Button, Space } from 'antd';
 import { HomeOutlined, ArrowLeftOutlined, LockOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
-import { errorLoggingService, ErrorCategory } from '../../services/errorLogging';
 
 /**
  * Permission types for fine-grained access control

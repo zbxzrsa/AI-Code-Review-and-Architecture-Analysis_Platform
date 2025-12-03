@@ -28,7 +28,6 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   KeyOutlined,
-  ReloadOutlined,
   DownloadOutlined,
   CopyOutlined,
   ExclamationCircleOutlined,
@@ -40,7 +39,7 @@ import { TwoFactorSetup, TwoFactorDisable } from '../../auth/TwoFactorAuth';
 import { twoFactorAuth } from '../../../services/security';
 import './TwoFactorSettings.css';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface TwoFactorStatus {
   enabled: boolean;

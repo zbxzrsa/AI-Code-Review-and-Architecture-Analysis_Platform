@@ -43,6 +43,7 @@
     "auto_fix_desc": "应用 AI 修复"
   },
   "nav": {
+    "welcome": "欢迎",
     "dashboard": "仪表盘",
     "projects": "项目",
     "code_review": "代码审查",
@@ -51,6 +52,7 @@
     "admin": "管理",
     "vulnerabilities": "漏洞",
     "security": "安全扫描器",
+    "quality": "代码质量",
     "evolution": "演进周期",
     "model_testing": "模型测试",
     "model_comparison": "模型比较",

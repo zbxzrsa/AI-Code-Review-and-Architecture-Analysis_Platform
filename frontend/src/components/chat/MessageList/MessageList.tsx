@@ -79,7 +79,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               <>
                 <ReactMarkdown
                   components={{
-                    code({ node, className, children, ...props }: any) {
+                    code({ node: _node, className, children, ...props }: any) {
                       const match = /language-(\w+)/.exec(className || '');
                       const codeString = String(children).replace(/\n$/, '');
                       const isInline = !match;
@@ -107,7 +107,7 @@ export const MessageList: React.FC<MessageListProps> = ({
             ) : (
               <ReactMarkdown
                 components={{
-                  code({ node, className, children, ...props }: any) {
+                  code({ node: _node2, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || '');
                     const codeString = String(children).replace(/\n$/, '');
                     const isInline = !match;

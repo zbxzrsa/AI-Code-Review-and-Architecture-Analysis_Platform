@@ -158,14 +158,14 @@ export const FileTree: React.FC<FileTreeProps> = ({
       .filter((node): node is DataNode => node !== null);
   };
 
-  // Get all parent keys for expanded state
-  const getParentKeys = (nodes: DataNode[], targetKey: string, parents: string[] = []): string[] => {
+  // Get all parent keys for expanded state (reserved for future use)
+  const _getParentKeys = (nodes: DataNode[], targetKey: string, parents: string[] = []): string[] => {
     for (const node of nodes) {
       if (node.key === targetKey) {
         return parents;
       }
       if (node.children) {
-        const found = getParentKeys(node.children, targetKey, [...parents, String(node.key)]);
+        const found = _getParentKeys(node.children, targetKey, [...parents, String(node.key)]);
         if (found.length > 0) {
           return found;
         }

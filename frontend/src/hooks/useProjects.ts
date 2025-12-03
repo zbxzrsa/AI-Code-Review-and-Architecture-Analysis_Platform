@@ -1,35 +1,40 @@
 /**
  * React Query hooks for project management
- * 
+ *
  * Provides caching, optimistic updates, and mutations for projects.
  */
 
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
-import { message } from 'antd';
-import { apiService } from '../services/api';
-import type { 
-  Project, 
-  ProjectFilters, 
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  UseQueryOptions,
+} from "@tanstack/react-query";
+import { message } from "antd";
+import { apiService } from "../services/api";
+import type {
+  Project,
+  ProjectFilters,
   PaginationState,
   TeamMember,
   Webhook,
   APIKey,
   ActivityLog,
-} from '../store/projectStore';
+} from "../store/projectStore";
 
 /** Query keys for cache management */
 export const projectKeys = {
-  all: ['projects'] as const,
-  lists: () => [...projectKeys.all, 'list'] as const,
-  list: (filters: ProjectFilters, pagination: PaginationState) => 
+  all: ["projects"] as const,
+  lists: () => [...projectKeys.all, "list"] as const,
+  list: (filters: ProjectFilters, pagination: PaginationState) =>
     [...projectKeys.lists(), { filters, pagination }] as const,
-  details: () => [...projectKeys.all, 'detail'] as const,
+  details: () => [...projectKeys.all, "detail"] as const,
   detail: (id: string) => [...projectKeys.details(), id] as const,
-  stats: (id: string) => [...projectKeys.detail(id), 'stats'] as const,
-  activity: (id: string) => [...projectKeys.detail(id), 'activity'] as const,
-  team: (id: string) => [...projectKeys.detail(id), 'team'] as const,
-  webhooks: (id: string) => [...projectKeys.detail(id), 'webhooks'] as const,
-  apiKeys: (id: string) => [...projectKeys.detail(id), 'api-keys'] as const,
+  stats: (id: string) => [...projectKeys.detail(id), "stats"] as const,
+  activity: (id: string) => [...projectKeys.detail(id), "activity"] as const,
+  team: (id: string) => [...projectKeys.detail(id), "team"] as const,
+  webhooks: (id: string) => [...projectKeys.detail(id), "webhooks"] as const,
+  apiKeys: (id: string) => [...projectKeys.detail(id), "api-keys"] as const,
 };
 
 /** Response type for paginated list */
@@ -44,9 +49,12 @@ interface PaginatedResponse<T> {
  * Hook to fetch projects list with pagination and filtering
  */
 export function useProjects(
-  filters: ProjectFilters, 
+  filters: ProjectFilters,
   pagination: PaginationState,
-  options?: Omit<UseQueryOptions<PaginatedResponse<Project>>, 'queryKey' | 'queryFn'>
+  options?: Omit<
+    UseQueryOptions<PaginatedResponse<Project>>,
+    "queryKey" | "queryFn"
+  >
 ) {
   return useQuery({
     queryKey: projectKeys.list(filters, pagination),
@@ -55,8 +63,8 @@ export function useProjects(
         page: pagination.page,
         limit: pagination.pageSize,
         search: filters.search || undefined,
-        status: filters.status !== 'all' ? filters.status : undefined,
-        language: filters.language !== 'all' ? filters.language : undefined,
+        status: filters.status !== "all" ? filters.status : undefined,
+        language: filters.language !== "all" ? filters.language : undefined,
         sort_field: filters.sortField,
         sort_order: filters.sortOrder,
       });
@@ -72,7 +80,7 @@ export function useProjects(
  */
 export function useProject(
   id: string | undefined,
-  options?: Omit<UseQueryOptions<Project>, 'queryKey' | 'queryFn'>
+  options?: Omit<UseQueryOptions<Project>, "queryKey" | "queryFn">
 ) {
   return useQuery({
     queryKey: projectKeys.detail(id!),
@@ -168,7 +176,7 @@ export function useProjectApiKeys(id: string | undefined) {
  */
 export function useCreateProject() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: {
       name: string;
@@ -181,10 +189,10 @@ export function useCreateProject() {
       const response = await apiService.projects.create(data);
       return response.data as Project;
     },
-    onSuccess: (newProject) => {
+    onSuccess: (_newProject) => {
       // Invalidate list queries to refetch
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      message.success('Project created successfully');
+      message.success("Project created successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to create project: ${error.message}`);
@@ -197,9 +205,12 @@ export function useCreateProject() {
  */
 export function useUpdateProject() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ id, data }: {
+    mutationFn: async ({
+      id,
+      data,
+    }: {
       id: string;
       data: Partial<{
         name: string;
@@ -214,10 +225,12 @@ export function useUpdateProject() {
     onMutate: async ({ id, data }) => {
       // Cancel outgoing refetches
       await queryClient.cancelQueries({ queryKey: projectKeys.detail(id) });
-      
+
       // Snapshot the previous value
-      const previousProject = queryClient.getQueryData<Project>(projectKeys.detail(id));
-      
+      const previousProject = queryClient.getQueryData<Project>(
+        projectKeys.detail(id)
+      );
+
       // Optimistically update to the new value
       if (previousProject) {
         queryClient.setQueryData<Project>(projectKeys.detail(id), {
@@ -225,13 +238,16 @@ export function useUpdateProject() {
           ...data,
         } as Project);
       }
-      
+
       return { previousProject };
     },
     onError: (error, { id }, context) => {
       // Rollback on error
       if (context?.previousProject) {
-        queryClient.setQueryData(projectKeys.detail(id), context.previousProject);
+        queryClient.setQueryData(
+          projectKeys.detail(id),
+          context.previousProject
+        );
       }
       message.error(`Failed to update project: ${error.message}`);
     },
@@ -241,7 +257,7 @@ export function useUpdateProject() {
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
     },
     onSuccess: () => {
-      message.success('Project updated successfully');
+      message.success("Project updated successfully");
     },
   });
 }
@@ -251,7 +267,7 @@ export function useUpdateProject() {
  */
 export function useDeleteProject() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       await apiService.projects.delete(id);
@@ -260,7 +276,7 @@ export function useDeleteProject() {
     onSuccess: (deletedId) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
       queryClient.removeQueries({ queryKey: projectKeys.detail(deletedId) });
-      message.success('Project deleted successfully');
+      message.success("Project deleted successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to delete project: ${error.message}`);
@@ -273,7 +289,7 @@ export function useDeleteProject() {
  */
 export function useArchiveProject() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await apiService.projects.archive(id);
@@ -282,7 +298,7 @@ export function useArchiveProject() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      message.success('Project archived successfully');
+      message.success("Project archived successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to archive project: ${error.message}`);
@@ -295,7 +311,7 @@ export function useArchiveProject() {
  */
 export function useRestoreProject() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       const response = await apiService.projects.restore(id);
@@ -304,7 +320,7 @@ export function useRestoreProject() {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
-      message.success('Project restored successfully');
+      message.success("Project restored successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to restore project: ${error.message}`);
@@ -319,7 +335,7 @@ export function useRestoreProject() {
  */
 export function useInviteTeamMember(projectId: string) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (data: { email: string; role: string }) => {
       const response = await apiService.projects.inviteMember(projectId, data);
@@ -327,7 +343,7 @@ export function useInviteTeamMember(projectId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.team(projectId) });
-      message.success('Team member invited successfully');
+      message.success("Team member invited successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to invite team member: ${error.message}`);
@@ -340,15 +356,25 @@ export function useInviteTeamMember(projectId: string) {
  */
 export function useUpdateMemberRole(projectId: string) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ memberId, role }: { memberId: string; role: string }) => {
-      const response = await apiService.projects.updateMemberRole(projectId, memberId, role);
+    mutationFn: async ({
+      memberId,
+      role,
+    }: {
+      memberId: string;
+      role: string;
+    }) => {
+      const response = await apiService.projects.updateMemberRole(
+        projectId,
+        memberId,
+        role
+      );
       return response.data as TeamMember;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.team(projectId) });
-      message.success('Member role updated successfully');
+      message.success("Member role updated successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to update member role: ${error.message}`);
@@ -361,7 +387,7 @@ export function useUpdateMemberRole(projectId: string) {
  */
 export function useRemoveTeamMember(projectId: string) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (memberId: string) => {
       await apiService.projects.removeMember(projectId, memberId);
@@ -369,7 +395,7 @@ export function useRemoveTeamMember(projectId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: projectKeys.team(projectId) });
-      message.success('Team member removed successfully');
+      message.success("Team member removed successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to remove team member: ${error.message}`);
@@ -384,15 +410,21 @@ export function useRemoveTeamMember(projectId: string) {
  */
 export function useCreateWebhook(projectId: string) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (data: { url: string; events: string[]; secret?: string }) => {
+    mutationFn: async (data: {
+      url: string;
+      events: string[];
+      secret?: string;
+    }) => {
       const response = await apiService.projects.createWebhook(projectId, data);
       return response.data as Webhook;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.webhooks(projectId) });
-      message.success('Webhook created successfully');
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.webhooks(projectId),
+      });
+      message.success("Webhook created successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to create webhook: ${error.message}`);
@@ -405,18 +437,27 @@ export function useCreateWebhook(projectId: string) {
  */
 export function useUpdateWebhook(projectId: string) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ webhookId, data }: {
+    mutationFn: async ({
+      webhookId,
+      data,
+    }: {
       webhookId: string;
       data: { url?: string; events?: string[]; is_active?: boolean };
     }) => {
-      const response = await apiService.projects.updateWebhook(projectId, webhookId, data);
+      const response = await apiService.projects.updateWebhook(
+        projectId,
+        webhookId,
+        data
+      );
       return response.data as Webhook;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.webhooks(projectId) });
-      message.success('Webhook updated successfully');
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.webhooks(projectId),
+      });
+      message.success("Webhook updated successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to update webhook: ${error.message}`);
@@ -429,15 +470,17 @@ export function useUpdateWebhook(projectId: string) {
  */
 export function useDeleteWebhook(projectId: string) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (webhookId: string) => {
       await apiService.projects.deleteWebhook(projectId, webhookId);
       return webhookId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.webhooks(projectId) });
-      message.success('Webhook deleted successfully');
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.webhooks(projectId),
+      });
+      message.success("Webhook deleted successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to delete webhook: ${error.message}`);
@@ -451,11 +494,14 @@ export function useDeleteWebhook(projectId: string) {
 export function useTestWebhook(projectId: string) {
   return useMutation({
     mutationFn: async (webhookId: string) => {
-      const response = await apiService.projects.testWebhook(projectId, webhookId);
+      const response = await apiService.projects.testWebhook(
+        projectId,
+        webhookId
+      );
       return response.data;
     },
     onSuccess: () => {
-      message.success('Webhook test sent successfully');
+      message.success("Webhook test sent successfully");
     },
     onError: (error: Error) => {
       message.error(`Webhook test failed: ${error.message}`);
@@ -470,15 +516,21 @@ export function useTestWebhook(projectId: string) {
  */
 export function useCreateApiKey(projectId: string) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async (data: { name: string; permissions: string[]; expires_at?: string }) => {
+    mutationFn: async (data: {
+      name: string;
+      permissions: string[];
+      expires_at?: string;
+    }) => {
       const response = await apiService.projects.createApiKey(projectId, data);
       return response.data as APIKey & { key: string }; // Full key returned only on creation
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.apiKeys(projectId) });
-      message.success('API key created successfully');
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.apiKeys(projectId),
+      });
+      message.success("API key created successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to create API key: ${error.message}`);
@@ -491,15 +543,17 @@ export function useCreateApiKey(projectId: string) {
  */
 export function useRevokeApiKey(projectId: string) {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (keyId: string) => {
       await apiService.projects.revokeApiKey(projectId, keyId);
       return keyId;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: projectKeys.apiKeys(projectId) });
-      message.success('API key revoked successfully');
+      queryClient.invalidateQueries({
+        queryKey: projectKeys.apiKeys(projectId),
+      });
+      message.success("API key revoked successfully");
     },
     onError: (error: Error) => {
       message.error(`Failed to revoke API key: ${error.message}`);

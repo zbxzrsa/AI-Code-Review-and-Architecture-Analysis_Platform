@@ -11,7 +11,7 @@
  * - Mobile drawer support
  */
 
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Menu,
@@ -20,12 +20,10 @@ import {
   Avatar,
   Space,
   Typography,
-  Tooltip,
   Dropdown,
   Drawer,
   Divider,
   theme,
-  Badge,
 } from 'antd';
 import type { MenuProps } from 'antd';
 import {
@@ -39,9 +37,7 @@ import {
   SearchOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  StarOutlined,
   StarFilled,
-  PlusOutlined,
   ExperimentOutlined,
   TeamOutlined,
   AuditOutlined,
@@ -62,10 +58,11 @@ import {
   DollarOutlined,
   BookOutlined,
   DesktopOutlined,
+  HomeOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../../store/authStore';
-import { useUIStore, type FavoriteItem } from '../../../store/uiStore';
+import { useUIStore } from '../../../store/uiStore';
 import './Sidebar.css';
 
 const { Text } = Typography;
@@ -116,10 +113,15 @@ export const Sidebar: React.FC = () => {
   } = useUIStore();
 
   const searchInputRef = useRef<any>(null);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
 
   // Define navigation items
   const navItems: NavItem[] = useMemo(() => [
+    {
+      key: 'welcome',
+      label: t('nav.welcome', 'Welcome'),
+      path: '/welcome',
+      icon: <HomeOutlined />,
+    },
     {
       key: 'dashboard',
       label: t('nav.dashboard', 'Dashboard'),
@@ -232,6 +234,7 @@ export const Sidebar: React.FC = () => {
         { key: 'admin-experiments', label: t('nav.experiments', 'Experiments'), path: '/admin/experiments', icon: <ExperimentOutlined /> },
         { key: 'admin-vulnerabilities', label: t('nav.vulnerabilities', 'Vulnerabilities'), path: '/admin/vulnerabilities', icon: <SafetyCertificateOutlined /> },
         { key: 'admin-security', label: t('nav.security', 'Security Scanner'), path: '/admin/security', icon: <SafetyCertificateOutlined /> },
+        { key: 'admin-quality', label: t('nav.quality', 'Code Quality'), path: '/admin/quality', icon: <CodeOutlined /> },
         { key: 'admin-evolution', label: t('nav.evolution', 'Evolution Cycle'), path: '/admin/evolution', icon: <RocketOutlined /> },
         { key: 'admin-model-testing', label: t('nav.model_testing', 'Model Testing'), path: '/admin/model-testing', icon: <ExperimentOutlined /> },
         { key: 'admin-model-comparison', label: t('nav.model_comparison', 'Model Comparison'), path: '/admin/model-comparison', icon: <BarChartOutlined /> },
@@ -309,8 +312,8 @@ export const Sidebar: React.FC = () => {
     return path;
   }, [location.pathname]);
 
-  // Handle favorite toggle
-  const toggleFavorite = useCallback((item: NavItem) => {
+  // Handle favorite toggle (reserved for future use)
+  const _toggleFavorite = useCallback((item: NavItem) => {
     const existingFavorite = sidebar.favorites.find(f => f.path === item.path);
     if (existingFavorite) {
       removeFavorite(existingFavorite.id);
@@ -323,8 +326,8 @@ export const Sidebar: React.FC = () => {
     }
   }, [sidebar.favorites, addFavorite, removeFavorite]);
 
-  // Check if item is favorited
-  const isFavorite = useCallback((path?: string) => {
+  // Check if item is favorited (reserved for future use)
+  const _isFavorite = useCallback((path?: string) => {
     if (!path) return false;
     return sidebar.favorites.some(f => f.path === path);
   }, [sidebar.favorites]);

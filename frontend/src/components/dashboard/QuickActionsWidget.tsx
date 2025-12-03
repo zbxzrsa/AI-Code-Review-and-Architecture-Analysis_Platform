@@ -15,8 +15,6 @@ import {
   ScanOutlined,
   FileSearchOutlined,
   RobotOutlined,
-  SettingOutlined,
-  TeamOutlined,
   SafetyOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';

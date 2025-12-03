@@ -27,7 +27,6 @@ import {
   RocketOutlined,
   SafetyOutlined,
   SyncOutlined,
-  CheckCircleOutlined,
   WarningOutlined,
   ExperimentOutlined,
   ArrowUpOutlined,
@@ -35,7 +34,7 @@ import {
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 interface CycleStatus {
   running: boolean;
@@ -57,13 +56,13 @@ interface EvolutionActivity {
 const SelfEvolutionWidget: React.FC = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [bugFixCycle, setBugFixCycle] = useState<CycleStatus>({
+  const [bugFixCycle] = useState<CycleStatus>({
     running: true,
     cycles: 15,
     lastCycle: new Date().toISOString(),
     metrics: { success: 12, failed: 3 },
   });
-  const [evolutionCycle, setEvolutionCycle] = useState<CycleStatus>({
+  const [evolutionCycle] = useState<CycleStatus>({
     running: true,
     cycles: 24,
     lastCycle: new Date().toISOString(),
@@ -118,21 +117,6 @@ const SelfEvolutionWidget: React.FC = () => {
         return <ExperimentOutlined style={{ color: '#faad14' }} />;
       default:
         return <SyncOutlined />;
-    }
-  };
-
-  const getActivityColor = (type: string) => {
-    switch (type) {
-      case 'promotion':
-        return 'green';
-      case 'degradation':
-        return 'red';
-      case 'fix':
-        return 'blue';
-      case 'experiment':
-        return 'orange';
-      default:
-        return 'default';
     }
   };
 

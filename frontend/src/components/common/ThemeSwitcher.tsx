@@ -19,7 +19,7 @@ export const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({
   showLabel = true,
   compact = false,
 }) => {
-  const { themeStyle, themeMode, setThemeStyle, setThemeMode, isPixel, isDark } = useTheme();
+  const { themeStyle, themeMode, setThemeStyle, setThemeMode, isPixel } = useTheme();
 
   if (compact) {
     return (

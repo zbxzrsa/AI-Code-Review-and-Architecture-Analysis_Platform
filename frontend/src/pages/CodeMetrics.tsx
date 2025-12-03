@@ -17,26 +17,18 @@ import {
   Typography,
   Space,
   Progress,
-  Statistic,
   Tag,
   Select,
   Table,
-  Tooltip,
   Badge,
-  Divider,
 } from 'antd';
 import type { TableProps } from 'antd';
 import {
   BarChartOutlined,
-  LineChartOutlined,
-  PieChartOutlined,
   CodeOutlined,
-  BugOutlined,
-  ClockCircleOutlined,
   FileTextOutlined,
   FunctionOutlined,
   ApartmentOutlined,
-  ThunderboltOutlined,
   SafetyCertificateOutlined,
   RiseOutlined,
   FallOutlined,
@@ -45,7 +37,7 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface FileMetric {
   path: string;

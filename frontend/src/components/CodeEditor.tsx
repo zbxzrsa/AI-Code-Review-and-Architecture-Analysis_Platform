@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Segmented, Spin, Alert } from 'antd'
-import { useTranslation } from 'react-i18next'
+import { useState } from 'react'
+import { Segmented, Alert } from 'antd'
 import MonacoEditor from '@monaco-editor/react'
 import CodeMirrorEditor from '@uiw/react-codemirror'
 import { python } from '@codemirror/lang-python'
@@ -29,7 +28,6 @@ export default function CodeEditor({
   const [editor, setEditor] = useState<'monaco' | 'codemirror'>('monaco')
   const [isMonacoReady, setIsMonacoReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const { t } = useTranslation()
 
   const getLanguageExtension = () => {
     switch (language.toLowerCase()) {
@@ -57,13 +55,6 @@ export default function CodeEditor({
       onChange(value)
       setError(null)
     }
-  }
-
-  const handleMonacoError = (error: any) => {
-    console.error('Monaco Editor error:', error)
-    setError(t('errors.editorError'))
-    // Fallback to CodeMirror
-    setEditor('codemirror')
   }
 
   return (

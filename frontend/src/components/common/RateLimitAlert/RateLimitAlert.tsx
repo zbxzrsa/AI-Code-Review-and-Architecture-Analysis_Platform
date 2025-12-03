@@ -34,7 +34,7 @@ export const RateLimitAlert: React.FC<RateLimitAlertProps> = ({
   message,
   type = 'warning',
   showProgress = true,
-  onRetry,
+  onRetry: _onRetry,
 }) => {
   const { t } = useTranslation();
 
@@ -148,7 +148,7 @@ interface RateLimitInfoProps {
 export const RateLimitInfo: React.FC<RateLimitInfoProps> = ({
   remaining,
   total,
-  resetTime,
+  resetTime: _resetTime,
 }) => {
   const { t } = useTranslation();
   const percent = Math.round((remaining / total) * 100);

@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useAuthStore } from '../store/authStore';
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useAuthStore } from "../store/authStore";
 
 interface WebSocketState<T> {
   data: T | null;
@@ -22,7 +22,7 @@ interface WebSocketOptions {
 const defaultOptions: WebSocketOptions = {
   reconnect: true,
   reconnectAttempts: 5,
-  reconnectInterval: 3000
+  reconnectInterval: 3000,
 };
 
 export function useWebSocket<T>(
@@ -31,11 +31,13 @@ export function useWebSocket<T>(
 ): WebSocketState<T> {
   const opts = { ...defaultOptions, ...options };
   const { token } = useAuthStore();
-  
-  const [state, setState] = useState<Omit<WebSocketState<T>, 'send' | 'reconnect'>>({
+
+  const [state, setState] = useState<
+    Omit<WebSocketState<T>, "send" | "reconnect">
+  >({
     data: null,
     error: null,
-    isConnected: false
+    isConnected: false,
   });
 
   const wsRef = useRef<WebSocket | null>(null);
@@ -57,8 +59,8 @@ export function useWebSocket<T>(
 
     try {
       // Add token to URL if available
-      const wsUrl = token 
-        ? `${url}${url.includes('?') ? '&' : '?'}token=${token}`
+      const wsUrl = token
+        ? `${url}${url.includes("?") ? "&" : "?"}token=${token}`
         : url;
 
       const ws = new WebSocket(wsUrl);
@@ -66,10 +68,10 @@ export function useWebSocket<T>(
 
       ws.onopen = () => {
         reconnectCountRef.current = 0;
-        setState(prev => ({ 
-          ...prev, 
-          isConnected: true, 
-          error: null 
+        setState((prev) => ({
+          ...prev,
+          isConnected: true,
+          error: null,
         }));
         opts.onOpen?.();
 
@@ -83,24 +85,24 @@ export function useWebSocket<T>(
       ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data) as T;
-          setState(prev => ({ ...prev, data }));
+          setState((prev) => ({ ...prev, data }));
           opts.onMessage?.(data);
         } catch (parseError) {
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
-            error: new Error('Failed to parse WebSocket message')
+            error: new Error("Failed to parse WebSocket message"),
           }));
         }
       };
 
-      ws.onerror = (event) => {
-        const error = new Error('WebSocket error');
-        setState(prev => ({ ...prev, error }));
+      ws.onerror = (_event) => {
+        const error = new Error("WebSocket error");
+        setState((prev) => ({ ...prev, error }));
         opts.onError?.(error);
       };
 
       ws.onclose = (event) => {
-        setState(prev => ({ ...prev, isConnected: false }));
+        setState((prev) => ({ ...prev, isConnected: false }));
         opts.onClose?.();
 
         // Reconnect logic
@@ -110,19 +112,20 @@ export function useWebSocket<T>(
           !event.wasClean
         ) {
           reconnectCountRef.current += 1;
-          const delay = (opts.reconnectInterval || 3000) * reconnectCountRef.current;
+          const delay =
+            (opts.reconnectInterval || 3000) * reconnectCountRef.current;
 
           reconnectTimeoutRef.current = setTimeout(() => {
             connect();
           }, delay);
         }
       };
-
     } catch (err) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isConnected: false,
-        error: err instanceof Error ? err : new Error('Failed to create WebSocket')
+        error:
+          err instanceof Error ? err : new Error("Failed to create WebSocket"),
       }));
     }
   }, [url, token, opts]);
@@ -159,39 +162,54 @@ export function useWebSocket<T>(
 
 // Specialized hook for collaborative editing
 export function useCollaborativeEditing(documentId: string) {
-  const baseUrl = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+  const baseUrl = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
   const url = `${baseUrl}/ws/collaborate/${documentId}`;
 
   interface CollaborativeMessage {
-    type: 'cursor' | 'edit' | 'selection' | 'presence';
+    type: "cursor" | "edit" | "selection" | "presence";
     userId: string;
     userName: string;
     data: unknown;
     timestamp: number;
   }
 
-  const { data, error, isConnected, send, reconnect } = useWebSocket<CollaborativeMessage>(url);
+  const { data, error, isConnected, send, reconnect } =
+    useWebSocket<CollaborativeMessage>(url);
 
-  const sendCursorPosition = useCallback((line: number, column: number) => {
-    send({
-      type: 'cursor',
-      data: { line, column }
-    });
-  }, [send]);
+  const sendCursorPosition = useCallback(
+    (line: number, column: number) => {
+      send({
+        type: "cursor",
+        data: { line, column },
+      });
+    },
+    [send]
+  );
 
-  const sendEdit = useCallback((changes: unknown) => {
-    send({
-      type: 'edit',
-      data: changes
-    });
-  }, [send]);
+  const sendEdit = useCallback(
+    (changes: unknown) => {
+      send({
+        type: "edit",
+        data: changes,
+      });
+    },
+    [send]
+  );
 
-  const sendSelection = useCallback((startLine: number, startColumn: number, endLine: number, endColumn: number) => {
-    send({
-      type: 'selection',
-      data: { startLine, startColumn, endLine, endColumn }
-    });
-  }, [send]);
+  const sendSelection = useCallback(
+    (
+      startLine: number,
+      startColumn: number,
+      endLine: number,
+      endColumn: number
+    ) => {
+      send({
+        type: "selection",
+        data: { startLine, startColumn, endLine, endColumn },
+      });
+    },
+    [send]
+  );
 
   return {
     message: data,
@@ -200,7 +218,7 @@ export function useCollaborativeEditing(documentId: string) {
     reconnect,
     sendCursorPosition,
     sendEdit,
-    sendSelection
+    sendSelection,
   };
 }
 

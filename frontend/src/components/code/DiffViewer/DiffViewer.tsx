@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { Diff2HtmlUI } from 'diff2html/lib/ui/js/diff2html-ui';
 import { html } from 'diff2html';
 import { useTranslation } from 'react-i18next';
 import { Button, Space, Segmented, Tooltip } from 'antd';
@@ -26,7 +25,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
   newCode,
   oldFileName = 'original',
   newFileName = 'modified',
-  language = 'plaintext',
+  language: _language = 'plaintext',
   outputFormat = 'side-by-side',
   onFormatChange
 }) => {
@@ -43,7 +42,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
     // Simple diff generation (for production, use a proper diff library)
     const maxLines = Math.max(oldLines.length, newLines.length);
     let hunkStart = -1;
-    let hunkLines: string[] = [];
+    // Track hunk state
+    let _hunkLines: string[] = [];
     
     for (let i = 0; i < maxLines; i++) {
       const oldLine = oldLines[i] || '';

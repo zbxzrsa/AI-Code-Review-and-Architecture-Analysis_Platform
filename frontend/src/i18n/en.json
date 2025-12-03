@@ -53,6 +53,7 @@
     "auto_fix_desc": "Apply AI fixes"
   },
   "nav": {
+    "welcome": "Welcome",
     "dashboard": "Dashboard",
     "projects": "Projects",
     "all_projects": "All Projects",
@@ -69,6 +70,7 @@
     "audit": "Audit Logs",
     "vulnerabilities": "Vulnerabilities",
     "security": "Security Scanner",
+    "quality": "Code Quality",
     "evolution": "Evolution Cycle",
     "model_testing": "Model Testing",
     "model_comparison": "Model Comparison",

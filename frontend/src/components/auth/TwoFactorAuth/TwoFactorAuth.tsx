@@ -7,7 +7,7 @@
  * - Backup codes management
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Card,
   Input,
@@ -28,7 +28,6 @@ import {
   KeyOutlined,
   CopyOutlined,
   DownloadOutlined,
-  ReloadOutlined,
   CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +35,7 @@ import { apiService } from '../../../services/api';
 import { twoFactorAuth } from '../../../services/security';
 import './TwoFactorAuth.css';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 // ============================================
 // 2FA Verification Component (During Login)

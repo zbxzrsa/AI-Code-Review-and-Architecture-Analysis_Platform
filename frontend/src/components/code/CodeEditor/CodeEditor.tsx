@@ -186,8 +186,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     return () => disposable.dispose();
   }, [issues, language, t]);
 
-  // Jump to specific line
-  const jumpToLine = useCallback((line: number) => {
+  // Jump to specific line (exposed for parent components)
+  const _jumpToLine = useCallback((line: number) => {
     if (editorRef.current) {
       editorRef.current.revealLineInCenter(line);
       editorRef.current.setPosition({ lineNumber: line, column: 1 });
@@ -195,8 +195,8 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({
     }
   }, []);
 
-  // Format document
-  const formatDocument = useCallback(() => {
+  // Format document (exposed for parent components)
+  const _formatDocument = useCallback(() => {
     if (editorRef.current) {
       editorRef.current.getAction('editor.action.formatDocument')?.run();
     }

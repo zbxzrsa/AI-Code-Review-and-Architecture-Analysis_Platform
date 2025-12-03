@@ -10,7 +10,7 @@
  * - Cost analytics
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -23,9 +23,6 @@ import {
   Table,
   Tag,
   Progress,
-  Tabs,
-  Tooltip,
-  Badge,
 } from 'antd';
 import {
   LineChartOutlined,
@@ -45,7 +42,7 @@ import {
   TrophyOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { api } from '../services/api';
+// import { api } from '../services/api';
 import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
@@ -79,7 +76,7 @@ export const Analytics: React.FC = () => {
     dayjs(),
   ]);
   const [selectedProject, setSelectedProject] = useState<string>('all');
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
 
   // Mock analytics data
   const overviewStats = {
@@ -97,7 +94,7 @@ export const Analytics: React.FC = () => {
     securityChange: -22.4,
   };
 
-  const weeklyData = [45, 52, 38, 65, 72, 58, 81];
+  const _weeklyData = [45, 52, 38, 65, 72, 58, 81];
   const monthlyTrend = [120, 135, 128, 145, 162, 158, 175, 190, 185, 210, 225, 240];
 
   const issuesByCategory = [

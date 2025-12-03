@@ -28,6 +28,9 @@ import { NotificationCenter } from './components/common/NotificationCenter';
 import { Layout } from './components/layout';
 import { isRTL } from './i18n/config';
 
+// Artistic theme styles
+import './styles/artistic-theme.css';
+
 // Initialize i18n / 初始化国际化
 import './i18n';
 import './App.css';
@@ -59,7 +62,7 @@ const Reports = lazy(() => import('./pages/Reports'));
 const ActivityFeed = lazy(() => import('./pages/ActivityFeed'));
 const Repositories = lazy(() => import('./pages/Repositories'));
 const PullRequests = lazy(() => import('./pages/PullRequests'));
-const AutoFix = lazy(() => import('./pages/admin/AutoFix'));
+// AutoFix page - uses AutoFixDashboard instead
 const Deployments = lazy(() => import('./pages/Deployments'));
 const CodeComparison = lazy(() => import('./pages/CodeComparison'));
 const CodeQualityRules = lazy(() => import('./pages/CodeQualityRules'));
@@ -100,6 +103,8 @@ const LearningCycleDashboard = lazy(() => import('./pages/admin/LearningCycleDas
 const ModelComparison = lazy(() => import('./pages/admin/ModelComparison'));
 const PerformanceMonitor = lazy(() => import('./pages/admin/PerformanceMonitor'));
 const SecurityScanner = lazy(() => import('./pages/admin/SecurityScanner'));
+const CodeQualityDashboard = lazy(() => import('./pages/admin/CodeQualityDashboard'));
+const WelcomeDashboard = lazy(() => import('./pages/WelcomeDashboard'));
 
 // Query client for React Query
 const queryClient = new QueryClient({
@@ -197,6 +202,7 @@ export default function App() {
                   </ProtectedRoute>
                 }>
                   <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/welcome" element={<WelcomeDashboard />} />
                   
                   {/* Projects routes / 项目路由 */}
                   <Route path="/projects" element={<ProjectList />} />
@@ -310,6 +316,11 @@ export default function App() {
                   <Route path="/admin/security" element={
                     <AdminRoute>
                       <SecurityScanner />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/quality" element={
+                    <AdminRoute>
+                      <CodeQualityDashboard />
                     </AdminRoute>
                   } />
                 </Route>

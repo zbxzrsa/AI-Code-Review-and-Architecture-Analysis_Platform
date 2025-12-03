@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from "react";
 
 interface SSEState<T> {
   data: T | null;
@@ -18,19 +18,16 @@ const defaultOptions: SSEOptions = {
   withCredentials: true,
   retryOnError: true,
   maxRetries: 3,
-  retryDelay: 1000
+  retryDelay: 1000,
 };
 
-export function useSSE<T>(
-  url: string,
-  options: SSEOptions = {}
-): SSEState<T> {
+export function useSSE<T>(url: string, options: SSEOptions = {}): SSEState<T> {
   const opts = { ...defaultOptions, ...options };
-  
-  const [state, setState] = useState<Omit<SSEState<T>, 'reconnect'>>({
+
+  const [state, setState] = useState<Omit<SSEState<T>, "reconnect">>({
     data: null,
     error: null,
-    isConnected: false
+    isConnected: false,
   });
 
   const eventSourceRef = useRef<EventSource | null>(null);
@@ -51,85 +48,97 @@ export function useSSE<T>(
 
     try {
       const eventSource = new EventSource(url, {
-        withCredentials: opts.withCredentials
+        withCredentials: opts.withCredentials,
       });
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
         retryCountRef.current = 0;
-        setState(prev => ({ 
-          ...prev, 
-          isConnected: true, 
-          error: null 
+        setState((prev) => ({
+          ...prev,
+          isConnected: true,
+          error: null,
         }));
       };
 
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data) as T;
-          setState(prev => ({ ...prev, data }));
+          setState((prev) => ({ ...prev, data }));
         } catch (parseError) {
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
-            error: new Error('Failed to parse SSE data')
+            error: new Error("Failed to parse SSE data"),
           }));
         }
       };
 
-      eventSource.onerror = (event) => {
+      eventSource.onerror = (_event) => {
         eventSource.close();
-        setState(prev => ({
+        setState((prev) => ({
           ...prev,
-          isConnected: false
+          isConnected: false,
         }));
 
         // Retry logic
-        if (opts.retryOnError && retryCountRef.current < (opts.maxRetries || 3)) {
+        if (
+          opts.retryOnError &&
+          retryCountRef.current < (opts.maxRetries || 3)
+        ) {
           retryCountRef.current += 1;
-          const delay = (opts.retryDelay || 1000) * Math.pow(2, retryCountRef.current - 1);
-          
+          const delay =
+            (opts.retryDelay || 1000) * Math.pow(2, retryCountRef.current - 1);
+
           retryTimeoutRef.current = setTimeout(() => {
             connect();
           }, delay);
         } else {
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
-            error: new Error('SSE connection error')
+            error: new Error("SSE connection error"),
           }));
         }
       };
 
       // Handle custom events
-      eventSource.addEventListener('error', (event: MessageEvent) => {
+      eventSource.addEventListener("error", (event: MessageEvent) => {
         try {
           const errorData = JSON.parse(event.data);
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
-            error: new Error(errorData.message || 'Unknown error')
+            error: new Error(errorData.message || "Unknown error"),
           }));
         } catch {
           // Ignore parse errors for error events
         }
       });
 
-      eventSource.addEventListener('complete', (event: MessageEvent) => {
+      eventSource.addEventListener("complete", (event: MessageEvent) => {
         try {
           const data = JSON.parse(event.data) as T;
-          setState(prev => ({ ...prev, data }));
+          setState((prev) => ({ ...prev, data }));
           eventSource.close();
         } catch {
           // Ignore parse errors
         }
       });
-
     } catch (err) {
-      setState(prev => ({
+      setState((prev) => ({
         ...prev,
         isConnected: false,
-        error: err instanceof Error ? err : new Error('Failed to create EventSource')
+        error:
+          err instanceof Error
+            ? err
+            : new Error("Failed to create EventSource"),
       }));
     }
-  }, [url, opts.withCredentials, opts.retryOnError, opts.maxRetries, opts.retryDelay]);
+  }, [
+    url,
+    opts.withCredentials,
+    opts.retryOnError,
+    opts.maxRetries,
+    opts.retryDelay,
+  ]);
 
   const reconnect = useCallback(() => {
     retryCountRef.current = 0;

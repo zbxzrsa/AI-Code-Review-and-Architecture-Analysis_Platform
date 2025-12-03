@@ -9,7 +9,6 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { MessageList, Message } from '../MessageList';
-import { useSSE } from '../../../hooks/useSSE';
 import './ChatInterface.css';
 
 const { TextArea } = Input;

@@ -21,7 +21,6 @@ import arEG from 'antd/locale/ar_EG';
 
 import i18n from '../../../i18n';
 import { useLanguage } from '../../../hooks/useLanguage';
-import { isRTL } from '../../../i18n/config';
 
 import './I18nProvider.css';
 

@@ -8,7 +8,7 @@
  * - Rich activity cards with context
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -20,23 +20,16 @@ import {
   Button,
   Select,
   Input,
-  Timeline,
   Tooltip,
   Badge,
-  Dropdown,
-  Tabs,
   Empty,
 } from 'antd';
 import {
   ClockCircleOutlined,
   CodeOutlined,
-  BugOutlined,
-  CheckCircleOutlined,
-  WarningOutlined,
   UserOutlined,
   TeamOutlined,
   BranchesOutlined,
-  PullRequestOutlined,
   MergeOutlined,
   CommentOutlined,
   EyeOutlined,
@@ -45,14 +38,13 @@ import {
   BellOutlined,
   RocketOutlined,
   SafetyCertificateOutlined,
-  FileTextOutlined,
   SettingOutlined,
   StarOutlined,
   StarFilled,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface Activity {
   id: string;
@@ -212,7 +204,7 @@ const formatTimeAgo = (timestamp: string): string => {
 
 export const ActivityFeed: React.FC = () => {
   const { t } = useTranslation();
-  const [activities, setActivities] = useState<Activity[]>(mockActivities);
+  const [activities, _setActivities] = useState<Activity[]>(mockActivities);
   const [filter, setFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [starred, setStarred] = useState<Set<string>>(new Set());

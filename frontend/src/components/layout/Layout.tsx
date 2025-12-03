@@ -33,7 +33,6 @@ import {
   QuestionCircleOutlined,
   SunOutlined,
   MoonOutlined,
-  SearchOutlined,
   SettingOutlined,
   HomeOutlined,
 } from '@ant-design/icons';
@@ -77,7 +76,6 @@ export const Layout: React.FC = () => {
     toggleMobileDrawer, 
     resolvedTheme, 
     setTheme,
-    breadcrumbs,
     openCommandPalette,
   } = useUIStore();
 

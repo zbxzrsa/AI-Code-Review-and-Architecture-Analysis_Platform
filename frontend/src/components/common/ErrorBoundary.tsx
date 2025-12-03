@@ -1,7 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Result, Button, Typography, Space, Card } from 'antd';
-import { ReloadOutlined, HomeOutlined, BugOutlined, ArrowLeftOutlined } from '@ant-design/icons';
-import { errorLoggingService, ErrorCategory } from '../../services/errorLogging';
+import { ReloadOutlined, HomeOutlined, BugOutlined } from '@ant-design/icons';
+import { errorLoggingService } from '../../services/errorLogging';
 
 const { Text, Paragraph } = Typography;
 

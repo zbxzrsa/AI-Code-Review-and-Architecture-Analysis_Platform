@@ -12,8 +12,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Card,
-  Row,
-  Col,
   Typography,
   Space,
   Input,
@@ -22,7 +20,6 @@ import {
   List,
   Tag,
   Tooltip,
-  Divider,
   Select,
   message,
   Spin,
@@ -36,17 +33,14 @@ import {
   SafetyCertificateOutlined,
   ThunderboltOutlined,
   CopyOutlined,
-  ReloadOutlined,
-  HistoryOutlined,
   DeleteOutlined,
   PlusOutlined,
-  StarOutlined,
   BookOutlined,
   ToolOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 interface Message {
@@ -80,7 +74,7 @@ const mockConversations: Conversation[] = [
 ];
 
 export const AIAssistant: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',

@@ -1,0 +1,676 @@
+/**
+ * Artistic Theme Styles
+ * 
+ * A soothing and artistic atmosphere with:
+ * - Soft gradients and glassmorphism
+ * - Gentle animations
+ * - Harmonious color palette
+ * - Modern typography
+ */
+
+/* ============================================
+   CSS Variables - Artistic Color Palette
+   ============================================ */
+:root {
+    /* Primary Colors - Calm Ocean */
+    --art-primary-50: #e6f4f9;
+    --art-primary-100: #cce9f3;
+    --art-primary-200: #99d3e7;
+    --art-primary-300: #66bddb;
+    --art-primary-400: #33a7cf;
+    --art-primary-500: #0091c3;
+    --art-primary-600: #00749c;
+    --art-primary-700: #005775;
+    --art-primary-800: #003a4e;
+    --art-primary-900: #001d27;
+
+    /* Accent Colors - Sunset Warmth */
+    --art-accent-50: #fff5eb;
+    --art-accent-100: #ffebd6;
+    --art-accent-200: #ffd7ad;
+    --art-accent-300: #ffc385;
+    --art-accent-400: #ffaf5c;
+    --art-accent-500: #ff9b33;
+    --art-accent-600: #cc7c29;
+    --art-accent-700: #995d1f;
+    --art-accent-800: #663e14;
+    --art-accent-900: #331f0a;
+
+    /* Success - Fresh Mint */
+    --art-success: #10b981;
+    --art-success-light: #d1fae5;
+
+    /* Warning - Soft Amber */
+    --art-warning: #f59e0b;
+    --art-warning-light: #fef3c7;
+
+    /* Error - Gentle Rose */
+    --art-error: #ef4444;
+    --art-error-light: #fee2e2;
+
+    /* Neutral - Soft Gray */
+    --art-gray-50: #fafafa;
+    --art-gray-100: #f4f4f5;
+    --art-gray-200: #e4e4e7;
+    --art-gray-300: #d4d4d8;
+    --art-gray-400: #a1a1aa;
+    --art-gray-500: #71717a;
+    --art-gray-600: #52525b;
+    --art-gray-700: #3f3f46;
+    --art-gray-800: #27272a;
+    --art-gray-900: #18181b;
+
+    /* Glassmorphism */
+    --glass-bg: rgba(255, 255, 255, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    --glass-blur: blur(10px);
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-ocean: linear-gradient(135deg, #0091c3 0%, #00c9a7 100%);
+    --gradient-sunset: linear-gradient(135deg, #ff9b33 0%, #ff6b6b 100%);
+    --gradient-aurora: linear-gradient(135deg, #a855f7 0%, #3b82f6 50%, #10b981 100%);
+    --gradient-soft: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --shadow-glow: 0 0 20px rgba(0, 145, 195, 0.3);
+
+    /* Transitions */
+    --transition-fast: 150ms ease;
+    --transition-normal: 300ms ease;
+    --transition-slow: 500ms ease;
+
+    /* Border Radius */
+    --radius-sm: 6px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 9999px;
+}
+
+/* ============================================
+   Dark Theme Variables
+   ============================================ */
+[data-theme="dark"] {
+    --glass-bg: rgba(30, 30, 35, 0.8);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --gradient-soft: linear-gradient(135deg, #1e1e23 0%, #2d2d35 100%);
+}
+
+/* ============================================
+   Global Artistic Styles
+   ============================================ */
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+    background: var(--art-primary-200);
+    color: var(--art-primary-900);
+}
+
+/* ============================================
+   Artistic Card Styles
+   ============================================ */
+.art-card {
+    background: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--glass-shadow);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.art-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-xl);
+}
+
+.art-card-gradient {
+    background: var(--gradient-soft);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+}
+
+.art-card-gradient::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradient-primary);
+}
+
+/* ============================================
+   Artistic Button Styles
+   ============================================ */
+.art-btn {
+    background: var(--gradient-primary);
+    border: none;
+    border-radius: var(--radius-full);
+    padding: 12px 28px;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    box-shadow: var(--shadow-md);
+}
+
+.art-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg), var(--shadow-glow);
+}
+
+.art-btn:active {
+    transform: translateY(0);
+}
+
+.art-btn-ghost {
+    background: transparent;
+    border: 2px solid var(--art-primary-500);
+    color: var(--art-primary-500);
+    box-shadow: none;
+}
+
+.art-btn-ghost:hover {
+    background: var(--art-primary-50);
+    box-shadow: none;
+}
+
+/* ============================================
+   Artistic Progress Indicators
+   ============================================ */
+.art-progress {
+    height: 8px;
+    background: var(--art-gray-200);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.art-progress-bar {
+    height: 100%;
+    background: var(--gradient-ocean);
+    border-radius: var(--radius-full);
+    transition: width var(--transition-slow);
+}
+
+.art-progress-animated .art-progress-bar {
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+/* ============================================
+   Artistic Stats Cards
+   ============================================ */
+.art-stat-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all var(--transition-normal);
+}
+
+.art-stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: var(--gradient-primary);
+    opacity: 0.1;
+    border-radius: 50%;
+    transform: translate(30%, -30%);
+    transition: all var(--transition-normal);
+}
+
+.art-stat-card:hover::after {
+    transform: translate(20%, -20%) scale(1.2);
+}
+
+.art-stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.art-stat-label {
+    color: var(--art-gray-500);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ============================================
+   Artistic Navigation
+   ============================================ */
+.art-nav-item {
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    color: var(--art-gray-600);
+    transition: all var(--transition-fast);
+    position: relative;
+}
+
+.art-nav-item:hover {
+    background: var(--art-primary-50);
+    color: var(--art-primary-600);
+}
+
+.art-nav-item.active {
+    background: var(--gradient-primary);
+    color: white;
+}
+
+.art-nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60%;
+    background: white;
+    border-radius: var(--radius-full);
+}
+
+/* ============================================
+   Artistic Tags & Badges
+   ============================================ */
+.art-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: var(--radius-full);
+    font-size: 0.75rem;
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.art-tag-primary {
+    background: var(--art-primary-100);
+    color: var(--art-primary-700);
+}
+
+.art-tag-success {
+    background: var(--art-success-light);
+    color: #065f46;
+}
+
+.art-tag-warning {
+    background: var(--art-warning-light);
+    color: #92400e;
+}
+
+.art-tag-error {
+    background: var(--art-error-light);
+    color: #991b1b;
+}
+
+.art-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: var(--radius-full);
+    background: var(--gradient-primary);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+/* ============================================
+   Artistic Inputs
+   ============================================ */
+.art-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--art-gray-200);
+    border-radius: var(--radius-md);
+    background: white;
+    transition: all var(--transition-fast);
+}
+
+.art-input:focus {
+    outline: none;
+    border-color: var(--art-primary-400);
+    box-shadow: 0 0 0 4px var(--art-primary-100);
+}
+
+.art-input::placeholder {
+    color: var(--art-gray-400);
+}
+
+/* ============================================
+   Artistic Tables
+   ============================================ */
+.art-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 8px;
+}
+
+.art-table th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--art-gray-500);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.art-table td {
+    padding: 16px;
+    background: white;
+    transition: all var(--transition-fast);
+}
+
+.art-table tr td:first-child {
+    border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+.art-table tr td:last-child {
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.art-table tr:hover td {
+    background: var(--art-primary-50);
+}
+
+/* ============================================
+   Artistic Animations
+   ============================================ */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px var(--art-primary-300);
+    }
+
+    50% {
+        box-shadow: 0 0 20px var(--art-primary-400);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+.animate-slide-in {
+    animation: slideIn 0.5s ease forwards;
+}
+
+.animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float 3s ease-in-out infinite;
+}
+
+.animate-glow {
+    animation: glow 2s ease-in-out infinite;
+}
+
+/* Staggered animation delays */
+.stagger-1 {
+    animation-delay: 0.1s;
+}
+
+.stagger-2 {
+    animation-delay: 0.2s;
+}
+
+.stagger-3 {
+    animation-delay: 0.3s;
+}
+
+.stagger-4 {
+    animation-delay: 0.4s;
+}
+
+.stagger-5 {
+    animation-delay: 0.5s;
+}
+
+/* ============================================
+   Artistic Dashboard Widgets
+   ============================================ */
+.art-widget {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-normal);
+}
+
+.art-widget:hover {
+    box-shadow: var(--shadow-lg);
+}
+
+.art-widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--art-gray-100);
+}
+
+.art-widget-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--art-gray-800);
+}
+
+.art-widget-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--gradient-primary);
+    color: white;
+}
+
+/* ============================================
+   Artistic Charts Container
+   ============================================ */
+.art-chart-container {
+    background: var(--gradient-soft);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    position: relative;
+}
+
+.art-chart-container::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-lg);
+    padding: 1px;
+    background: linear-gradient(135deg, var(--art-primary-200), var(--art-accent-200));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+/* ============================================
+   Artistic Loading States
+   ============================================ */
+.art-skeleton {
+    background: linear-gradient(90deg, var(--art-gray-100) 25%, var(--art-gray-200) 50%, var(--art-gray-100) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: var(--radius-md);
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+.art-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid var(--art-gray-200);
+    border-top-color: var(--art-primary-500);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* ============================================
+   Artistic Tooltip
+   ============================================ */
+.art-tooltip {
+    position: relative;
+}
+
+.art-tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-8px);
+    padding: 8px 12px;
+    background: var(--art-gray-800);
+    color: white;
+    font-size: 0.75rem;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all var(--transition-fast);
+}
+
+.art-tooltip:hover::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-4px);
+}
+
+/* ============================================
+   Responsive Utilities
+   ============================================ */
+@media (max-width: 768px) {
+    .art-stat-value {
+        font-size: 1.75rem;
+    }
+
+    .art-card {
+        border-radius: var(--radius-md);
+    }
+
+    .art-widget {
+        padding: 16px;
+    }
+}
+
+/* ============================================
+   Print Styles
+   ============================================ */
+@media print {
+
+    .art-card,
+    .art-widget {
+        box-shadow: none;
+        border: 1px solid var(--art-gray-200);
+    }
+
+    .animate-fade-in,
+    .animate-slide-in,
+    .animate-pulse,
+    .animate-float {
+        animation: none;
+    }
+}
