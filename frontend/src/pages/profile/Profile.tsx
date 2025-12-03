@@ -498,7 +498,8 @@ const ActivitySection: React.FC = () => {
   const { data: loginHistory, isLoading: loginLoading } = useLoginHistory({ limit: 10 });
   const { data: apiActivity, isLoading: apiLoading } = useApiActivity({ limit: 10 });
 
-  const getDeviceIcon = (device: string) => {
+  const getDeviceIcon = (device?: string) => {
+    if (!device) return <DesktopOutlined />;
     const lower = device.toLowerCase();
     if (lower.includes('mobile') || lower.includes('phone')) return <MobileOutlined />;
     if (lower.includes('tablet')) return <LaptopOutlined />;
@@ -510,27 +511,32 @@ const ActivitySection: React.FC = () => {
       title: t('profile.activity.device', 'Device'),
       dataIndex: 'device',
       key: 'device',
-      render: (device: string, record) => (
-        <Space>
-          {getDeviceIcon(device)}
-          <div>
-            <Text strong>{record.browser}</Text>
-            <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>{device}</Text>
-          </div>
-        </Space>
-      ),
+      render: (device: string, record: any) => {
+        // Handle both 'device' and 'device_type' from API
+        const deviceInfo = device || record.device_type || 'desktop';
+        const browserInfo = record.browser || record.user_agent?.split(' ')[0] || 'Unknown';
+        return (
+          <Space>
+            {getDeviceIcon(deviceInfo)}
+            <div>
+              <Text strong>{browserInfo}</Text>
+              <br />
+              <Text type="secondary" style={{ fontSize: 12 }}>{deviceInfo}</Text>
+            </div>
+          </Space>
+        );
+      },
     },
     {
       title: t('profile.activity.location', 'Location'),
       key: 'location',
-      render: (_, record) => (
+      render: (_: any, record: any) => (
         <Space>
           <EnvironmentOutlined />
           <div>
             <Text>{record.location || 'Unknown'}</Text>
             <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>{record.ip}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>{record.ip || record.ip_address || 'Unknown'}</Text>
           </div>
         </Space>
       ),
@@ -539,21 +545,26 @@ const ActivitySection: React.FC = () => {
       title: t('profile.activity.time', 'Time'),
       dataIndex: 'timestamp',
       key: 'timestamp',
-      render: (time: string) => new Date(time).toLocaleString(),
+      render: (time: string, record: any) => {
+        const timestamp = time || record.created_at;
+        return timestamp ? new Date(timestamp).toLocaleString() : 'Unknown';
+      },
     },
     {
       title: t('profile.activity.status', 'Status'),
       dataIndex: 'success',
       key: 'success',
-      render: (success: boolean, record) => (
-        success ? (
+      render: (success: boolean, record: any) => {
+        // Handle both 'success' boolean and 'status' string from API
+        const isSuccess = success === true || record.status === 'success';
+        return isSuccess ? (
           <Tag color="green">{t('profile.activity.success', 'Success')}</Tag>
         ) : (
-          <Tooltip title={record.failureReason}>
+          <Tooltip title={record.failureReason || record.failure_reason}>
             <Tag color="red">{t('profile.activity.failed', 'Failed')}</Tag>
           </Tooltip>
-        )
-      ),
+        );
+      },
     },
   ];
 
@@ -580,23 +591,32 @@ const ActivitySection: React.FC = () => {
       title: t('profile.activity.response_time', 'Response'),
       dataIndex: 'responseTime',
       key: 'responseTime',
-      render: (time: number) => `${time}ms`,
+      render: (time: number, record: any) => {
+        const responseTime = time || record.response_time_ms || 0;
+        return `${responseTime}ms`;
+      },
     },
     {
       title: t('profile.activity.status', 'Status'),
       dataIndex: 'statusCode',
       key: 'statusCode',
-      render: (code: number) => (
-        <Tag color={code < 300 ? 'green' : code < 400 ? 'orange' : 'red'}>
-          {code}
-        </Tag>
-      ),
+      render: (code: number, record: any) => {
+        const statusCode = code || record.status_code || 200;
+        return (
+          <Tag color={statusCode < 300 ? 'green' : statusCode < 400 ? 'orange' : 'red'}>
+            {statusCode}
+          </Tag>
+        );
+      },
     },
     {
       title: t('profile.activity.time', 'Time'),
       dataIndex: 'timestamp',
       key: 'timestamp',
-      render: (time: string) => new Date(time).toLocaleString(),
+      render: (time: string, record: any) => {
+        const timestamp = time || record.created_at;
+        return timestamp ? new Date(timestamp).toLocaleString() : 'Unknown';
+      },
     },
   ];
 

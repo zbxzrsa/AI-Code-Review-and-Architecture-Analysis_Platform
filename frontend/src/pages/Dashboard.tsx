@@ -26,6 +26,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth';
 import { apiService } from '../services/api';
+import { SelfEvolutionWidget, CodeQualityWidget, QuickActionsWidget } from '../components/dashboard';
 import './Dashboard.css';
 
 const { Title, Text } = Typography;
@@ -279,7 +280,7 @@ export const Dashboard: React.FC = () => {
 
       {/* Recent Activity */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24}>
+        <Col xs={24} lg={12}>
           <Card title={t('dashboard.recent_activity', 'Recent Activity')}>
             <List
               itemLayout="horizontal"
@@ -313,6 +314,21 @@ export const Dashboard: React.FC = () => {
               )}
             />
           </Card>
+        </Col>
+
+        {/* Self-Evolution Status Widget */}
+        <Col xs={24} lg={12}>
+          <SelfEvolutionWidget />
+        </Col>
+      </Row>
+
+      {/* Code Quality & Quick Actions */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+        <Col xs={24} lg={12}>
+          <CodeQualityWidget />
+        </Col>
+        <Col xs={24} lg={12}>
+          <QuickActionsWidget />
         </Col>
       </Row>
     </div>

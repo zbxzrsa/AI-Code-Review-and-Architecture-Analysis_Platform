@@ -3,10 +3,12 @@ Authentication and authorization utilities.
 
 JWT token management, role-based access control, and security dependencies.
 """
+import hashlib
 import logging
 import os
+import uuid
 from typing import Optional, Dict, Any
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 
 from fastapi import Depends, HTTPException, status
@@ -15,9 +17,14 @@ from jose import JWTError, jwt
 
 logger = logging.getLogger(__name__)
 
-# Configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+# Configuration - SECURITY: No default fallback for secrets
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("JWT_SECRET_KEY environment variable must be set")
+
 ALGORITHM = "HS256"
+JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "code-review-platform")
+JWT_ISSUER = os.getenv("JWT_ISSUER", "auth-service")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "15"))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
@@ -38,13 +45,16 @@ class TokenManager:
             if expires_delta is None:
                 expires_delta = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(timezone.utc) + expires_delta
             to_encode = {
                 "sub": user_id,
                 "role": role,
                 "type": "access",
                 "exp": expire,
-                "iat": datetime.utcnow()
+                "iat": datetime.now(timezone.utc),
+                "jti": str(uuid.uuid4()),  # JWT ID for revocation tracking
+                "aud": JWT_AUDIENCE,
+                "iss": JWT_ISSUER,
             }
 
             encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -64,12 +74,15 @@ class TokenManager:
             if expires_delta is None:
                 expires_delta = timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
 
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(timezone.utc) + expires_delta
             to_encode = {
                 "sub": user_id,
                 "type": "refresh",
                 "exp": expire,
-                "iat": datetime.utcnow()
+                "iat": datetime.now(timezone.utc),
+                "jti": str(uuid.uuid4()),
+                "aud": JWT_AUDIENCE,
+                "iss": JWT_ISSUER,
             }
 
             encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
@@ -92,9 +105,20 @@ class TokenManager:
 
     @staticmethod
     def verify_token(token: str, token_type: str = "access") -> Dict[str, Any]:
-        """Verify and decode token."""
+        """Verify and decode token with full validation."""
         try:
-            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            payload = jwt.decode(
+                token,
+                SECRET_KEY,
+                algorithms=[ALGORITHM],
+                options={
+                    "verify_aud": True,
+                    "verify_iss": True,
+                    "require": ["exp", "sub", "type", "iat", "jti"]
+                },
+                audience=JWT_AUDIENCE,
+                issuer=JWT_ISSUER,
+            )
 
             # Verify token type
             if payload.get("type") != token_type:
@@ -297,7 +321,7 @@ class SecurityAudit:
         """Log authentication event."""
         try:
             log_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "user_id": user_id,
                 "event_type": event_type,
                 "status": status,
@@ -324,7 +348,7 @@ class SecurityAudit:
         """Log access event."""
         try:
             log_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "user_id": user_id,
                 "resource": resource,
                 "action": action,
@@ -359,14 +383,15 @@ class SessionManager:
         try:
             access_token, refresh_token = TokenManager.create_tokens(user_id, role)
 
-            # Store session in Redis
-            session_key = f"session:{user_id}:{access_token[:20]}"
+            # Store session in Redis with secure hash
+            token_hash = hashlib.sha256(access_token.encode()).hexdigest()[:32]
+            session_key = f"session:{user_id}:{token_hash}"
             session_data = {
                 "user_id": user_id,
                 "role": role,
                 "device_info": device_info,
-                "created_at": datetime.utcnow().isoformat(),
-                "last_activity": datetime.utcnow().isoformat()
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "last_activity": datetime.now(timezone.utc).isoformat()
             }
 
             self.redis.set_global_cache(
@@ -390,7 +415,8 @@ class SessionManager:
     def invalidate_session(self, user_id: str, token: str) -> bool:
         """Invalidate user session."""
         try:
-            session_key = f"session:{user_id}:{token[:20]}"
+            token_hash = hashlib.sha256(token.encode()).hexdigest()[:32]
+            session_key = f"session:{user_id}:{token_hash}"
             self.redis.delete_global_cache(session_key)
             logger.info(f"Session invalidated for user {user_id}")
             return True
@@ -412,7 +438,8 @@ class SessionManager:
     def get_session(self, user_id: str, token: str) -> Optional[Dict[str, Any]]:
         """Get session data."""
         try:
-            session_key = f"session:{user_id}:{token[:20]}"
+            token_hash = hashlib.sha256(token.encode()).hexdigest()[:32]
+            session_key = f"session:{user_id}:{token_hash}"
             return self.redis.get_global_cache(session_key)
         except Exception as e:
             logger.error(f"Failed to get session: {e}")
@@ -421,11 +448,12 @@ class SessionManager:
     def update_session_activity(self, user_id: str, token: str) -> bool:
         """Update session last activity."""
         try:
-            session_key = f"session:{user_id}:{token[:20]}"
+            token_hash = hashlib.sha256(token.encode()).hexdigest()[:32]
+            session_key = f"session:{user_id}:{token_hash}"
             session = self.redis.get_global_cache(session_key)
 
             if session:
-                session["last_activity"] = datetime.utcnow().isoformat()
+                session["last_activity"] = datetime.now(timezone.utc).isoformat()
                 self.redis.set_global_cache(
                     session_key,
                     session,

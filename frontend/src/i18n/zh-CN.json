@@ -27,6 +27,37 @@
     "yes": "是",
     "no": "否"
   },
+  "quick_actions": {
+    "title": "快捷操作",
+    "new_project": "新建项目",
+    "new_project_desc": "创建新项目",
+    "analyze": "开始分析",
+    "analyze_desc": "执行代码分析",
+    "reports": "查看报告",
+    "reports_desc": "查看分析报告",
+    "ai_assistant": "AI 助手",
+    "ai_assistant_desc": "与 AI 对话",
+    "security": "安全扫描",
+    "security_desc": "检查漏洞",
+    "auto_fix": "自动修复",
+    "auto_fix_desc": "应用 AI 修复"
+  },
+  "nav": {
+    "dashboard": "仪表盘",
+    "projects": "项目",
+    "code_review": "代码审查",
+    "reports": "报告",
+    "settings": "设置",
+    "admin": "管理",
+    "vulnerabilities": "漏洞",
+    "evolution": "演进周期",
+    "model_testing": "模型测试",
+    "model_comparison": "模型比较",
+    "system_health": "系统健康",
+    "learning": "学习周期",
+    "ai_models": "AI 模型",
+    "auto_fix": "AI 自动修复"
+  },
   "login": {
     "title": "欢迎回来",
     "subtitle": "登录以继续使用代码审查平台",

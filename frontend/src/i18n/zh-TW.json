@@ -27,6 +27,37 @@
     "yes": "是",
     "no": "否"
   },
+  "quick_actions": {
+    "title": "快捷操作",
+    "new_project": "新建專案",
+    "new_project_desc": "建立新專案",
+    "analyze": "開始分析",
+    "analyze_desc": "執行程式碼分析",
+    "reports": "查看報告",
+    "reports_desc": "查看分析報告",
+    "ai_assistant": "AI 助手",
+    "ai_assistant_desc": "與 AI 對話",
+    "security": "安全掃描",
+    "security_desc": "檢查漏洞",
+    "auto_fix": "自動修復",
+    "auto_fix_desc": "套用 AI 修復"
+  },
+  "nav": {
+    "dashboard": "儀表板",
+    "projects": "專案",
+    "code_review": "程式碼審查",
+    "reports": "報告",
+    "settings": "設定",
+    "admin": "管理",
+    "vulnerabilities": "漏洞",
+    "evolution": "演進週期",
+    "model_testing": "模型測試",
+    "model_comparison": "模型比較",
+    "system_health": "系統健康",
+    "learning": "學習週期",
+    "ai_models": "AI 模型",
+    "auto_fix": "AI 自動修復"
+  },
   "login": {
     "title": "歡迎回來",
     "subtitle": "登入以繼續使用程式碼審查平台",

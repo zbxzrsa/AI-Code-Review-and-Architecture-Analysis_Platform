@@ -87,7 +87,17 @@ export function useAuth() {
 
       return true;
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Login failed';
+      const detail = error.response?.data?.detail;
+      let message: string;
+      if (typeof detail === 'string') {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        message = detail.map((e: any) => e.msg || e.message || String(e)).join(', ');
+      } else if (detail && typeof detail === 'object') {
+        message = detail.msg || detail.message || 'Login failed';
+      } else {
+        message = 'Login failed';
+      }
       setError(message);
       return false;
     } finally {
@@ -109,7 +119,18 @@ export function useAuth() {
 
       return true;
     } catch (error: any) {
-      const message = error.response?.data?.detail || 'Registration failed';
+      const detail = error.response?.data?.detail;
+      let message: string;
+      if (typeof detail === 'string') {
+        message = detail;
+      } else if (Array.isArray(detail)) {
+        // Pydantic validation errors are returned as an array
+        message = detail.map((e: any) => e.msg || e.message || String(e)).join(', ');
+      } else if (detail && typeof detail === 'object') {
+        message = detail.msg || detail.message || 'Registration failed';
+      } else {
+        message = 'Registration failed';
+      }
       setError(message);
       return false;
     } finally {

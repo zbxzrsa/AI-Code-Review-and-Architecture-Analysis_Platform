@@ -41,6 +41,7 @@ import {
   Progress,
   Statistic,
   Steps,
+  Avatar,
 } from 'antd';
 import type { TabsProps, TableProps } from 'antd';
 import {
@@ -79,7 +80,7 @@ import {
   ThunderboltOutlined,
   HistoryOutlined,
   QrcodeOutlined,
-  ShieldOutlined,
+  SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { useUIStore } from '../../store/uiStore';
@@ -465,7 +466,7 @@ const SecuritySection: React.FC = () => {
       <Divider />
 
       {/* Two-Factor Authentication */}
-      <Title level={4}><ShieldOutlined /> {t('settings.two_factor', 'Two-Factor Authentication')}</Title>
+      <Title level={4}><SafetyCertificateOutlined /> {t('settings.two_factor', 'Two-Factor Authentication')}</Title>
       {loading2FA ? (
         <Skeleton active paragraph={{ rows: 2 }} />
       ) : twoFactorStatus?.enabled ? (

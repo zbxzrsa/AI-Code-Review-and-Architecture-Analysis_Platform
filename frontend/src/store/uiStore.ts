@@ -298,10 +298,25 @@ export const useUIStore = create<UIState>()(
         theme: state.theme,
         language: state.language,
         sidebar: {
-          isOpen: state.sidebar.isOpen,
-          width: state.sidebar.width
+          isOpen: state.sidebar?.isOpen ?? true,
+          width: state.sidebar?.width ?? 280,
+          favorites: state.sidebar?.favorites ?? [],
         }
-      })
+      }),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<UIState>;
+        return {
+          ...currentState,
+          ...persisted,
+          sidebar: {
+            ...currentState.sidebar,
+            ...persisted.sidebar,
+            // Ensure arrays have defaults
+            expandedKeys: persisted.sidebar?.expandedKeys ?? currentState.sidebar.expandedKeys ?? [],
+            favorites: persisted.sidebar?.favorites ?? currentState.sidebar.favorites ?? [],
+          }
+        };
+      }
     }
   )
 );

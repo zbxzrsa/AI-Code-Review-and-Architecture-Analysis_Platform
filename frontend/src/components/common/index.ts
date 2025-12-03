@@ -15,3 +15,8 @@ export type {
   NotificationOptions 
 } from './NotificationCenter';
 export { RateLimitAlert, RateLimitWarning, RateLimitInfo } from './RateLimitAlert';
+
+// Pixel theme components
+export { ThemeSwitcher, ThemeQuickToggle } from './ThemeSwitcher';
+export { PixelBadge, PixelStatus, PixelProgress, PixelSpinner } from './PixelBadge';
+export { PixelLogo, ASCIILogo } from './PixelLogo';

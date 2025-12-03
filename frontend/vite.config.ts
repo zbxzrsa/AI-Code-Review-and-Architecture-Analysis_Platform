@@ -1,50 +1,66 @@
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import { mockApiPlugin } from './src/mocks/mockServer';
 
 // https://vitejs.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    port: 5173,
-    strictPort: false, // Allow fallback to next available port / 允许回退到下一个可用端口
-    proxy: {
-      // Auth service / 认证服务
-      '/api/auth': {
-        target: 'http://localhost:8001',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
-      },
-      // Other API services / 其他API服务
-      '/api': {
-        target: 'http://localhost:8000',
-        changeOrigin: true,
-      },
-      '/ws': {
-        target: 'ws://localhost:8000',
-        ws: true,
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  const useMockApi = env.VITE_USE_MOCK_API === 'true' || mode === 'development';
+
+  return {
+    plugins: [
+      react(),
+      // Use mock API in development when backend is not running
+      useMockApi && mockApiPlugin(),
+    ].filter(Boolean),
+    resolve: {
+      alias: {
+        '@': path.resolve(__dirname, './src'),
       },
     },
-  },
-  build: {
-    outDir: 'dist',
-    sourcemap: true,
-  },
-  test: {
-    globals: true,
-    environment: 'jsdom',
-    setupFiles: './src/test/setup.ts',
-    css: true,
-    include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: ['node_modules/', 'src/test/'],
+    server: {
+      port: 5173,
+      strictPort: false, // Allow fallback to next available port
+      proxy: !useMockApi ? {
+        // CSRF token - route to auth server
+        '/api/csrf-token': {
+          target: 'http://localhost:8001',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+        // Auth service
+        '/api/auth': {
+          target: 'http://localhost:8001',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+        // Other API services
+        '/api': {
+          target: 'http://localhost:8000',
+          changeOrigin: true,
+        },
+        '/ws': {
+          target: 'ws://localhost:8000',
+          ws: true,
+        },
+      } : undefined,
     },
-  },
+    build: {
+      outDir: 'dist',
+      sourcemap: true,
+    },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/test/setup.ts',
+      css: true,
+      include: ['src/**/*.{test,spec}.{js,jsx,ts,tsx}'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'json', 'html'],
+        exclude: ['node_modules/', 'src/test/'],
+      },
+    },
+  };
 });

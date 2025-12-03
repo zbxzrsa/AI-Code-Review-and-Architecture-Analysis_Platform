@@ -87,6 +87,16 @@
   color: var(--ant-color-primary);
 }
 
+.app-breadcrumbs .breadcrumb-link {
+  cursor: pointer;
+  color: var(--ant-color-text-secondary);
+  transition: color 0.2s;
+}
+
+.app-breadcrumbs .breadcrumb-link:hover {
+  color: var(--ant-color-primary);
+}
+
 /* Content area */
 .app-content {
   padding: 24px;

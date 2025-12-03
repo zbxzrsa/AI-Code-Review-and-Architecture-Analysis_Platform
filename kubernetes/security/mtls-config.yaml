@@ -1,0 +1,159 @@
+# mTLS Configuration for Inter-Service Communication
+# Requires Istio or Linkerd service mesh
+
+---
+# PeerAuthentication for strict mTLS
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls
+  namespace: platform-v2-stable
+spec:
+  mtls:
+    mode: STRICT
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls
+  namespace: platform-v1-exp
+spec:
+  mtls:
+    mode: STRICT
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default-mtls
+  namespace: platform-infrastructure
+spec:
+  mtls:
+    mode: STRICT
+
+---
+# DestinationRule for TLS settings
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: default-tls
+  namespace: platform-v2-stable
+spec:
+  host: "*.platform-v2-stable.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: default-tls
+  namespace: platform-v1-exp
+spec:
+  host: "*.platform-v1-exp.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+# AuthorizationPolicy - Deny all by default
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: deny-all
+  namespace: platform-v2-stable
+spec: {} # Empty spec denies all traffic
+
+---
+# AuthorizationPolicy - Allow specific service-to-service communication
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-v2-services
+  namespace: platform-v2-stable
+spec:
+  action: ALLOW
+  rules:
+    # Allow from ingress
+    - from:
+        - source:
+            namespaces: ["ingress-nginx"]
+      to:
+        - operation:
+            ports: ["8000"]
+    # Allow from monitoring
+    - from:
+        - source:
+            namespaces: ["platform-monitoring"]
+      to:
+        - operation:
+            paths: ["/health", "/health/*", "/metrics"]
+    # Allow internal service-to-service
+    - from:
+        - source:
+            namespaces: ["platform-v2-stable"]
+            principals: ["cluster.local/ns/platform-v2-stable/sa/*"]
+
+---
+# AuthorizationPolicy - V1 to V2 promotion access
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-v1-promotion
+  namespace: platform-v2-stable
+spec:
+  action: ALLOW
+  selector:
+    matchLabels:
+      app: version-control-service
+  rules:
+    - from:
+        - source:
+            namespaces: ["platform-v1-exp"]
+            principals:
+              ["cluster.local/ns/platform-v1-exp/sa/promotion-controller"]
+      to:
+        - operation:
+            methods: ["POST"]
+            paths: ["/api/v2/versions/promote"]
+
+---
+# Certificate configuration for mTLS
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: v2-service-cert
+  namespace: platform-v2-stable
+spec:
+  secretName: v2-service-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h # 15 days
+  subject:
+    organizations:
+      - code-review-platform
+  isCA: false
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - "*.platform-v2-stable.svc.cluster.local"
+    - "*.platform-v2-stable.svc"
+  issuerRef:
+    name: platform-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+
+---
+# ClusterIssuer for internal CA
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: platform-ca-issuer
+spec:
+  ca:
+    secretName: platform-ca-key-pair

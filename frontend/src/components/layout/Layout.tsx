@@ -9,8 +9,8 @@
  * - Responsive design / 响应式设计
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation, Outlet, Link } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import {
   Layout as AntLayout,
   Avatar,
@@ -87,10 +87,11 @@ export const Layout: React.FC = () => {
   // Generate breadcrumbs from current path
   const currentBreadcrumbs = useMemo(() => {
     const paths = location.pathname.split('/').filter(Boolean);
-    const items: { title: React.ReactNode; href?: string }[] = [
+    const items: { title: React.ReactNode; onClick?: () => void; className?: string }[] = [
       {
-        title: <Link to="/dashboard"><HomeOutlined /></Link>,
-        href: '/dashboard',
+        title: <><HomeOutlined /> {t('nav.dashboard', 'Dashboard')}</>,
+        onClick: () => navigate('/dashboard'),
+        className: 'breadcrumb-link',
       },
     ];
 
@@ -99,18 +100,17 @@ export const Layout: React.FC = () => {
       currentPath += `/${path}`;
       const route = routeToBreadcrumb[currentPath];
       if (route) {
+        const isCurrentPage = currentPath === location.pathname;
         items.push({
-          title: currentPath === location.pathname ? (
-            <span>{t(`nav.${path}`, route.label)}</span>
-          ) : (
-            <Link to={currentPath}>{t(`nav.${path}`, route.label)}</Link>
-          ),
+          title: <span>{t(`nav.${path}`, route.label)}</span>,
+          onClick: isCurrentPage ? undefined : () => navigate(currentPath),
+          className: isCurrentPage ? undefined : 'breadcrumb-link',
         });
       }
     }
 
     return items.length > 1 ? items : [];
-  }, [location.pathname, t]);
+  }, [location.pathname, t, navigate]);
 
   const handleLogout = () => {
     logout();

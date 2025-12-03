@@ -172,7 +172,7 @@ export const Register: React.FC = () => {
         {/* 错误提示 / Error alert */}
         {error && (
           <Alert
-            message={error}
+            message={typeof error === 'string' ? error : (error as any)?.message || (error as any)?.msg || t('register.error', 'Registration failed')}
             type="error"
             showIcon
             closable

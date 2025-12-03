@@ -1,0 +1,246 @@
+# Fixed Network Policies
+# Addresses: unnecessary egress traffic, missing restrictions
+
+---
+# V2 Production - Strict isolation with minimal egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v2-strict-isolation
+  namespace: platform-v2-stable
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress controller
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 9090
+    # Allow internal V2 traffic
+    - from:
+        - podSelector: {}
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # PostgreSQL
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+          podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Redis
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+          podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # AI Model APIs (OpenAI, Anthropic)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    # Internal V2 traffic
+    - to:
+        - podSelector: {}
+
+---
+# V1 Experimentation - More relaxed but still controlled
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v1-controlled-isolation
+  namespace: platform-v1-exp
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from ingress
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 9090
+    # Internal V1 traffic
+    - from:
+        - podSelector: {}
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # PostgreSQL
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+          podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Redis
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+          podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # V2 for promotion requests ONLY
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-v2-stable
+          podSelector:
+            matchLabels:
+              app: version-control-service
+      ports:
+        - protocol: TCP
+          port: 8000
+    # AI Model APIs
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    # Internal V1 traffic
+    - to:
+        - podSelector: {}
+
+---
+# V3 Quarantine - Read-only, minimal network access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v3-readonly-isolation
+  namespace: platform-v3-quarantine
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Admin access only
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+    # Monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+        - protocol: TCP
+          port: 9090
+  egress:
+    # DNS only
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # PostgreSQL (read-only user)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+          podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+
+---
+# Block V1 internal service ports from external access
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-internal-ports
+  namespace: platform-v1-exp
+spec:
+  podSelector:
+    matchLabels:
+      internal: "true"
+  policyTypes:
+    - Ingress
+  ingress:
+    # Only allow from same namespace
+    - from:
+        - podSelector: {}

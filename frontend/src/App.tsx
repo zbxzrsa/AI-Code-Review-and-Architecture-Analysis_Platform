@@ -31,6 +31,7 @@ import { isRTL } from './i18n/config';
 // Initialize i18n / 初始化国际化
 import './i18n';
 import './App.css';
+import './styles/pixel-theme.css';
 
 /**
  * Lazy load pages for code splitting
@@ -47,6 +48,35 @@ const Help = lazy(() => import('./pages/Help'));
 // Profile & Settings pages / 个人资料和设置页面
 const Profile = lazy(() => import('./pages/profile/Profile'));
 const Settings = lazy(() => import('./pages/settings/Settings'));
+const APIKeys = lazy(() => import('./pages/settings/APIKeys'));
+const Integrations = lazy(() => import('./pages/settings/Integrations'));
+
+// Additional pages / 其他页面
+const Analytics = lazy(() => import('./pages/Analytics'));
+const SecurityDashboard = lazy(() => import('./pages/SecurityDashboard'));
+const TeamManagement = lazy(() => import('./pages/TeamManagement'));
+const Reports = lazy(() => import('./pages/Reports'));
+const ActivityFeed = lazy(() => import('./pages/ActivityFeed'));
+const Repositories = lazy(() => import('./pages/Repositories'));
+const PullRequests = lazy(() => import('./pages/PullRequests'));
+const AutoFix = lazy(() => import('./pages/admin/AutoFix'));
+const Deployments = lazy(() => import('./pages/Deployments'));
+const CodeComparison = lazy(() => import('./pages/CodeComparison'));
+const CodeQualityRules = lazy(() => import('./pages/CodeQualityRules'));
+const Billing = lazy(() => import('./pages/Billing'));
+const Documentation = lazy(() => import('./pages/Documentation'));
+const NotificationCenterPage = lazy(() => import('./pages/NotificationCenter'));
+const SystemStatus = lazy(() => import('./pages/SystemStatus'));
+const SearchResults = lazy(() => import('./pages/SearchResults'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Changelog = lazy(() => import('./pages/Changelog'));
+const Shortcuts = lazy(() => import('./pages/Shortcuts'));
+const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+const Webhooks = lazy(() => import('./pages/Webhooks'));
+const CodeMetrics = lazy(() => import('./pages/CodeMetrics'));
+const ScheduledJobs = lazy(() => import('./pages/ScheduledJobs'));
+const ImportExport = lazy(() => import('./pages/ImportExport'));
+const AuditLogs = lazy(() => import('./pages/AuditLogs'));
 
 // Projects pages / 项目管理页面
 const ProjectList = lazy(() => import('./pages/projects/ProjectList'));
@@ -57,7 +87,17 @@ const ProjectSettings = lazy(() => import('./pages/projects/ProjectSettings'));
 const ExperimentManagement = lazy(() => import('./pages/admin/ExperimentManagement'));
 const UserManagement = lazy(() => import('./pages/admin/UserManagement'));
 const ProviderManagement = lazy(() => import('./pages/admin/ProviderManagement'));
-const AuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+const AdminAuditLogs = lazy(() => import('./pages/admin/AuditLogs'));
+const AIModels = lazy(() => import('./pages/admin/AIModels'));
+
+// Self-Evolution pages / 自演化页面
+const VulnerabilityDashboard = lazy(() => import('./pages/VulnerabilityDashboard'));
+const EvolutionCycleDashboard = lazy(() => import('./pages/EvolutionCycleDashboard'));
+const AIModelTesting = lazy(() => import('./pages/admin/AIModelTesting'));
+const SystemHealth = lazy(() => import('./pages/admin/SystemHealth'));
+const AutoFixDashboard = lazy(() => import('./pages/admin/AutoFixDashboard'));
+const LearningCycleDashboard = lazy(() => import('./pages/admin/LearningCycleDashboard'));
+const ModelComparison = lazy(() => import('./pages/admin/ModelComparison'));
 
 // Query client for React Query
 const queryClient = new QueryClient({
@@ -167,11 +207,44 @@ export default function App() {
                   <Route path="/review" element={<CodeReview />} />
                   <Route path="/review/:projectId" element={<CodeReview />} />
                   <Route path="/settings" element={<Settings />} />
+                  <Route path="/settings/api-keys" element={<APIKeys />} />
+                  <Route path="/settings/integrations" element={<Integrations />} />
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/help" element={<Help />} />
+                  
+                  {/* Analytics & Security / 分析和安全 */}
+                  <Route path="/analytics" element={<Analytics />} />
+                  <Route path="/security" element={<SecurityDashboard />} />
+                  <Route path="/teams" element={<TeamManagement />} />
+                  <Route path="/reports" element={<Reports />} />
+                  <Route path="/activity" element={<ActivityFeed />} />
+                  <Route path="/repositories" element={<Repositories />} />
+                  <Route path="/pull-requests" element={<PullRequests />} />
+                  <Route path="/deployments" element={<Deployments />} />
+                  <Route path="/compare" element={<CodeComparison />} />
+                  <Route path="/rules" element={<CodeQualityRules />} />
+                  <Route path="/billing" element={<Billing />} />
+                  <Route path="/docs" element={<Documentation />} />
+                  <Route path="/notification-center" element={<NotificationCenterPage />} />
+                  <Route path="/status" element={<SystemStatus />} />
+                  <Route path="/search" element={<SearchResults />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/changelog" element={<Changelog />} />
+                  <Route path="/shortcuts" element={<Shortcuts />} />
+                  <Route path="/ai-assistant" element={<AIAssistant />} />
+                  <Route path="/webhooks" element={<Webhooks />} />
+                  <Route path="/metrics" element={<CodeMetrics />} />
+                  <Route path="/scheduled-jobs" element={<ScheduledJobs />} />
+                  <Route path="/import-export" element={<ImportExport />} />
+                  <Route path="/audit-logs" element={<AuditLogs />} />
 
                   {/* Admin routes */}
+                  <Route path="/admin/auto-fix" element={
+                    <AdminRoute>
+                      <AutoFixDashboard />
+                    </AdminRoute>
+                  } />
                   <Route path="/admin/experiments" element={
                     <AdminRoute>
                       <ExperimentManagement />
@@ -189,7 +262,42 @@ export default function App() {
                   } />
                   <Route path="/admin/audit" element={
                     <AdminRoute>
-                      <AuditLogs />
+                      <AdminAuditLogs />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/ai-models" element={
+                    <AdminRoute>
+                      <AIModels />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/vulnerabilities" element={
+                    <AdminRoute>
+                      <VulnerabilityDashboard />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/evolution" element={
+                    <AdminRoute>
+                      <EvolutionCycleDashboard />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/model-testing" element={
+                    <AdminRoute>
+                      <AIModelTesting />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/health" element={
+                    <AdminRoute>
+                      <SystemHealth />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/learning" element={
+                    <AdminRoute>
+                      <LearningCycleDashboard />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/model-comparison" element={
+                    <AdminRoute>
+                      <ModelComparison />
                     </AdminRoute>
                   } />
                 </Route>

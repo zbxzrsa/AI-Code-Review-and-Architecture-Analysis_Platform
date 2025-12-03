@@ -1,0 +1,98 @@
+# Pod Disruption Budgets for V2 Production
+# Ensures high availability during maintenance/updates
+
+---
+# V2 Analysis Service - Critical path
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: analysis-service-pdb
+  namespace: platform-v2-stable
+spec:
+  minAvailable: 2 # At least 2 pods must be available
+  selector:
+    matchLabels:
+      app: analysis-service
+      version: v2
+
+---
+# V2 Auth Service - Critical for all requests
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: platform-v2-stable
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: auth-service
+      version: v2
+
+---
+# V2 Version Control AI - Primary service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vc-ai-service-pdb
+  namespace: platform-v2-stable
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: vc-ai-service
+      version: v2
+
+---
+# V2 Code Review AI - Primary service
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: cr-ai-service-pdb
+  namespace: platform-v2-stable
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: cr-ai-service
+      version: v2
+
+---
+# V2 API Gateway
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: platform-v2-stable
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+      version: v2
+
+---
+# Infrastructure - PostgreSQL (if using multiple replicas)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgresql-pdb
+  namespace: platform-infrastructure
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: postgresql
+
+---
+# Infrastructure - Redis
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: platform-infrastructure
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: redis

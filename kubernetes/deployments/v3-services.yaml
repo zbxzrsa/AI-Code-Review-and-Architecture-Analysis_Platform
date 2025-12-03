@@ -1,0 +1,246 @@
+---
+# V3 Quarantine Services Deployment
+# Read-only archive services for deprecated technologies
+# Admin/System access only - NO user access
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v3-quarantine
+  labels:
+    version: v3
+    purpose: quarantine
+    access: admin-only
+---
+# V3 CR-AI Service (Archived Code Review AI)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: v3-cr-ai-service
+  namespace: platform-v3-quarantine
+  labels:
+    app: v3-cr-ai
+    version: v3
+    component: code-review-ai
+spec:
+  replicas: 1 # Minimal for read-only archive
+  selector:
+    matchLabels:
+      app: v3-cr-ai
+  template:
+    metadata:
+      labels:
+        app: v3-cr-ai
+        version: v3
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8013"
+    spec:
+      serviceAccountName: v3-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: v3-cr-ai
+          image: gcr.io/PROJECT_ID/v3-cr-ai-service:latest
+          ports:
+            - containerPort: 8013
+              name: http
+          env:
+            - name: ENVIRONMENT
+              value: "quarantine"
+            - name: PORT
+              value: "8013"
+            - name: READ_ONLY
+              value: "true"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8013
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8013
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+---
+# V3 VC-AI Service (Archived Version Control AI)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: v3-vc-ai-service
+  namespace: platform-v3-quarantine
+  labels:
+    app: v3-vc-ai
+    version: v3
+    component: version-control-ai
+spec:
+  replicas: 1 # Minimal for read-only archive
+  selector:
+    matchLabels:
+      app: v3-vc-ai
+  template:
+    metadata:
+      labels:
+        app: v3-vc-ai
+        version: v3
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8014"
+    spec:
+      serviceAccountName: v3-service-account
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: v3-vc-ai
+          image: gcr.io/PROJECT_ID/v3-vc-ai-service:latest
+          ports:
+            - containerPort: 8014
+              name: http
+          env:
+            - name: ENVIRONMENT
+              value: "quarantine"
+            - name: PORT
+              value: "8014"
+            - name: READ_ONLY
+              value: "true"
+            - name: RETENTION_DAYS
+              value: "730"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8014
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8014
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+---
+# Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: v3-cr-ai-service
+  namespace: platform-v3-quarantine
+  labels:
+    app: v3-cr-ai
+spec:
+  selector:
+    app: v3-cr-ai
+  ports:
+    - port: 8013
+      targetPort: 8013
+      name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: v3-vc-ai-service
+  namespace: platform-v3-quarantine
+  labels:
+    app: v3-vc-ai
+spec:
+  selector:
+    app: v3-vc-ai
+  ports:
+    - port: 8014
+      targetPort: 8014
+      name: http
+  type: ClusterIP
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: v3-service-account
+  namespace: platform-v3-quarantine
+---
+# Network Policy - Strict isolation, admin access only
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v3-strict-isolation
+  namespace: platform-v3-quarantine
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Only allow from admin gateway
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+        - podSelector:
+            matchLabels:
+              role: admin-gateway
+      ports:
+        - port: 8013
+        - port: 8014
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-monitoring
+      ports:
+        - port: 8013
+        - port: 8014
+  egress:
+    # Only allow DNS and database (read-only)
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - port: 53
+          protocol: UDP
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+        - podSelector:
+            matchLabels:
+              app: postgresql
+      ports:
+        - port: 5432
+---
+# Resource Quota - Minimal for archive
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: v3-resource-quota
+  namespace: platform-v3-quarantine
+spec:
+  hard:
+    requests.cpu: "500m"
+    requests.memory: "1Gi"
+    limits.cpu: "2"
+    limits.memory: "2Gi"
+    pods: "4"

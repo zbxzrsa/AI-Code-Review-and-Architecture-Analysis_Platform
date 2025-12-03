@@ -1,0 +1,332 @@
+/**
+ * Pixel Art Theme
+ * 
+ * Retro pixel-style aesthetic for the AI Code Review Platform.
+ * Features:
+ * - Pixel fonts
+ * - Sharp edges (no border-radius)
+ * - Retro color palette
+ * - 8-bit inspired UI elements
+ */
+
+/* Import pixel fonts */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+/* CSS Variables for Pixel Theme */
+:root {
+  /* Pixel font families */
+  --pixel-font-display: 'Press Start 2P', cursive;
+  --pixel-font-body: 'VT323', monospace;
+  
+  /* Retro color palette */
+  --pixel-bg-dark: #0f0f23;
+  --pixel-bg-medium: #1a1a2e;
+  --pixel-bg-light: #16213e;
+  --pixel-primary: #00ff88;
+  --pixel-secondary: #ff6b6b;
+  --pixel-accent: #4ecdc4;
+  --pixel-warning: #ffd93d;
+  --pixel-info: #6bcbff;
+  --pixel-text: #e0e0e0;
+  --pixel-text-dim: #888888;
+  --pixel-border: #333366;
+  --pixel-success: #00ff88;
+  --pixel-error: #ff4757;
+  
+  /* Pixel grid */
+  --pixel-size: 4px;
+  --pixel-border-width: 2px;
+}
+
+/* Pixel theme class */
+.pixel-theme {
+  font-family: var(--pixel-font-body);
+  background-color: var(--pixel-bg-dark);
+  color: var(--pixel-text);
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Pixel headings */
+.pixel-theme h1,
+.pixel-theme h2,
+.pixel-theme h3,
+.pixel-theme h4,
+.pixel-theme h5 {
+  font-family: var(--pixel-font-display);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 2px 2px 0 var(--pixel-border);
+}
+
+.pixel-theme h1 { font-size: 24px; }
+.pixel-theme h2 { font-size: 18px; }
+.pixel-theme h3 { font-size: 14px; }
+.pixel-theme h4 { font-size: 12px; }
+
+/* Pixel cards */
+.pixel-theme .ant-card {
+  border-radius: 0 !important;
+  border: var(--pixel-border-width) solid var(--pixel-border);
+  background: var(--pixel-bg-medium);
+  box-shadow: 
+    4px 4px 0 var(--pixel-border),
+    inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+
+.pixel-theme .ant-card-head {
+  border-radius: 0 !important;
+  border-bottom: var(--pixel-border-width) solid var(--pixel-border);
+  background: var(--pixel-bg-light);
+  font-family: var(--pixel-font-display);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+/* Pixel buttons */
+.pixel-theme .ant-btn {
+  border-radius: 0 !important;
+  font-family: var(--pixel-font-body);
+  font-size: 16px;
+  text-transform: uppercase;
+  border: var(--pixel-border-width) solid;
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.3);
+  transition: all 0.1s ease;
+}
+
+.pixel-theme .ant-btn:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.4);
+}
+
+.pixel-theme .ant-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 rgba(0,0,0,0.2);
+}
+
+.pixel-theme .ant-btn-primary {
+  background: var(--pixel-primary);
+  border-color: #00cc6a;
+  color: #000;
+}
+
+.pixel-theme .ant-btn-primary:hover {
+  background: #00ff99;
+}
+
+/* Pixel inputs */
+.pixel-theme .ant-input,
+.pixel-theme .ant-select-selector,
+.pixel-theme .ant-picker {
+  border-radius: 0 !important;
+  border: var(--pixel-border-width) solid var(--pixel-border);
+  background: var(--pixel-bg-dark);
+  font-family: var(--pixel-font-body);
+  font-size: 16px;
+}
+
+.pixel-theme .ant-input:focus,
+.pixel-theme .ant-select-focused .ant-select-selector {
+  border-color: var(--pixel-primary) !important;
+  box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.2);
+}
+
+/* Pixel tables */
+.pixel-theme .ant-table {
+  font-family: var(--pixel-font-body);
+  font-size: 16px;
+}
+
+.pixel-theme .ant-table-thead > tr > th {
+  background: var(--pixel-bg-light);
+  border-bottom: var(--pixel-border-width) solid var(--pixel-border);
+  font-family: var(--pixel-font-display);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.pixel-theme .ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--pixel-border);
+}
+
+.pixel-theme .ant-table-tbody > tr:hover > td {
+  background: var(--pixel-bg-light);
+}
+
+/* Pixel tags */
+.pixel-theme .ant-tag {
+  border-radius: 0;
+  font-family: var(--pixel-font-body);
+  font-size: 14px;
+  border: 1px solid;
+  text-transform: uppercase;
+}
+
+/* Pixel progress bars */
+.pixel-theme .ant-progress-inner {
+  border-radius: 0 !important;
+  background: var(--pixel-bg-dark);
+  border: 1px solid var(--pixel-border);
+}
+
+.pixel-theme .ant-progress-bg {
+  border-radius: 0 !important;
+}
+
+/* Pixel menu */
+.pixel-theme .ant-menu {
+  font-family: var(--pixel-font-body);
+  font-size: 16px;
+  border-right: var(--pixel-border-width) solid var(--pixel-border);
+}
+
+.pixel-theme .ant-menu-item {
+  border-radius: 0 !important;
+}
+
+.pixel-theme .ant-menu-item-selected {
+  background: var(--pixel-bg-light) !important;
+  border-left: 3px solid var(--pixel-primary);
+}
+
+/* Pixel modal */
+.pixel-theme .ant-modal-content {
+  border-radius: 0 !important;
+  border: var(--pixel-border-width) solid var(--pixel-border);
+  box-shadow: 8px 8px 0 rgba(0,0,0,0.5);
+}
+
+.pixel-theme .ant-modal-header {
+  border-radius: 0;
+  border-bottom: var(--pixel-border-width) solid var(--pixel-border);
+  background: var(--pixel-bg-light);
+}
+
+/* Pixel statistics */
+.pixel-theme .ant-statistic-title {
+  font-family: var(--pixel-font-display);
+  font-size: 8px;
+  text-transform: uppercase;
+  color: var(--pixel-text-dim);
+}
+
+.pixel-theme .ant-statistic-content {
+  font-family: var(--pixel-font-display);
+  color: var(--pixel-primary);
+}
+
+/* Pixel notifications */
+.pixel-theme .ant-notification-notice {
+  border-radius: 0;
+  border: var(--pixel-border-width) solid var(--pixel-border);
+  background: var(--pixel-bg-medium);
+  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+}
+
+/* Pixel scrollbar */
+.pixel-theme ::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.pixel-theme ::-webkit-scrollbar-track {
+  background: var(--pixel-bg-dark);
+  border: 1px solid var(--pixel-border);
+}
+
+.pixel-theme ::-webkit-scrollbar-thumb {
+  background: var(--pixel-border);
+  border: 1px solid var(--pixel-bg-dark);
+}
+
+.pixel-theme ::-webkit-scrollbar-thumb:hover {
+  background: var(--pixel-primary);
+}
+
+/* Pixel animations */
+@keyframes pixel-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes pixel-glow {
+  0%, 100% { 
+    text-shadow: 0 0 4px var(--pixel-primary);
+  }
+  50% { 
+    text-shadow: 0 0 8px var(--pixel-primary), 0 0 12px var(--pixel-primary);
+  }
+}
+
+.pixel-blink {
+  animation: pixel-blink 1s step-end infinite;
+}
+
+.pixel-glow {
+  animation: pixel-glow 2s ease-in-out infinite;
+}
+
+/* Pixel badge */
+.pixel-theme .ant-badge-count {
+  border-radius: 0;
+  font-family: var(--pixel-font-display);
+  font-size: 8px;
+  box-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+}
+
+/* Pixel avatar */
+.pixel-theme .ant-avatar {
+  border-radius: 0;
+  border: var(--pixel-border-width) solid var(--pixel-border);
+}
+
+/* Pixel timeline */
+.pixel-theme .ant-timeline-item-head {
+  border-radius: 0;
+  border: var(--pixel-border-width) solid;
+}
+
+/* Pixel divider */
+.pixel-theme .ant-divider {
+  border-top-style: dashed;
+  border-color: var(--pixel-border);
+}
+
+/* Scanlines effect overlay */
+.pixel-scanlines::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.1),
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* CRT effect */
+.pixel-crt {
+  position: relative;
+}
+
+.pixel-crt::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 0%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+  pointer-events: none;
+}

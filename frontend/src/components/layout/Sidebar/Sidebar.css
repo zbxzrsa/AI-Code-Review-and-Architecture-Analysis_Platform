@@ -1,5 +1,5 @@
 /**
- * Enhanced Sidebar Styles
+ * VSCode/GitHub-Inspired Sidebar Styles
  */
 
 .sidebar {
@@ -10,10 +10,12 @@
     width: 280px;
     display: flex;
     flex-direction: column;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.15);
     z-index: 100;
     overflow: hidden;
-    transition: width 0.2s ease;
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sidebar--collapsed {

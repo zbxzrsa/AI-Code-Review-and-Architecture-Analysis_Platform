@@ -448,22 +448,22 @@ export const Settings: React.FC = () => {
                     <Paragraph>
                       {t('settings.api_key_warning', 'Make sure to copy your API key now. You won\'t be able to see it again!')}
                     </Paragraph>
-                    <Input.Password
-                      value={newApiKey}
-                      readOnly
-                      addonAfter={
-                        <Button
-                          type="link"
-                          size="small"
-                          onClick={() => {
-                            navigator.clipboard.writeText(newApiKey);
-                            message.success('Copied!');
-                          }}
-                        >
-                          Copy
-                        </Button>
-                      }
-                    />
+                    <Space.Compact style={{ width: '100%' }}>
+                      <Input.Password
+                        value={newApiKey}
+                        readOnly
+                        style={{ flex: 1 }}
+                      />
+                      <Button
+                        type="primary"
+                        onClick={() => {
+                          navigator.clipboard.writeText(newApiKey);
+                          message.success('Copied!');
+                        }}
+                      >
+                        Copy
+                      </Button>
+                    </Space.Compact>
                   </>
                 }
               />

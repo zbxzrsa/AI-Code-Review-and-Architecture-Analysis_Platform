@@ -1,11 +1,11 @@
+/* Import Theme */
+@import './styles/theme.css';
+
 /* App-level styles */
 
 /* Layout */
 .app-layout {
     min-height: 100vh;
-}
-
-.app-header {
     display: flex;
     align-items: center;
     justify-content: space-between;

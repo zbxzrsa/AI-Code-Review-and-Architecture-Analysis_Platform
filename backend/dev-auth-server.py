@@ -18,6 +18,8 @@ Endpoints:
 import secrets
 import hashlib
 import re
+import json
+import os
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, status, Response, Request
@@ -26,17 +28,57 @@ from pydantic import BaseModel, EmailStr, Field, validator
 import uvicorn
 
 # ============================================
+# File-based persistence / 文件持久化
+# ============================================
+
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
+USERS_FILE = os.path.join(DATA_DIR, '.dev_users.json')
+
+def load_users() -> Dict[str, Dict[str, Any]]:
+    """Load users from file / 从文件加载用户"""
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                # Convert ISO strings back to datetime
+                for email, user in data.items():
+                    if 'created_at' in user and isinstance(user['created_at'], str):
+                        user['created_at'] = datetime.fromisoformat(user['created_at'])
+                return data
+        except Exception as e:
+            print(f"⚠️ Failed to load users: {e}")
+    return {}
+
+def save_users(users: Dict[str, Dict[str, Any]]) -> None:
+    """Save users to file / 保存用户到文件"""
+    try:
+        # Convert datetime to ISO string for JSON serialization
+        data = {}
+        for email, user in users.items():
+            data[email] = {
+                **user,
+                'created_at': user['created_at'].isoformat() if isinstance(user['created_at'], datetime) else user['created_at']
+            }
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"⚠️ Failed to save users: {e}")
+
+# ============================================
 # Configuration / 配置
 # ============================================
 
 # Admin invitation code / 管理员邀请码
 ADMIN_INVITATION_CODE = "ZBXzbx123"
 
-# In-memory user database for development / 开发用内存用户数据库
-users_db: Dict[str, Dict[str, Any]] = {}
+# User database with file persistence / 带文件持久化的用户数据库
+users_db: Dict[str, Dict[str, Any]] = load_users()
 
 # Token storage / 令牌存储
 tokens_db: Dict[str, str] = {}  # token -> user_email
+
+# CSRF token storage / CSRF令牌存储
+csrf_tokens: Dict[str, str] = {}  # session_id -> csrf_token
 
 # ============================================
 # Models / 模型
@@ -125,6 +167,7 @@ def create_user(email: str, password: str, name: str, role: str = "user") -> Dic
         "created_at": datetime.utcnow()
     }
     users_db[email] = user
+    save_users(users_db)  # Persist to file
     return user
 
 
@@ -172,6 +215,19 @@ async def root():
 async def health():
     """Health check / 健康检查"""
     return {"status": "healthy"}
+
+
+@app.get("/csrf-token")
+async def get_csrf_token(response: Response):
+    """
+    Get CSRF token / 获取CSRF令牌
+    
+    Returns a CSRF token for state-changing requests.
+    返回用于状态改变请求的CSRF令牌。
+    """
+    token = secrets.token_urlsafe(32)
+    response.headers["X-CSRF-Token"] = token
+    return {"token": token}
 
 
 @app.post("/auth/register", response_model=AuthResponse)

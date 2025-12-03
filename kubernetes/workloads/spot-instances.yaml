@@ -1,0 +1,131 @@
+# Spot Instance Configuration for V1 Experimentation
+# Cost optimization: Use spot/preemptible instances for non-critical workloads
+
+---
+# Node pool for spot instances (GKE)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spot-instance-config
+  namespace: platform-v1-exp
+data:
+  node-pool.yaml: |
+    # GKE Spot Node Pool Configuration
+    # Apply via: gcloud container node-pools create
+    name: v1-spot-pool
+    config:
+      machineType: n1-standard-8
+      diskSizeGb: 100
+      diskType: pd-ssd
+      preemptible: true  # Spot instances
+      oauthScopes:
+        - https://www.googleapis.com/auth/cloud-platform
+      labels:
+        workload-type: experimentation
+        spot-instance: "true"
+      taints:
+        - key: spot-instance
+          value: "true"
+          effect: NoSchedule
+    autoscaling:
+      enabled: true
+      minNodeCount: 0
+      maxNodeCount: 10
+    management:
+      autoUpgrade: true
+      autoRepair: true
+
+---
+# Deployment for V1 with spot instance tolerance
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: v1-experiment-worker
+  namespace: platform-v1-exp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: experiment-worker
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: experiment-worker
+        version: v1
+        spot-tolerant: "true"
+    spec:
+      # Tolerate spot instance taint
+      tolerations:
+        - key: spot-instance
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+        - key: cloud.google.com/gke-preemptible
+          operator: Equal
+          value: "true"
+          effect: NoSchedule
+
+      # Prefer spot instances
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: spot-instance
+                    operator: In
+                    values:
+                      - "true"
+
+      # Graceful termination for spot preemption
+      terminationGracePeriodSeconds: 30
+
+      containers:
+        - name: worker
+          image: gcr.io/project/v1-experiment-worker:latest
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+
+          # Handle preemption gracefully
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - /bin/sh
+                  - -c
+                  - |
+                    echo "Spot preemption detected, saving state..."
+                    /app/save_experiment_state.sh
+                    sleep 5
+
+          env:
+            - name: SPOT_INSTANCE
+              value: "true"
+            - name: CHECKPOINT_ENABLED
+              value: "true"
+
+---
+# PriorityClass for spot-tolerant workloads
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: spot-tolerant
+value: 100
+globalDefault: false
+description: "Low priority for spot instance workloads"
+
+---
+# PriorityClass for critical V2 workloads (never on spot)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: production-critical
+value: 1000000
+globalDefault: false
+description: "High priority for production workloads - never preempted"

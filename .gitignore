@@ -48,6 +48,9 @@ env/
 *.sqlite3
 postgres_data/
 
+# Dev auth server user data
+.dev_users.json
+
 # Logs
 logs/
 *.log

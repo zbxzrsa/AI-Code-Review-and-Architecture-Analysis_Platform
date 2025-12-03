@@ -273,8 +273,8 @@ export const Projects: React.FC = () => {
       width: 100,
       render: (_: any, record: Project) => (
         <Badge
-          status={record.settings.auto_review ? 'processing' : 'default'}
-          text={record.settings.auto_review ? 'Active' : 'Manual'}
+          status={record.settings?.auto_review ? 'processing' : 'default'}
+          text={record.settings?.auto_review ? 'Active' : 'Manual'}
         />
       )
     },
@@ -348,7 +348,7 @@ export const Projects: React.FC = () => {
           <Card>
             <Statistic
               title={t('projects.active', 'Active Reviews')}
-              value={projects.filter(p => p.settings.auto_review).length}
+              value={projects.filter(p => p.settings?.auto_review).length}
               prefix={<PlayCircleOutlined />}
               valueStyle={{ color: '#3f8600' }}
             />

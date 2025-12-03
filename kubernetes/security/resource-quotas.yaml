@@ -1,0 +1,179 @@
+# Resource Quotas
+# Prevents resource exhaustion and ensures fair allocation
+
+---
+# V1 Experimentation Namespace Quota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: v1-resource-quota
+  namespace: platform-v1-exp
+spec:
+  hard:
+    # Compute resources
+    requests.cpu: "20"
+    requests.memory: "40Gi"
+    limits.cpu: "40"
+    limits.memory: "80Gi"
+
+    # GPU resources (if applicable)
+    requests.nvidia.com/gpu: "2"
+
+    # Object counts
+    pods: "50"
+    services: "20"
+    secrets: "100"
+    configmaps: "100"
+    persistentvolumeclaims: "20"
+
+    # Specific resource types
+    count/deployments.apps: "20"
+    count/statefulsets.apps: "5"
+    count/jobs.batch: "100"
+
+---
+# V2 Production Namespace Quota (higher limits)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: v2-resource-quota
+  namespace: platform-v2-stable
+spec:
+  hard:
+    # Compute resources (production needs more)
+    requests.cpu: "50"
+    requests.memory: "100Gi"
+    limits.cpu: "100"
+    limits.memory: "200Gi"
+
+    # GPU resources
+    requests.nvidia.com/gpu: "4"
+
+    # Object counts
+    pods: "100"
+    services: "50"
+    secrets: "200"
+    configmaps: "200"
+    persistentvolumeclaims: "50"
+
+    # Specific resource types
+    count/deployments.apps: "30"
+    count/statefulsets.apps: "10"
+    count/jobs.batch: "50"
+
+---
+# V3 Quarantine Namespace Quota (minimal)
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: v3-resource-quota
+  namespace: platform-v3-quarantine
+spec:
+  hard:
+    # Minimal compute (read-only operations)
+    requests.cpu: "5"
+    requests.memory: "10Gi"
+    limits.cpu: "10"
+    limits.memory: "20Gi"
+
+    # No GPU
+    requests.nvidia.com/gpu: "0"
+
+    # Limited objects
+    pods: "20"
+    services: "10"
+    secrets: "50"
+    configmaps: "50"
+    persistentvolumeclaims: "10"
+
+---
+# Limit Ranges for V1
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: v1-limit-range
+  namespace: platform-v1-exp
+spec:
+  limits:
+    # Default container limits
+    - default:
+        cpu: "1000m"
+        memory: "2Gi"
+      defaultRequest:
+        cpu: "100m"
+        memory: "256Mi"
+      type: Container
+
+    # Maximum per container
+    - max:
+        cpu: "4000m"
+        memory: "8Gi"
+      min:
+        cpu: "50m"
+        memory: "64Mi"
+      type: Container
+
+    # Maximum per pod
+    - max:
+        cpu: "8000m"
+        memory: "16Gi"
+      type: Pod
+
+---
+# Limit Ranges for V2 (higher limits)
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: v2-limit-range
+  namespace: platform-v2-stable
+spec:
+  limits:
+    # Default container limits
+    - default:
+        cpu: "2000m"
+        memory: "4Gi"
+      defaultRequest:
+        cpu: "250m"
+        memory: "512Mi"
+      type: Container
+
+    # Maximum per container
+    - max:
+        cpu: "8000m"
+        memory: "16Gi"
+      min:
+        cpu: "100m"
+        memory: "128Mi"
+      type: Container
+
+    # Maximum per pod
+    - max:
+        cpu: "16000m"
+        memory: "32Gi"
+      type: Pod
+
+---
+# GPU Node Affinity for AI workloads
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gpu-scheduling-config
+  namespace: platform-v2-stable
+data:
+  affinity.yaml: |
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values:
+                  - "true"
+      preferredDuringSchedulingIgnoredDuringExecution:
+        - weight: 100
+          preference:
+            matchExpressions:
+              - key: nvidia.com/gpu.memory
+                operator: Gt
+                values:
+                  - "16000"  # Prefer GPUs with >16GB memory
