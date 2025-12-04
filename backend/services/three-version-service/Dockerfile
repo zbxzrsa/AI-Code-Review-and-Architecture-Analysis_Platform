@@ -3,17 +3,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy AI core module
-COPY ../../../ai_core /app/ai_core
-
 # Copy service code
-COPY . /app/services/three-version-service
-
-WORKDIR /app/services/three-version-service
+COPY . /app/
 
 # Set Python path
 ENV PYTHONPATH=/app

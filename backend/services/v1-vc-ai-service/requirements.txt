@@ -22,8 +22,8 @@ peft>=0.6.0                    # LoRA/QLoRA
 bitsandbytes>=0.41.0          # Quantization
 optimum>=1.14.0               # Optimization utilities
 
-# Attention Optimization
-flash-attn>=2.3.0; platform_system != "Windows"
+# Attention Optimization (installed separately in Dockerfile due to build dependencies)
+# flash-attn>=2.3.0  # Requires torch pre-installed, handled in Dockerfile
 xformers>=0.0.23; platform_system != "Windows"
 triton>=2.1.0; platform_system != "Windows"
 

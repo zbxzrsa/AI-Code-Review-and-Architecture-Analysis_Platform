@@ -300,6 +300,263 @@ async def get_analysis_issues(session_id: str):
 
 
 # ============================================
+# OAuth / OAuth认证
+# ============================================
+
+mock_oauth_connections = []
+mock_repositories = [
+    {
+        "id": "repo_1",
+        "name": "ai-code-review",
+        "full_name": "user/ai-code-review",
+        "provider": "github",
+        "clone_url": "https://github.com/user/ai-code-review.git",
+        "default_branch": "main",
+        "description": "AI-powered code review platform",
+        "is_private": False,
+        "status": "ready",
+        "stars": 42,
+        "forks": 12,
+        "created_at": (datetime.now() - timedelta(days=30)).isoformat(),
+        "updated_at": datetime.now().isoformat(),
+    },
+    {
+        "id": "repo_2",
+        "name": "backend-services",
+        "full_name": "user/backend-services",
+        "provider": "github",
+        "clone_url": "https://github.com/user/backend-services.git",
+        "default_branch": "main",
+        "description": "FastAPI microservices",
+        "is_private": True,
+        "status": "ready",
+        "stars": 15,
+        "forks": 3,
+        "created_at": (datetime.now() - timedelta(days=20)).isoformat(),
+        "updated_at": datetime.now().isoformat(),
+    },
+]
+
+
+@app.get("/api/auth/oauth/providers")
+async def get_oauth_providers():
+    """Get available OAuth providers / 获取可用的OAuth提供商"""
+    return {
+        "providers": [
+            {"name": "github", "display_name": "GitHub", "icon": "github", "connected": False},
+            {"name": "gitlab", "display_name": "GitLab", "icon": "gitlab", "connected": False},
+            {"name": "bitbucket", "display_name": "Bitbucket", "icon": "bitbucket", "connected": False},
+        ]
+    }
+
+
+@app.get("/api/auth/oauth/connect/{provider}")
+async def initiate_oauth(provider: str, return_url: str = "/"):
+    """Initiate OAuth flow / 启动OAuth流程"""
+    state = secrets.token_urlsafe(32)
+    # In production, this redirects to the OAuth provider
+    auth_url = f"https://{provider}.com/login/oauth/authorize?client_id=demo&state={state}&redirect_uri=http://localhost:5173/oauth/callback/{provider}"
+    return {
+        "authorization_url": auth_url,
+        "state": state
+    }
+
+
+@app.get("/api/auth/oauth/callback/{provider}")
+async def oauth_callback(provider: str, code: str = "", state: str = ""):
+    """Handle OAuth callback / 处理OAuth回调"""
+    # Simulate successful OAuth
+    mock_oauth_connections.append({
+        "provider": provider,
+        "username": f"user_{provider}",
+        "email": f"user@{provider}.com",
+        "connected_at": datetime.now().isoformat()
+    })
+    return {
+        "success": True,
+        "message": f"Connected to {provider}",
+        "is_new_user": False
+    }
+
+
+@app.get("/api/auth/oauth/connections")
+async def get_oauth_connections():
+    """Get connected OAuth accounts / 获取已连接的OAuth账户"""
+    return {
+        "connections": mock_oauth_connections if mock_oauth_connections else [
+            {"provider": "github", "username": "demo_user", "email": "demo@github.com", "connected_at": datetime.now().isoformat()}
+        ]
+    }
+
+
+@app.delete("/api/auth/oauth/connections/{provider}")
+async def disconnect_oauth(provider: str):
+    """Disconnect OAuth provider / 断开OAuth提供商连接"""
+    return {"message": f"Disconnected from {provider}"}
+
+
+# ============================================
+# Repositories / 仓库管理
+# ============================================
+
+@app.get("/api/repositories")
+async def list_repositories(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    project_id: Optional[str] = None
+):
+    """List repositories / 列出仓库"""
+    repos = mock_repositories
+    if project_id:
+        repos = [r for r in repos if r.get("project_id") == project_id]
+    return {
+        "items": repos,
+        "total": len(repos),
+        "page": page,
+        "limit": limit
+    }
+
+
+@app.post("/api/repositories")
+async def create_repository(
+    url: str = "",
+    name: Optional[str] = None,
+    project_id: Optional[str] = None
+):
+    """Create repository from URL / 从URL创建仓库"""
+    repo_id = f"repo_{secrets.token_hex(4)}"
+    repo = {
+        "id": repo_id,
+        "name": name or url.split("/")[-1].replace(".git", ""),
+        "full_name": "/".join(url.split("/")[-2:]).replace(".git", ""),
+        "provider": "github" if "github" in url else "gitlab" if "gitlab" in url else "bitbucket",
+        "clone_url": url,
+        "default_branch": "main",
+        "is_private": False,
+        "status": "pending",
+        "project_id": project_id,
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat()
+    }
+    mock_repositories.append(repo)
+    return repo
+
+
+@app.post("/api/repositories/connect")
+async def connect_repository(
+    provider: str = "github",
+    repo_full_name: str = "",
+    project_id: Optional[str] = None
+):
+    """Connect repository from OAuth provider / 从OAuth提供商连接仓库"""
+    repo_id = f"repo_{secrets.token_hex(4)}"
+    owner, name = repo_full_name.split("/") if "/" in repo_full_name else ("user", repo_full_name)
+    repo = {
+        "id": repo_id,
+        "name": name,
+        "full_name": repo_full_name,
+        "provider": provider,
+        "clone_url": f"https://{provider}.com/{repo_full_name}.git",
+        "default_branch": "main",
+        "is_private": False,
+        "status": "pending",
+        "project_id": project_id,
+        "created_at": datetime.now().isoformat(),
+        "updated_at": datetime.now().isoformat()
+    }
+    mock_repositories.append(repo)
+    return repo
+
+
+@app.get("/api/repositories/{repo_id}")
+async def get_repository(repo_id: str):
+    """Get repository by ID / 通过ID获取仓库"""
+    for repo in mock_repositories:
+        if repo["id"] == repo_id:
+            return repo
+    raise HTTPException(status_code=404, detail="Repository not found")
+
+
+@app.delete("/api/repositories/{repo_id}")
+async def delete_repository(repo_id: str):
+    """Delete repository / 删除仓库"""
+    for i, repo in enumerate(mock_repositories):
+        if repo["id"] == repo_id:
+            mock_repositories.pop(i)
+            return {"message": "Repository deleted", "id": repo_id}
+    raise HTTPException(status_code=404, detail="Repository not found")
+
+
+@app.post("/api/repositories/{repo_id}/sync")
+async def sync_repository(repo_id: str):
+    """Sync repository with remote / 与远程同步仓库"""
+    return {"message": "Sync started", "id": repo_id, "status": "syncing"}
+
+
+@app.get("/api/repositories/{repo_id}/tree")
+async def get_repository_tree(repo_id: str, path: str = ""):
+    """Get repository file tree / 获取仓库文件树"""
+    return {
+        "path": path,
+        "items": [
+            {"name": "src", "path": "src", "type": "directory"},
+            {"name": "tests", "path": "tests", "type": "directory"},
+            {"name": "main.py", "path": "main.py", "type": "file", "size": 1024, "language": "python"},
+            {"name": "README.md", "path": "README.md", "type": "file", "size": 2048, "language": "markdown"},
+            {"name": "requirements.txt", "path": "requirements.txt", "type": "file", "size": 256},
+        ]
+    }
+
+
+@app.get("/api/repositories/{repo_id}/files/{file_path:path}")
+async def get_repository_file(repo_id: str, file_path: str):
+    """Get file content from repository / 从仓库获取文件内容"""
+    content = f"# Content of {file_path}\n\ndef main():\n    print('Hello, World!')\n\nif __name__ == '__main__':\n    main()"
+    return {
+        "path": file_path,
+        "content": content,
+        "size": len(content),
+        "language": "python" if file_path.endswith(".py") else "text"
+    }
+
+
+@app.get("/api/repositories/oauth/{provider}")
+async def list_oauth_repositories(provider: str):
+    """List repositories from OAuth provider / 列出OAuth提供商的仓库"""
+    # Simulated repositories from the provider
+    return {
+        "repositories": [
+            {
+                "id": "12345",
+                "name": "my-project",
+                "full_name": "user/my-project",
+                "owner": "user",
+                "description": "My awesome project",
+                "url": f"https://{provider}.com/user/my-project",
+                "clone_url": f"https://{provider}.com/user/my-project.git",
+                "default_branch": "main",
+                "is_private": False,
+                "stars": 42,
+                "forks": 12
+            },
+            {
+                "id": "67890",
+                "name": "another-repo",
+                "full_name": "user/another-repo",
+                "owner": "user",
+                "description": "Another repository",
+                "url": f"https://{provider}.com/user/another-repo",
+                "clone_url": f"https://{provider}.com/user/another-repo.git",
+                "default_branch": "main",
+                "is_private": True,
+                "stars": 10,
+                "forks": 2
+            }
+        ]
+    }
+
+
+# ============================================
 # Activity / 活动
 # ============================================
 
@@ -2527,6 +2784,113 @@ async def ai_fix(issue_id: str = "", code: str = ""):
 async def ai_feedback(response_id: str = "", helpful: bool = True, comment: str = ""):
     """Submit AI feedback / 提交AI反馈"""
     return {"success": True, "message": "Thank you for your feedback!"}
+
+
+# ============================================
+# Security / 安全
+# ============================================
+
+@app.get("/api/security/vulnerabilities")
+async def get_vulnerabilities(severity: str = None, status: str = None, project: str = None, page: int = 1, limit: int = 20):
+    """Get security vulnerabilities / 获取安全漏洞"""
+    vulns = [
+        {"id": "vuln_1", "title": "SQL Injection in User Authentication", "severity": "critical", "category": "A03:2021 Injection", "cve": "CVE-2024-1234", "project": "Backend Services", "file": "src/auth/login.py", "line": 45, "status": "open", "discoveredAt": datetime.now().isoformat(), "assignee": "John Doe"},
+        {"id": "vuln_2", "title": "Hardcoded API Key Exposure", "severity": "critical", "category": "A02:2021 Cryptographic Failures", "project": "AI Platform", "file": "src/services/ai.ts", "line": 12, "status": "in_progress", "discoveredAt": datetime.now().isoformat(), "assignee": "Jane Smith"},
+        {"id": "vuln_3", "title": "Cross-Site Scripting (XSS)", "severity": "high", "category": "A03:2021 Injection", "project": "Frontend", "file": "src/components/Comment.tsx", "line": 78, "status": "open", "discoveredAt": datetime.now().isoformat()},
+        {"id": "vuln_4", "title": "Insecure Direct Object Reference", "severity": "medium", "category": "A01:2021 Broken Access Control", "project": "Backend Services", "file": "src/api/users.py", "line": 156, "status": "resolved", "discoveredAt": datetime.now().isoformat()},
+        {"id": "vuln_5", "title": "Outdated Dependency with Known CVE", "severity": "low", "category": "A06:2021 Vulnerable Components", "cve": "CVE-2023-9999", "project": "Frontend", "file": "package.json", "line": 1, "status": "open", "discoveredAt": datetime.now().isoformat()},
+    ]
+    filtered = vulns
+    if severity:
+        filtered = [v for v in filtered if v["severity"] == severity]
+    if status:
+        filtered = [v for v in filtered if v["status"] == status]
+    if project:
+        filtered = [v for v in filtered if project.lower() in v["project"].lower()]
+    return {"items": filtered[(page-1)*limit:page*limit], "total": len(filtered), "page": page, "limit": limit}
+
+
+@app.get("/api/security/metrics")
+async def get_security_metrics():
+    """Get security metrics / 获取安全指标"""
+    return {
+        "total_vulnerabilities": 25,
+        "critical": 2,
+        "high": 5,
+        "medium": 10,
+        "low": 8,
+        "open": 12,
+        "resolved": 10,
+        "in_progress": 3,
+        "resolution_rate": 0.72,
+        "avg_resolution_time_days": 3.5,
+        "trends": {
+            "new_this_week": 3,
+            "resolved_this_week": 5,
+            "critical_open": 2
+        }
+    }
+
+
+@app.get("/api/security/compliance")
+async def get_compliance_status():
+    """Get compliance status / 获取合规状态"""
+    return {
+        "checks": [
+            {"name": "OWASP Top 10", "status": "partial", "score": 72, "items": 10, "passed": 7},
+            {"name": "PCI DSS", "status": "passing", "score": 95, "items": 12, "passed": 11},
+            {"name": "SOC 2", "status": "passing", "score": 88, "items": 15, "passed": 13},
+            {"name": "GDPR", "status": "partial", "score": 78, "items": 8, "passed": 6},
+            {"name": "HIPAA", "status": "failing", "score": 45, "items": 10, "passed": 4},
+        ],
+        "overall_score": 76,
+        "last_audit": datetime.now().isoformat()
+    }
+
+
+@app.get("/api/admin/ai-models")
+async def get_admin_ai_models():
+    """Get AI models for admin / 获取AI模型(管理员)"""
+    return {
+        "items": [
+            {"id": "model_1", "name": "GPT-4 Turbo", "provider": "OpenAI", "model_id": "gpt-4-turbo", "version": "v2.1.0", "zone": "v2-production", "status": "active", "metrics": {"accuracy": 0.94, "latency_p95": 1.8, "error_rate": 0.02, "cost_per_request": 0.03, "requests_today": 15420, "success_rate": 0.98}, "config": {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9}},
+            {"id": "model_2", "name": "Claude 3 Opus", "provider": "Anthropic", "model_id": "claude-3-opus", "version": "v1.0.0", "zone": "v1-experimentation", "status": "testing", "metrics": {"accuracy": 0.91, "latency_p95": 2.2, "error_rate": 0.04, "cost_per_request": 0.05, "requests_today": 850, "success_rate": 0.96}, "config": {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9}},
+            {"id": "model_3", "name": "Llama 3 70B", "provider": "Meta", "model_id": "llama-3-70b", "version": "v1.2.0", "zone": "v1-experimentation", "status": "testing", "metrics": {"accuracy": 0.88, "latency_p95": 1.5, "error_rate": 0.05, "cost_per_request": 0.01, "requests_today": 2100, "success_rate": 0.95}, "config": {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9}},
+        ],
+        "total": 3
+    }
+
+
+# ============================================
+# Reports / 报告
+# ============================================
+
+@app.get("/api/reports")
+async def get_reports(page: int = 1, limit: int = 20):
+    """Get reports / 获取报告"""
+    return {
+        "items": [
+            {"id": "report_1", "name": "Weekly Security Scan", "type": "security", "status": "completed", "format": "pdf", "project": "AI Platform", "createdAt": datetime.now().isoformat(), "completedAt": datetime.now().isoformat(), "size": "2.3 MB"},
+            {"id": "report_2", "name": "Code Quality Report", "type": "code_review", "status": "completed", "format": "pdf", "project": "Backend Services", "createdAt": datetime.now().isoformat(), "completedAt": datetime.now().isoformat(), "size": "1.5 MB"},
+            {"id": "report_3", "name": "Compliance Check Q1", "type": "compliance", "status": "generating", "format": "pdf", "createdAt": datetime.now().isoformat()},
+            {"id": "report_4", "name": "Performance Analytics", "type": "analytics", "status": "completed", "format": "csv", "createdAt": datetime.now().isoformat(), "completedAt": datetime.now().isoformat(), "size": "856 KB"},
+        ],
+        "total": 4,
+        "page": page,
+        "limit": limit
+    }
+
+
+@app.post("/api/reports/generate")
+async def generate_report(name: str = "", type: str = "code_review", format: str = "pdf", project: str = ""):
+    """Generate report / 生成报告"""
+    return {"success": True, "report_id": secrets.token_hex(8), "status": "generating", "estimated_time": 30}
+
+
+@app.post("/api/reports/schedule")
+async def schedule_report(name: str = "", type: str = "code_review", frequency: str = "weekly", recipients: list = None):
+    """Schedule report / 计划报告"""
+    return {"success": True, "schedule_id": secrets.token_hex(8), "next_run": (datetime.now() + timedelta(days=7)).isoformat()}
 
 
 # ============================================

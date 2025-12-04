@@ -51,6 +51,7 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
+import { aiService } from '../../services/aiService';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -194,18 +195,50 @@ export const AIModels: React.FC = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [form] = Form.useForm();
 
-  // Fetch models
+  // Fetch models from API with fallback
   const fetchModels = useCallback(async () => {
     setLoading(true);
     try {
+      // Try admin API first
       const response = await api.get('/api/admin/ai-models');
-      setModels(response.data?.items || mockModels);
-    } catch (error) {
-      // Use mock data on error
-      setModels(mockModels);
-    } finally {
-      setLoading(false);
+      if (response.data?.items) {
+        setModels(response.data.items);
+        return;
+      }
+    } catch {
+      // Try evolution API as fallback
+      try {
+        const technologies = await aiService.getTechnologies();
+        if (technologies && technologies.length > 0) {
+          const mappedModels: AIModel[] = technologies.map((tech: any) => ({
+            id: tech.id,
+            name: tech.name,
+            provider: tech.name.includes('GPT') ? 'OpenAI' : tech.name.includes('Claude') ? 'Anthropic' : 'Unknown',
+            model_id: tech.id,
+            version: '1.0.0',
+            zone: tech.version === 'v1' ? 'v1-experimentation' : tech.version === 'v2' ? 'v2-production' : 'v3-quarantine',
+            status: tech.status === 'active' ? 'active' : tech.status === 'testing' ? 'testing' : tech.status === 'deprecated' ? 'deprecated' : 'quarantined',
+            metrics: {
+              accuracy: tech.accuracy || 0,
+              latency_p95: tech.latency || 0,
+              error_rate: tech.errorRate || 0,
+              cost_per_request: 0.01,
+              requests_today: tech.samples || 0,
+              success_rate: 1 - (tech.errorRate || 0),
+            },
+            config: { max_tokens: 4096, temperature: 0.7, top_p: 0.9 },
+            created_at: tech.lastUpdated || new Date().toISOString(),
+            updated_at: tech.lastUpdated || new Date().toISOString(),
+          }));
+          setModels(mappedModels);
+          return;
+        }
+      } catch {
+        // Use mock data as last resort
+      }
     }
+    setModels(mockModels);
+    setLoading(false);
   }, []);
 
   useEffect(() => {

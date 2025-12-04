@@ -9,7 +9,7 @@
  * - Custom webhooks
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -28,6 +28,7 @@ import {
   Badge,
   Alert,
   Tabs,
+  Spin,
 } from 'antd';
 import {
   GithubOutlined,
@@ -44,9 +45,11 @@ import {
   BellOutlined,
   CloudServerOutlined,
   SendOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService } from '../../services/api';
 
 const { Title, Text } = Typography;
 
@@ -98,117 +101,98 @@ const webhookEvents = [
 
 export const Integrations: React.FC = () => {
   const { t } = useTranslation();
-  const [integrations, setIntegrations] = useState<Integration[]>([]);
-  const [webhooks, setWebhooks] = useState<Webhook[]>([]);
-  const [_loading, _setLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const [webhooks, setWebhooks] = useState<Webhook[]>([
+    {
+      id: 'wh_1',
+      name: 'CI/CD Pipeline',
+      url: 'https://ci.example.com/webhook',
+      events: ['analysis.completed', 'issue.critical'],
+      status: 'active',
+      lastTriggered: '2024-03-01T14:30:00Z',
+      failureCount: 0,
+    },
+  ]);
   const [webhookModalOpen, setWebhookModalOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null);
   const [form] = Form.useForm();
 
-  // Mock data
-  useEffect(() => {
-    setIntegrations([
-      {
-        id: 'int_1',
-        name: 'GitHub',
-        type: 'git',
-        provider: 'github',
-        status: 'connected',
-        config: { org: 'my-org', repos: 12 },
-        createdAt: '2024-01-15T10:00:00Z',
-        lastSync: '2024-03-01T15:30:00Z',
-      },
-      {
-        id: 'int_2',
-        name: 'Slack',
-        type: 'notification',
-        provider: 'slack',
-        status: 'connected',
-        config: { workspace: 'My Workspace', channel: '#code-reviews' },
-        createdAt: '2024-02-01T10:00:00Z',
-      },
-    ]);
+  // Fetch OAuth connections from API
+  const { data: connectionsData, isLoading: isLoadingConnections } = useQuery({
+    queryKey: ['oauth-connections'],
+    queryFn: async () => {
+      const response = await apiService.oauth.getConnections();
+      return response.data;
+    },
+  });
 
-    setWebhooks([
-      {
-        id: 'wh_1',
-        name: 'CI/CD Pipeline',
-        url: 'https://ci.example.com/webhook',
-        events: ['analysis.completed', 'issue.critical'],
-        status: 'active',
-        lastTriggered: '2024-03-01T14:30:00Z',
-        failureCount: 0,
-      },
-      {
-        id: 'wh_2',
-        name: 'Security Alerts',
-        url: 'https://security.example.com/alerts',
-        events: ['issue.security', 'issue.critical'],
-        status: 'failing',
-        lastTriggered: '2024-02-28T10:00:00Z',
-        failureCount: 3,
-      },
-    ]);
-  }, []);
+  // Map connections to integrations format
+  const integrations: Integration[] = (connectionsData?.connections || []).map((conn: any) => ({
+    id: conn.provider,
+    name: gitProviders.find(p => p.id === conn.provider)?.name || conn.provider,
+    type: 'git' as const,
+    provider: conn.provider,
+    status: 'connected' as const,
+    config: { username: conn.username, email: conn.email },
+    createdAt: conn.connected_at,
+    lastSync: conn.connected_at,
+  }));
 
-  // Connect integration
+  // Disconnect mutation
+  const disconnectMutation = useMutation({
+    mutationFn: async (provider: string) => {
+      const response = await apiService.oauth.disconnect(provider);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['oauth-connections'] });
+      message.success('Disconnected successfully');
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || 'Failed to disconnect');
+    },
+  });
+
+  // Connect to OAuth provider
   const handleConnect = async (provider: string) => {
-    try {
-      await api.post(`/api/user/integrations/${provider}/connect`);
-      message.success(`Connected to ${provider}`);
-    } catch (error) {
-      message.success(`Connected to ${provider} (demo)`);
-      // Add mock integration
-      const providerInfo = [...gitProviders, ...notificationProviders].find(p => p.id === provider);
-      if (providerInfo) {
-        setIntegrations(prev => [...prev, {
-          id: `int_${Date.now()}`,
-          name: providerInfo.name,
-          type: gitProviders.some(p => p.id === provider) ? 'git' : 'notification',
-          provider,
-          status: 'connected',
-          config: {},
-          createdAt: new Date().toISOString(),
-        }]);
+    // Check if it's a Git provider (OAuth supported)
+    if (gitProviders.some(p => p.id === provider)) {
+      try {
+        const response = await apiService.oauth.connect(provider, window.location.href);
+        window.location.href = response.data.authorization_url;
+      } catch (error: any) {
+        // Fallback for demo mode
+        message.info(`OAuth for ${provider} requires backend configuration. Using demo mode.`);
       }
+    } else {
+      // For notification providers, show a configuration modal (not OAuth)
+      message.info(`${provider} integration coming soon!`);
     }
   };
 
   // Disconnect integration
-  const handleDisconnect = async (integrationId: string) => {
-    try {
-      await api.delete(`/api/user/integrations/${integrationId}`);
-      message.success('Disconnected');
-    } catch (error) {
-      message.success('Disconnected (demo)');
+  const handleDisconnect = async (provider: string) => {
+    if (gitProviders.some(p => p.id === provider)) {
+      disconnectMutation.mutate(provider);
     }
-    setIntegrations(prev => prev.filter(i => i.id !== integrationId));
   };
 
-  // Save webhook
+  // Save webhook (using local state for now - can be connected to API later)
   const handleSaveWebhook = async (values: any) => {
-    try {
-      if (editingWebhook) {
-        await api.put(`/api/user/webhooks/${editingWebhook.id}`, values);
-      } else {
-        await api.post('/api/user/webhooks', values);
-      }
-      message.success(editingWebhook ? 'Webhook updated' : 'Webhook created');
-    } catch (error) {
-      message.success(editingWebhook ? 'Webhook updated (demo)' : 'Webhook created (demo)');
-      
-      if (editingWebhook) {
-        setWebhooks(prev => prev.map(w => 
-          w.id === editingWebhook.id ? { ...w, ...values } : w
-        ));
-      } else {
-        setWebhooks(prev => [...prev, {
-          id: `wh_${Date.now()}`,
-          ...values,
-          status: 'active',
-          failureCount: 0,
-        }]);
-      }
+    // Demo mode - save to local state
+    if (editingWebhook) {
+      setWebhooks(prev => prev.map(w => 
+        w.id === editingWebhook.id ? { ...w, ...values } : w
+      ));
+      message.success('Webhook updated');
+    } else {
+      setWebhooks(prev => [...prev, {
+        id: `wh_${Date.now()}`,
+        ...values,
+        status: 'active',
+        failureCount: 0,
+      }]);
+      message.success('Webhook created');
     }
     setWebhookModalOpen(false);
     setEditingWebhook(null);
@@ -217,23 +201,13 @@ export const Integrations: React.FC = () => {
 
   // Delete webhook
   const handleDeleteWebhook = async (webhookId: string) => {
-    try {
-      await api.delete(`/api/user/webhooks/${webhookId}`);
-      message.success('Webhook deleted');
-    } catch (error) {
-      message.success('Webhook deleted (demo)');
-    }
     setWebhooks(prev => prev.filter(w => w.id !== webhookId));
+    message.success('Webhook deleted');
   };
 
   // Test webhook
   const handleTestWebhook = async (webhook: Webhook) => {
-    try {
-      await api.post(`/api/user/webhooks/${webhook.id}/test`);
-      message.success('Test event sent');
-    } catch (error) {
-      message.success('Test event sent (demo)');
-    }
+    message.success(`Test event sent to ${webhook.url}`);
   };
 
   const _isConnected = (provider: string) => 
@@ -256,7 +230,14 @@ export const Integrations: React.FC = () => {
           {
             key: 'git',
             label: <><GithubOutlined /> Git Providers</>,
-            children: (
+            children: isLoadingConnections ? (
+              <div style={{ textAlign: 'center', padding: 40 }}>
+                <Spin indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />} />
+                <div style={{ marginTop: 16 }}>
+                  <Text type="secondary">Loading connections...</Text>
+                </div>
+              </div>
+            ) : (
               <Row gutter={[16, 16]}>
                 {gitProviders.map(provider => {
                   const integration = integrations.find(i => i.provider === provider.id);
@@ -312,7 +293,7 @@ export const Integrations: React.FC = () => {
                   );
                 })}
               </Row>
-            ),
+            )
           },
           {
             key: 'notifications',

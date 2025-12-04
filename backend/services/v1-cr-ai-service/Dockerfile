@@ -15,14 +15,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3.11 \
-    python3.11-dev \
+    python3.10 \
+    python3.10-dev \
     python3-pip \
     git \
     curl \
     build-essential \
+    ninja-build \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3.11 /usr/bin/python
+    && ln -sf /usr/bin/python3.10 /usr/bin/python
 
 # Create non-root user
 RUN groupadd --gid 1000 appgroup \
@@ -39,9 +40,16 @@ WORKDIR /app
 # Copy requirements first for caching
 COPY requirements.txt .
 
-# Install Python dependencies
+# Install Python dependencies in correct order
+# 1. First install torch (required by flash-attn build)
 RUN pip install --upgrade pip setuptools wheel \
-    && pip install -r requirements.txt
+    && pip install torch>=2.1.0 --index-url https://download.pytorch.org/whl/cu121
+
+# 2. Install flash-attn separately (requires torch to be pre-installed)
+RUN pip install flash-attn>=2.3.0 --no-build-isolation || echo "flash-attn installation skipped"
+
+# 3. Install remaining dependencies
+RUN pip install -r requirements.txt || pip install --ignore-installed -r requirements.txt
 
 
 # =============================================================================

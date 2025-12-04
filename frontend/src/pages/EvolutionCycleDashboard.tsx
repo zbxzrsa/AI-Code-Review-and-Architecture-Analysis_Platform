@@ -27,6 +27,7 @@ import {
   Alert,
   message,
   Divider,
+  notification,
 } from 'antd';
 import {
   ExperimentOutlined,
@@ -37,9 +38,12 @@ import {
   ReloadOutlined,
   SyncOutlined,
   ThunderboltOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';
+import { aiService } from '../services/aiService';
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -142,12 +146,49 @@ const EvolutionCycleDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedVersion, setSelectedVersion] = useState<string>('all');
 
-  // Fetch data
+  // Fetch data from real API with fallback to mock
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
 
-      // Mock data - in production, call actual API
+      // Try to fetch real data from API
+      try {
+        const [cycleResponse, techResponse] = await Promise.all([
+          aiService.getCycleStatus(),
+          aiService.getTechnologies(),
+        ]);
+
+        if (cycleResponse) {
+          setCycleStatus(cycleResponse as unknown as CycleStatus);
+        }
+        if (techResponse && techResponse.length > 0) {
+          // Map API response to local Technology type
+          const mappedTech: Technology[] = techResponse.map((t: any) => ({
+            tech_id: t.id,
+            name: t.name,
+            category: 'ai-model',
+            description: t.name,
+            source: 'API',
+            version: t.version as 'v1' | 'v2' | 'v3',
+            status: t.status === 'active' ? 'promoted' : t.status === 'testing' ? 'experimental' : 'quarantined',
+            metrics: {
+              accuracy: t.accuracy,
+              error_rate: t.errorRate,
+              latency_p95_ms: t.latency,
+              sample_count: t.samples,
+            },
+            created_at: t.lastUpdated,
+          }));
+          setTechnologies(mappedTech);
+        }
+        setLoading(false);
+        return;
+      } catch (apiError) {
+        // API not available, use mock data
+        console.log('Using mock data - API not available');
+      }
+
+      // Fallback mock data for development
       const mockTechnologies: Technology[] = [
         {
           tech_id: 'tech-001',

@@ -508,6 +508,118 @@ export const apiService = {
     ) => api.get(`/projects/${id}/api-keys/${keyId}/usage`, { params }),
   },
 
+  // ============================================
+  // OAuth
+  // ============================================
+  oauth: {
+    /**
+     * Get available OAuth providers
+     */
+    getProviders: () => api.get("/auth/oauth/providers"),
+
+    /**
+     * Initiate OAuth flow
+     */
+    connect: (provider: string, returnUrl?: string) =>
+      api.get(`/auth/oauth/connect/${provider}`, {
+        params: { return_url: returnUrl },
+      }),
+
+    /**
+     * Get connected OAuth accounts
+     */
+    getConnections: () => api.get("/auth/oauth/connections"),
+
+    /**
+     * Disconnect OAuth provider
+     */
+    disconnect: (provider: string) =>
+      api.delete(`/auth/oauth/connections/${provider}`),
+
+    /**
+     * List repositories from OAuth provider
+     */
+    listRepositories: (provider: string) =>
+      api.get(`/repositories/oauth/${provider}`),
+  },
+
+  // ============================================
+  // Repositories
+  // ============================================
+  repositories: {
+    /**
+     * List all repositories
+     */
+    list: (params?: {
+      page?: number;
+      limit?: number;
+      project_id?: string;
+      provider?: string;
+      status?: string;
+    }) => api.get("/repositories", { params }),
+
+    /**
+     * Get repository by ID
+     */
+    get: (id: string) => api.get(`/repositories/${id}`),
+
+    /**
+     * Create repository from URL
+     */
+    create: (data: { url: string; name?: string; project_id?: string }) =>
+      api.post("/repositories", data),
+
+    /**
+     * Connect repository from OAuth provider
+     */
+    connect: (data: {
+      provider: string;
+      repo_full_name: string;
+      project_id?: string;
+      default_branch?: string;
+    }) => api.post("/repositories/connect", data),
+
+    /**
+     * Delete repository
+     */
+    delete: (id: string) => api.delete(`/repositories/${id}`),
+
+    /**
+     * Sync repository with remote
+     */
+    sync: (id: string) => api.post(`/repositories/${id}/sync`),
+
+    /**
+     * Get repository file tree
+     */
+    getTree: (id: string, path?: string) =>
+      api.get(`/repositories/${id}/tree`, { params: { path } }),
+
+    /**
+     * Get file content from repository
+     */
+    getFile: (id: string, filePath: string) =>
+      api.get(`/repositories/${id}/files/${encodeURIComponent(filePath)}`),
+
+    /**
+     * Create webhook for repository
+     */
+    createWebhook: (id: string) => api.post(`/repositories/${id}/webhook`),
+
+    /**
+     * Get repository branches
+     */
+    getBranches: (id: string) => api.get(`/repositories/${id}/branches`),
+
+    /**
+     * Get repository commits
+     */
+    getCommits: (
+      id: string,
+      params?: { branch?: string; page?: number; limit?: number }
+    ) => api.get(`/repositories/${id}/commits`, { params }),
+  },
+
   // Analysis
   analysis: {
     start: (
@@ -535,6 +647,19 @@ export const apiService = {
 
     streamUrl: (sessionId: string) =>
       `${API_BASE_URL}/analyze/${sessionId}/stream`,
+
+    // Security vulnerabilities
+    getVulnerabilities: (params?: {
+      severity?: string;
+      status?: string;
+      project?: string;
+      page?: number;
+      limit?: number;
+    }) => api.get("/security/vulnerabilities", { params }),
+
+    getSecurityMetrics: () => api.get("/security/metrics"),
+
+    getComplianceStatus: () => api.get("/security/compliance"),
   },
 
   // Experiments (Admin)

@@ -10,7 +10,7 @@
  * - Scheduled reports
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Row,
@@ -173,12 +173,32 @@ export const Reports: React.FC = () => {
   const { t } = useTranslation();
   const [reports, setReports] = useState<Report[]>(mockReports);
   const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>(mockScheduledReports);
-  const [loading, _setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('reports');
   const [form] = Form.useForm();
   const [scheduleForm] = Form.useForm();
+
+  // Fetch reports from API
+  const fetchReports = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/api/reports');
+      if (response.data?.items) {
+        setReports(response.data.items);
+      }
+    } catch {
+      // Use mock data
+      setReports(mockReports);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   // Generate report
   const handleGenerate = async (values: any) => {

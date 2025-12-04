@@ -10,7 +10,7 @@
  * - Security trends
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card,
   Row,
@@ -26,6 +26,8 @@ import {
   Badge,
   Button,
   List,
+  Spin,
+  message,
 } from 'antd';
 import type { TableProps } from 'antd';
 import {
@@ -43,6 +45,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { apiService } from '../services/api';
 
 const { Title, Text } = Typography;
 
@@ -144,16 +147,38 @@ const complianceChecks = [
 
 export const SecurityDashboard: React.FC = () => {
   const { t } = useTranslation();
+  const [vulnerabilities, setVulnerabilities] = useState<Vulnerability[]>(mockVulnerabilities);
+  const [loading, setLoading] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
 
+  // Fetch vulnerabilities from API
+  const fetchVulnerabilities = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await apiService.analysis.getVulnerabilities();
+      if (response.data?.items) {
+        setVulnerabilities(response.data.items);
+      }
+    } catch {
+      // Use mock data if API fails
+      setVulnerabilities(mockVulnerabilities);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchVulnerabilities();
+  }, [fetchVulnerabilities]);
+
   const stats = {
-    critical: mockVulnerabilities.filter(v => v.severity === 'critical').length,
-    high: mockVulnerabilities.filter(v => v.severity === 'high').length,
-    medium: mockVulnerabilities.filter(v => v.severity === 'medium').length,
-    low: mockVulnerabilities.filter(v => v.severity === 'low').length,
-    open: mockVulnerabilities.filter(v => v.status === 'open').length,
-    resolved: mockVulnerabilities.filter(v => v.status === 'resolved').length,
+    critical: vulnerabilities.filter(v => v.severity === 'critical').length,
+    high: vulnerabilities.filter(v => v.severity === 'high').length,
+    medium: vulnerabilities.filter(v => v.severity === 'medium').length,
+    low: vulnerabilities.filter(v => v.severity === 'low').length,
+    open: vulnerabilities.filter(v => v.status === 'open').length,
+    resolved: vulnerabilities.filter(v => v.status === 'resolved').length,
   };
 
   const getSeverityColor = (severity: string) => {

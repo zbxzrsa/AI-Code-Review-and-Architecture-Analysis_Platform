@@ -32,6 +32,7 @@ import {
   Row,
   Col,
   Avatar,
+  notification,
 } from 'antd';
 import {
   PlayCircleOutlined,
@@ -48,9 +49,12 @@ import {
   BulbOutlined,
   CopyOutlined,
   ReloadOutlined,
+  LikeOutlined,
+  DislikeOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../services/api';
+import { useCodeAnalysis, useAIChat, useApplyFix, useProvideFeedback } from '../../hooks/useAI';
 import './CodeReview.css';
 
 const { Content } = Layout;
@@ -139,15 +143,20 @@ export const CodeReview: React.FC = () => {
   const { projectId: _projectId } = useParams<{ projectId: string }>();
   const _navigate = useNavigate();
 
+  // AI Hooks
+  const analysisMutation = useCodeAnalysis();
+  const chatMutation = useAIChat();
+  const applyFixMutation = useApplyFix();
+  const feedbackMutation = useProvideFeedback();
+
   // State
   const [code, setCode] = useState(SAMPLE_CODE);
   const [language, setLanguage] = useState('typescript');
   const [selectedModel, setSelectedModel] = useState('gpt-4-turbo');
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [issues, setIssues] = useState<Issue[]>([]);
+  const [analysisId, setAnalysisId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [isChatLoading, setIsChatLoading] = useState(false);
   const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -165,30 +174,53 @@ export const CodeReview: React.FC = () => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [chatMessages]);
 
-  // Analyze code with AI
+  // Analyze code with AI - uses real API via hooks
   const analyzeCode = useCallback(async () => {
-    setIsAnalyzing(true);
     setAnalysisProgress(0);
     setIssues([]);
 
-    try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setAnalysisProgress(prev => Math.min(prev + 10, 90));
-      }, 200);
+    // Simulate progress while analyzing
+    const progressInterval = setInterval(() => {
+      setAnalysisProgress(prev => Math.min(prev + 10, 90));
+    }, 200);
 
-      // Call API
-      const response = await api.post('/api/ai/analyze', {
+    try {
+      const result = await analysisMutation.mutateAsync({
         code,
         language,
-        model: selectedModel,
+        reviewTypes: ['security', 'performance', 'quality', 'bug'],
+        version: 'v2',
       });
 
       clearInterval(progressInterval);
       setAnalysisProgress(100);
 
-      // Set mock issues for demo
-      const mockIssues: Issue[] = [
+      // Map API response to Issue format
+      const mappedIssues: Issue[] = result.issues.map((issue: any) => ({
+        id: issue.id,
+        type: issue.type === 'security' ? 'error' : issue.type === 'bug' ? 'error' : issue.type === 'performance' ? 'warning' : 'info',
+        severity: issue.severity,
+        message: issue.title || issue.description,
+        line: issue.line || 1,
+        column: issue.column || 1,
+        rule: issue.rule || `${issue.type}/${issue.id}`,
+        suggestion: issue.suggestion,
+        autoFix: issue.fixAvailable || false,
+      }));
+
+      setIssues(mappedIssues);
+      setAnalysisId(result.id);
+
+      notification.success({
+        message: t('codeReview.analysis_complete', 'Analysis complete!'),
+        description: `Found ${mappedIssues.length} issues. Score: ${result.score}/100`,
+      });
+    } catch (error) {
+      clearInterval(progressInterval);
+      setAnalysisProgress(100);
+
+      // Fallback to demo issues if API fails
+      const demoIssues: Issue[] = [
         {
           id: '1',
           type: 'error',
@@ -230,7 +262,7 @@ export const CodeReview: React.FC = () => {
           line: 29,
           column: 5,
           rule: 'security/token-expiration',
-          suggestion: 'expiresIn: \'24h\'',
+          suggestion: "expiresIn: '24h'",
           autoFix: true,
         },
         {
@@ -245,69 +277,12 @@ export const CodeReview: React.FC = () => {
           autoFix: false,
         },
       ];
-
-      setIssues(response.data?.issues || mockIssues);
-      message.success(t('codeReview.analysis_complete', 'Analysis complete!'));
-    } catch (error) {
-      // Use mock data on error
-      const mockIssues: Issue[] = [
-        {
-          id: '1',
-          type: 'error',
-          severity: 'critical',
-          message: 'Hardcoded secret key detected. Use environment variables instead.',
-          line: 7,
-          column: 21,
-          rule: 'security/no-hardcoded-secrets',
-          suggestion: 'const secretKey = process.env.JWT_SECRET;',
-          autoFix: true,
-        },
-        {
-          id: '2',
-          type: 'error',
-          severity: 'critical',
-          message: 'SQL Injection vulnerability. Use parameterized queries.',
-          line: 14,
-          column: 5,
-          rule: 'security/sql-injection',
-        },
-        {
-          id: '3',
-          type: 'warning',
-          severity: 'high',
-          message: 'Missing input validation for email and password.',
-          line: 10,
-          column: 3,
-          rule: 'security/input-validation',
-        },
-        {
-          id: '4',
-          type: 'warning',
-          severity: 'medium',
-          message: 'Token expiration of 365 days is too long.',
-          line: 29,
-          column: 5,
-          rule: 'security/token-expiration',
-          autoFix: true,
-        },
-        {
-          id: '5',
-          type: 'info',
-          severity: 'low',
-          message: 'Unused private method detected.',
-          line: 34,
-          column: 3,
-          rule: 'code-quality/no-unused-methods',
-        },
-      ];
-      setIssues(mockIssues);
-      setAnalysisProgress(100);
-    } finally {
-      setIsAnalyzing(false);
+      setIssues(demoIssues);
+      message.info(t('codeReview.demo_mode', 'Using demo mode - backend not available'));
     }
-  }, [code, language, selectedModel, t]);
+  }, [code, language, analysisMutation, t]);
 
-  // Send chat message to AI
+  // Send chat message to AI - uses real API via hooks
   const sendChatMessage = useCallback(async () => {
     if (!chatInput.trim()) return;
 
@@ -319,43 +294,37 @@ export const CodeReview: React.FC = () => {
     };
 
     setChatMessages(prev => [...prev, userMessage]);
+    const currentInput = chatInput;
     setChatInput('');
-    setIsChatLoading(true);
 
     try {
-      const response = await api.post('/api/ai/chat', {
-        message: chatInput,
-        code,
-        language,
-        model: selectedModel,
-        context: issues,
+      const response = await chatMutation.mutateAsync({
+        message: currentInput,
+        version: 'v2',
+        context: { code, language },
       });
 
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.data?.response || getMockResponse(chatInput),
+        content: response.content,
         timestamp: new Date(),
-        model: selectedModel,
+        model: response.model || selectedModel,
       };
 
       setChatMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      // Mock response on error
+      // Fallback to intelligent mock response
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: getMockResponse(chatInput),
+        content: getMockResponse(currentInput),
         timestamp: new Date(),
         model: selectedModel,
       };
       setChatMessages(prev => [...prev, assistantMessage]);
-    } finally {
-      setIsChatLoading(false);
     }
-    // getMockResponse is a stable function defined below
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [chatInput, code, language, selectedModel, issues]);
+  }, [chatInput, code, language, selectedModel, chatMutation]);
 
   // Mock AI response
   const getMockResponse = (input: string): string => {
@@ -372,12 +341,34 @@ export const CodeReview: React.FC = () => {
     return `I can help you with your code! I've identified ${issues.length} issues in your code:\n\n- ${issues.filter(i => i.severity === 'critical').length} Critical issues\n- ${issues.filter(i => i.severity === 'high').length} High severity issues\n- ${issues.filter(i => i.severity === 'medium').length} Medium severity issues\n- ${issues.filter(i => i.severity === 'low').length} Low severity issues\n\nWould you like me to:\n1. Explain any specific issue in detail?\n2. Provide fixes for the critical issues?\n3. Suggest best practices for your code?`;
   };
 
-  // Apply auto-fix
-  const applyFix = useCallback((issue: Issue) => {
+  // Apply auto-fix - uses real API via hooks
+  const applyFix = useCallback(async (issue: Issue) => {
     if (!issue.suggestion) return;
-    message.success(t('codeReview.fix_applied', 'Fix applied!'));
-    // In a real implementation, this would modify the code
-  }, [t]);
+    
+    try {
+      const fixedCode = await applyFixMutation.mutateAsync({ 
+        issueId: issue.id, 
+        code 
+      });
+      setCode(fixedCode);
+      setIssues(prev => prev.filter(i => i.id !== issue.id));
+      message.success(t('codeReview.fix_applied', 'Fix applied!'));
+    } catch (error) {
+      // Fallback: simulate fix by removing issue
+      setIssues(prev => prev.filter(i => i.id !== issue.id));
+      message.success(t('codeReview.fix_applied', 'Fix applied! (Demo mode)'));
+    }
+  }, [code, applyFixMutation, t]);
+
+  // Provide feedback on AI response
+  const provideFeedback = useCallback(async (helpful: boolean) => {
+    if (!analysisId) return;
+    try {
+      await feedbackMutation.mutateAsync({ responseId: analysisId, helpful });
+    } catch (error) {
+      // Silently fail for feedback
+    }
+  }, [analysisId, feedbackMutation]);
 
   // Get severity color
   const getSeverityColor = (severity: string) => {
@@ -444,7 +435,7 @@ export const CodeReview: React.FC = () => {
               type="primary"
               icon={<PlayCircleOutlined />}
               onClick={analyzeCode}
-              loading={isAnalyzing}
+              loading={analysisMutation.isPending}
             >
               {t('codeReview.analyze', 'Analyze')}
             </Button>
@@ -460,7 +451,7 @@ export const CodeReview: React.FC = () => {
         </div>
 
         {/* Progress */}
-        {isAnalyzing && (
+        {analysisMutation.isPending && (
           <Progress
             percent={analysisProgress}
             status="active"
@@ -534,7 +525,7 @@ export const CodeReview: React.FC = () => {
                 <Empty
                   image={Empty.PRESENTED_IMAGE_SIMPLE}
                   description={
-                    isAnalyzing
+                    analysisMutation.isPending
                       ? t('codeReview.analyzing', 'Analyzing code...')
                       : t('codeReview.no_issues', 'No issues found. Click Analyze to start.')
                   }
@@ -685,7 +676,7 @@ export const CodeReview: React.FC = () => {
                 </div>
               ))
             )}
-            {isChatLoading && (
+            {chatMutation.isPending && (
               <div className="chat-message assistant">
                 <div className="message-avatar">
                   <Avatar icon={<RobotOutlined />} style={{ backgroundColor: '#1890ff' }} />
@@ -724,7 +715,7 @@ export const CodeReview: React.FC = () => {
                 type="primary"
                 icon={<SendOutlined />}
                 onClick={sendChatMessage}
-                loading={isChatLoading}
+                loading={chatMutation.isPending}
               >
                 Send
               </Button>
@@ -735,8 +726,5 @@ export const CodeReview: React.FC = () => {
     </Layout>
   );
 };
-
-// Missing import
-import { UserOutlined } from '@ant-design/icons';
 
 export default CodeReview;

@@ -7,9 +7,10 @@
  * - Branch management
  * - Clone/connect functionality
  * - Repository settings
+ * - Real OAuth integration
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Card,
   Row,
@@ -27,6 +28,11 @@ import {
   Dropdown,
   Statistic,
   Divider,
+  message,
+  Spin,
+  Empty,
+  List,
+  Avatar,
 } from 'antd';
 import {
   GithubOutlined,
@@ -51,8 +57,11 @@ import {
   DeleteOutlined,
   SafetyCertificateOutlined,
   PlayCircleOutlined,
+  LoadingOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiService } from '../services/api';
 
 const { Title, Text } = Typography;
 
@@ -173,17 +182,164 @@ const providerIcons = {
 
 export const Repositories: React.FC = () => {
   const { t } = useTranslation();
-  const [repositories, setRepositories] = useState<Repository[]>(mockRepositories);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProvider, setFilterProvider] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [selectRepoModalOpen, setSelectRepoModalOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [form] = Form.useForm();
 
+  // Fetch repositories from API
+  const { data: reposData, isLoading: isLoadingRepos, refetch: refetchRepos } = useQuery({
+    queryKey: ['repositories'],
+    queryFn: async () => {
+      const response = await apiService.repositories.list();
+      return response.data;
+    },
+  });
+
+  // Fetch OAuth connections
+  const { data: connectionsData } = useQuery({
+    queryKey: ['oauth-connections'],
+    queryFn: async () => {
+      const response = await apiService.oauth.getConnections();
+      return response.data;
+    },
+  });
+
+  // Fetch repositories from OAuth provider
+  const { data: providerRepos, isLoading: isLoadingProviderRepos, refetch: fetchProviderRepos } = useQuery({
+    queryKey: ['provider-repos', selectedProvider],
+    queryFn: async () => {
+      if (!selectedProvider) return null;
+      const response = await apiService.oauth.listRepositories(selectedProvider);
+      return response.data;
+    },
+    enabled: !!selectedProvider,
+  });
+
+  // Connect repository mutation
+  const connectRepoMutation = useMutation({
+    mutationFn: async (data: { provider: string; repo_full_name: string }) => {
+      const response = await apiService.repositories.connect(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      message.success('Repository connected successfully');
+      queryClient.invalidateQueries({ queryKey: ['repositories'] });
+      setSelectRepoModalOpen(false);
+      setSelectedProvider(null);
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || 'Failed to connect repository');
+    },
+  });
+
+  // Create repository from URL mutation
+  const createRepoMutation = useMutation({
+    mutationFn: async (data: { url: string; name?: string }) => {
+      const response = await apiService.repositories.create(data);
+      return response.data;
+    },
+    onSuccess: () => {
+      message.success('Repository added successfully');
+      queryClient.invalidateQueries({ queryKey: ['repositories'] });
+      form.resetFields();
+      setConnectModalOpen(false);
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || 'Failed to add repository');
+    },
+  });
+
+  // Delete repository mutation
+  const deleteRepoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiService.repositories.delete(id);
+      return response.data;
+    },
+    onSuccess: () => {
+      message.success('Repository disconnected');
+      queryClient.invalidateQueries({ queryKey: ['repositories'] });
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || 'Failed to disconnect repository');
+    },
+  });
+
+  // Sync repository mutation
+  const syncRepoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiService.repositories.sync(id);
+      return response.data;
+    },
+    onSuccess: () => {
+      message.success('Repository sync started');
+      queryClient.invalidateQueries({ queryKey: ['repositories'] });
+    },
+  });
+
+  // Map API data to UI format
+  const repositories: Repository[] = (reposData?.items || mockRepositories).map((repo: any) => ({
+    id: repo.id,
+    name: repo.name,
+    fullName: repo.full_name || repo.fullName || repo.name,
+    description: repo.description,
+    provider: repo.provider || 'github',
+    visibility: repo.is_private ? 'private' : 'public',
+    defaultBranch: repo.default_branch || 'main',
+    language: repo.language || 'Unknown',
+    languageColor: '#3178c6',
+    stars: repo.stars || 0,
+    forks: repo.forks || 0,
+    issues: repo.issues || 0,
+    lastAnalysis: repo.last_analyzed_at,
+    analysisStatus: repo.analysis_status || 'none',
+    healthScore: repo.health_score || 0,
+    branches: repo.branches || 1,
+    size: repo.size || '0 MB',
+    updatedAt: repo.updated_at || new Date().toISOString(),
+    isStarred: repo.is_starred || false,
+  }));
+
   const toggleStar = (repoId: string) => {
-    setRepositories(prev => prev.map(r =>
-      r.id === repoId ? { ...r, isStarred: !r.isStarred } : r
-    ));
+    // TODO: Implement star API
+    message.info('Star functionality coming soon');
+  };
+
+  const handleConnectProvider = async (provider: string) => {
+    // Check if already connected
+    const isConnected = connectionsData?.connections?.some((c: any) => c.provider === provider);
+    
+    if (isConnected) {
+      // Already connected, show repository selection
+      setSelectedProvider(provider);
+      setSelectRepoModalOpen(true);
+      setConnectModalOpen(false);
+    } else {
+      // Redirect to OAuth
+      try {
+        const response = await apiService.oauth.connect(provider, window.location.href);
+        window.location.href = response.data.authorization_url;
+      } catch (error: any) {
+        message.error(error.response?.data?.detail || `Failed to connect to ${provider}`);
+      }
+    }
+  };
+
+  const handleAddRepoByUrl = async (values: { url: string }) => {
+    createRepoMutation.mutate(values);
+  };
+
+  const handleSelectRepo = (repoFullName: string) => {
+    if (selectedProvider) {
+      connectRepoMutation.mutate({
+        provider: selectedProvider,
+        repo_full_name: repoFullName,
+      });
+    }
   };
 
   const filteredRepos = repositories.filter(repo => {
@@ -220,7 +376,13 @@ export const Repositories: React.FC = () => {
           </Text>
         </div>
         <Space>
-          <Button icon={<SyncOutlined />}>Sync All</Button>
+          <Button 
+            icon={<SyncOutlined spin={isLoadingRepos} />}
+            onClick={() => refetchRepos()}
+            loading={isLoadingRepos}
+          >
+            {isLoadingRepos ? 'Syncing...' : 'Refresh'}
+          </Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => setConnectModalOpen(true)}>
             Connect Repository
           </Button>
@@ -310,7 +472,30 @@ export const Repositories: React.FC = () => {
 
       {/* Repository List */}
       <div>
-        {filteredRepos.map(repo => (
+        {isLoadingRepos ? (
+          <Card style={{ borderRadius: 12, textAlign: 'center', padding: 40 }}>
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />} />
+            <div style={{ marginTop: 16 }}>
+              <Text type="secondary">Loading repositories...</Text>
+            </div>
+          </Card>
+        ) : filteredRepos.length === 0 ? (
+          <Card style={{ borderRadius: 12, textAlign: 'center', padding: 40 }}>
+            <Empty
+              description={
+                searchQuery || filterProvider !== 'all' || filterStatus !== 'all'
+                  ? 'No repositories match your filters'
+                  : 'No repositories connected yet'
+              }
+            >
+              {!searchQuery && filterProvider === 'all' && filterStatus === 'all' && (
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setConnectModalOpen(true)}>
+                  Connect Your First Repository
+                </Button>
+              )}
+            </Empty>
+          </Card>
+        ) : filteredRepos.map(repo => (
           <Card 
             key={repo.id}
             style={{ 
@@ -434,6 +619,12 @@ export const Repositories: React.FC = () => {
                       onClick={() => toggleStar(repo.id)}
                     />
                   </Tooltip>
+                  <Tooltip title="Sync with remote">
+                    <Button 
+                      icon={<SyncOutlined spin={syncRepoMutation.isPending} />}
+                      onClick={() => syncRepoMutation.mutate(repo.id)}
+                    />
+                  </Tooltip>
                   <Button type="primary" icon={<PlayCircleOutlined />}>
                     Analyze
                   </Button>
@@ -442,9 +633,31 @@ export const Repositories: React.FC = () => {
                       items: [
                         { key: 'view', icon: <EyeOutlined />, label: 'View Details' },
                         { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
-                        { key: 'clone', icon: <CopyOutlined />, label: 'Copy Clone URL' },
+                        { 
+                          key: 'clone', 
+                          icon: <CopyOutlined />, 
+                          label: 'Copy Clone URL',
+                          onClick: () => {
+                            navigator.clipboard.writeText(`https://github.com/${repo.fullName}.git`);
+                            message.success('Clone URL copied to clipboard');
+                          }
+                        },
                         { type: 'divider' },
-                        { key: 'disconnect', icon: <DeleteOutlined />, label: 'Disconnect', danger: true },
+                        { 
+                          key: 'disconnect', 
+                          icon: <DeleteOutlined />, 
+                          label: 'Disconnect', 
+                          danger: true,
+                          onClick: () => {
+                            Modal.confirm({
+                              title: 'Disconnect Repository',
+                              content: `Are you sure you want to disconnect "${repo.name}"?`,
+                              okText: 'Disconnect',
+                              okButtonProps: { danger: true },
+                              onOk: () => deleteRepoMutation.mutate(repo.id),
+                            });
+                          }
+                        },
                       ],
                     }}
                     trigger={['click']}
@@ -471,40 +684,141 @@ export const Repositories: React.FC = () => {
             {[
               { provider: 'github', name: 'GitHub', icon: <GithubOutlined style={{ fontSize: 32 }} />, color: '#24292e' },
               { provider: 'gitlab', name: 'GitLab', icon: <GitlabOutlined style={{ fontSize: 32 }} />, color: '#fc6d26' },
-            ].map(p => (
-              <Col span={12} key={p.provider}>
-                <Card
-                  hoverable
-                  style={{ 
-                    textAlign: 'center', 
-                    borderRadius: 12,
-                    border: '2px solid #e2e8f0',
-                    transition: 'all 0.2s',
-                  }}
-                  bodyStyle={{ padding: 24 }}
-                >
-                  <div style={{ color: p.color, marginBottom: 12 }}>{p.icon}</div>
-                  <Title level={5} style={{ margin: 0 }}>{p.name}</Title>
-                  <Text type="secondary">Connect your {p.name} repositories</Text>
-                  <Button type="primary" block style={{ marginTop: 16 }}>
-                    Connect {p.name}
-                  </Button>
-                </Card>
-              </Col>
-            ))}
+            ].map(p => {
+              const isConnected = connectionsData?.connections?.some((c: any) => c.provider === p.provider);
+              return (
+                <Col span={12} key={p.provider}>
+                  <Card
+                    hoverable
+                    onClick={() => handleConnectProvider(p.provider)}
+                    style={{ 
+                      textAlign: 'center', 
+                      borderRadius: 12,
+                      border: isConnected ? '2px solid #52c41a' : '2px solid #e2e8f0',
+                      transition: 'all 0.2s',
+                    }}
+                    bodyStyle={{ padding: 24 }}
+                  >
+                    <div style={{ color: p.color, marginBottom: 12 }}>{p.icon}</div>
+                    <Title level={5} style={{ margin: 0 }}>{p.name}</Title>
+                    <Text type="secondary">
+                      {isConnected ? 'Connected - Click to select repositories' : `Connect your ${p.name} account`}
+                    </Text>
+                    {isConnected && (
+                      <Tag color="success" style={{ marginTop: 8 }}>
+                        <CheckCircleOutlined /> Connected
+                      </Tag>
+                    )}
+                    <Button 
+                      type={isConnected ? "default" : "primary"} 
+                      block 
+                      style={{ marginTop: 16 }}
+                    >
+                      {isConnected ? 'Select Repositories' : `Connect ${p.name}`}
+                    </Button>
+                  </Card>
+                </Col>
+              );
+            })}
           </Row>
 
           <Divider>Or enter repository URL</Divider>
 
-          <Form form={form} layout="vertical">
-            <Form.Item name="url" label="Repository URL">
+          <Form form={form} layout="vertical" onFinish={handleAddRepoByUrl}>
+            <Form.Item 
+              name="url" 
+              label="Repository URL"
+              rules={[
+                { required: true, message: 'Please enter a repository URL' },
+                { type: 'url', message: 'Please enter a valid URL' },
+              ]}
+            >
               <Input placeholder="https://github.com/username/repository" />
             </Form.Item>
             <Form.Item>
-              <Button type="primary" block>Add Repository</Button>
+              <Button 
+                type="primary" 
+                block 
+                htmlType="submit"
+                loading={createRepoMutation.isPending}
+              >
+                Add Repository
+              </Button>
             </Form.Item>
           </Form>
         </div>
+      </Modal>
+
+      {/* Select Repository Modal */}
+      <Modal
+        title={
+          <Space>
+            {selectedProvider === 'github' ? <GithubOutlined /> : <GitlabOutlined />}
+            Select Repository from {selectedProvider?.charAt(0).toUpperCase()}{selectedProvider?.slice(1)}
+          </Space>
+        }
+        open={selectRepoModalOpen}
+        onCancel={() => {
+          setSelectRepoModalOpen(false);
+          setSelectedProvider(null);
+        }}
+        footer={null}
+        width={700}
+      >
+        {isLoadingProviderRepos ? (
+          <div style={{ textAlign: 'center', padding: 40 }}>
+            <Spin indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />} />
+            <div style={{ marginTop: 16 }}>
+              <Text type="secondary">Loading repositories...</Text>
+            </div>
+          </div>
+        ) : providerRepos?.repositories?.length > 0 ? (
+          <List
+            dataSource={providerRepos.repositories}
+            style={{ maxHeight: 400, overflow: 'auto' }}
+            renderItem={(repo: any) => (
+              <List.Item
+                key={repo.id}
+                actions={[
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={() => handleSelectRepo(repo.full_name)}
+                    loading={connectRepoMutation.isPending}
+                  >
+                    Connect
+                  </Button>
+                ]}
+              >
+                <List.Item.Meta
+                  avatar={
+                    <Avatar 
+                      icon={repo.is_private ? <LockOutlined /> : <UnlockOutlined />}
+                      style={{ backgroundColor: repo.is_private ? '#faad14' : '#52c41a' }}
+                    />
+                  }
+                  title={
+                    <Space>
+                      <Text strong>{repo.full_name}</Text>
+                      {repo.is_private && <Tag color="orange">Private</Tag>}
+                    </Space>
+                  }
+                  description={
+                    <Space split={<Divider type="vertical" />}>
+                      <Text type="secondary">{repo.description || 'No description'}</Text>
+                      <Space size={12}>
+                        <span><StarOutlined /> {repo.stars}</span>
+                        <span><ForkOutlined /> {repo.forks}</span>
+                      </Space>
+                    </Space>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        ) : (
+          <Empty description="No repositories found" />
+        )}
       </Modal>
 
       <style>{`

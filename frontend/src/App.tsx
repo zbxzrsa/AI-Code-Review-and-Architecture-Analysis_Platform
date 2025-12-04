@@ -114,6 +114,9 @@ const AIInteractionHub = lazy(() => import('./pages/ai/AIInteractionHub'));
 const VersionControlAI = lazy(() => import('./pages/ai/VersionControlAI'));
 const CodeReviewAI = lazy(() => import('./pages/ai/CodeReviewAI'));
 
+// OAuth Callback / OAuth回调
+const OAuthCallback = lazy(() => import('./pages/OAuthCallback'));
+
 // Query client for React Query
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -202,6 +205,9 @@ export default function App() {
                     <Register />
                   </PublicRoute>
                 } />
+
+                {/* OAuth Callback route / OAuth回调路由 */}
+                <Route path="/oauth/callback/:provider" element={<OAuthCallback />} />
 
                 {/* Protected routes with Layout / 受保护的路由（带布局） */}
                 <Route element={
