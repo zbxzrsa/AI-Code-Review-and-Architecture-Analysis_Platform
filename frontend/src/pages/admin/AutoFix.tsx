@@ -1,4 +1,4 @@
-/**
+﻿/**
  * AI Auto-Fix Management Page (Admin)
  * AI自动修复管理页面
  * 
@@ -56,7 +56,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface AutoFix {
   id: string;
@@ -207,13 +207,13 @@ const mockCycles: FixCycle[] = [
 ];
 
 export const AutoFix: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [fixes, setFixes] = useState<AutoFix[]>(mockAutoFixes);
   const [cycles, setCycles] = useState<FixCycle[]>(mockCycles);
   const [autoFixEnabled, setAutoFixEnabled] = useState(true);
   const [selectedFix, setSelectedFix] = useState<AutoFix | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
 
   // Statistics
   const stats = {

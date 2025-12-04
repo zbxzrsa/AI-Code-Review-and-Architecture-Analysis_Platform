@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { AxiosError } from "axios";
 import { rateLimiter, RateLimitConfig } from "../services/security";
 
 /**
@@ -186,11 +187,11 @@ export function useRateLimiter(key: string, config?: RateLimitConfig) {
 
         try {
           return await fn();
-        } catch (error: any) {
-          lastError = error;
+        } catch (error: unknown) {
+          lastError = error instanceof Error ? error : new Error(String(error));
 
           // Check if rate limited (429)
-          if (error.response?.status === 429) {
+          if (error instanceof AxiosError && error.response?.status === 429) {
             const retryAfter = parseInt(
               error.response.headers["retry-after"] || "60"
             );

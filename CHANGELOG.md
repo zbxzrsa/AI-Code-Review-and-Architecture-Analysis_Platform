@@ -21,6 +21,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker Compose for local development
 - Comprehensive documentation
 
+## [1.1.0] - 2025-12-04
+
+### Added
+
+- **Three-Version Spiral Evolution Service**
+
+  - REST API for managing V1/V2/V3 evolution cycle
+  - 8-phase spiral evolution: experimentation → remediation → evaluation → promotion → stabilization → degradation → comparison → re-evaluation
+  - Dual-AI per version: VC-AI (Version Control) + CR-AI (Code Review)
+  - Cross-version feedback system (V2 fixes V1 errors)
+  - V3 comparison engine with exclusion rules
+  - Prometheus metrics with 30+ custom metrics
+  - Grafana dashboard for evolution monitoring
+  - 25+ alerting rules for cycle health
+
+- **Frontend Admin Panel**
+
+  - Three-version control page (`/admin/three-version`)
+  - Real-time cycle status monitoring
+  - V1 error reporting interface
+  - Promotion/degradation controls
+  - Quarantine statistics and insights
+  - i18n support (English, Chinese)
+
+- **API Service** (`backend/services/three-version-service/`)
+
+  - `/api/v1/evolution/status` - Cycle status
+  - `/api/v1/evolution/start|stop` - Cycle control
+  - `/api/v1/evolution/v1/errors` - Error reporting
+  - `/api/v1/evolution/promote` - V1→V2 promotion
+  - `/api/v1/evolution/degrade` - V2→V3 degradation
+  - `/api/v1/evolution/reeval` - V3→V1 re-evaluation
+  - OpenAPI documentation at `/docs`
+
+- **Infrastructure**
+  - Kubernetes deployment manifest
+  - Helm chart template and values
+  - Docker Compose service
+  - Nginx API gateway route
+  - CI/CD pipeline integration
+
+### Changed
+
+- Updated CI/CD pipeline to build three-version-service
+- Added three-version event types to lifecycle controller
+- Extended Prometheus scrape configuration
+
+### Security
+
+- Admin-only access for VC-AI (all versions)
+- User access restricted to V2 CR-AI only
+- Network policies for service isolation
+
+---
+
 ### Changed
 
 - N/A

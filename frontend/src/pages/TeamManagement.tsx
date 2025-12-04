@@ -123,7 +123,7 @@ export const TeamManagement: React.FC = () => {
   const { t } = useTranslation();
   const [teams, setTeams] = useState<Team[]>(mockTeams);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(mockTeams[0]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
   const [createTeamModalOpen, setCreateTeamModalOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [editMemberModalOpen, setEditMemberModalOpen] = useState(false);

@@ -325,4 +325,82 @@ describe("SecurityService", () => {
       expect(summary.byType).toBeDefined();
     });
   });
+
+  describe("Three-Version Access Control", () => {
+    it("should allow users to access V2 resources", () => {
+      const userRole = "user";
+      const version = "v2";
+      const resourceType = "cr_ai"; // Code Review AI
+
+      const canAccess = security.checkVersionAccess(
+        userRole,
+        version,
+        resourceType
+      );
+      expect(canAccess).toBe(true);
+    });
+
+    it("should deny users access to V1 resources", () => {
+      const userRole = "user";
+      const version = "v1";
+      const resourceType = "cr_ai";
+
+      const canAccess = security.checkVersionAccess(
+        userRole,
+        version,
+        resourceType
+      );
+      expect(canAccess).toBe(false);
+    });
+
+    it("should deny users access to V3 resources", () => {
+      const userRole = "user";
+      const version = "v3";
+      const resourceType = "cr_ai";
+
+      const canAccess = security.checkVersionAccess(
+        userRole,
+        version,
+        resourceType
+      );
+      expect(canAccess).toBe(false);
+    });
+
+    it("should deny users access to VC-AI on any version", () => {
+      const userRole = "user";
+      const resourceType = "vc_ai"; // Version Control AI - admin only
+
+      expect(security.checkVersionAccess(userRole, "v1", resourceType)).toBe(
+        false
+      );
+      expect(security.checkVersionAccess(userRole, "v2", resourceType)).toBe(
+        false
+      );
+      expect(security.checkVersionAccess(userRole, "v3", resourceType)).toBe(
+        false
+      );
+    });
+
+    it("should allow admins to access all versions", () => {
+      const userRole = "admin";
+
+      expect(security.checkVersionAccess(userRole, "v1", "cr_ai")).toBe(true);
+      expect(security.checkVersionAccess(userRole, "v1", "vc_ai")).toBe(true);
+      expect(security.checkVersionAccess(userRole, "v2", "cr_ai")).toBe(true);
+      expect(security.checkVersionAccess(userRole, "v2", "vc_ai")).toBe(true);
+      expect(security.checkVersionAccess(userRole, "v3", "cr_ai")).toBe(true);
+      expect(security.checkVersionAccess(userRole, "v3", "vc_ai")).toBe(true);
+    });
+
+    it("should log unauthorized version access attempts", () => {
+      const initialEvents = security.getSecurityEvents({
+        type: "access",
+      }).length;
+
+      security.checkVersionAccess("user", "v1", "vc_ai");
+
+      const newEvents = security.getSecurityEvents({ type: "access" });
+      expect(newEvents.length).toBeGreaterThan(initialEvents);
+    });
+  });
 });

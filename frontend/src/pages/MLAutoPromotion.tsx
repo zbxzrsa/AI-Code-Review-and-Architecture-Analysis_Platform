@@ -44,9 +44,11 @@ import {
   LineChartOutlined,
   WarningOutlined,
   RollbackOutlined,
-  PlayCircleOutlined,
-  PauseCircleOutlined,
+  BranchesOutlined,
+  ArrowRightOutlined,
 } from '@ant-design/icons';
+import { Link } from 'react-router-dom';
+import { getCycleStatus, type CycleStatus } from '../services/threeVersionService';
 import './MLAutoPromotion.css';
 
 const { Title, Text, Paragraph } = Typography;
@@ -191,6 +193,33 @@ export const MLAutoPromotion: React.FC = () => {
   const [selectedVersion, setSelectedVersion] = useState<ModelVersion | null>(null);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
   const [isPromoting, setIsPromoting] = useState(false);
+  const [evolutionStatus, setEvolutionStatus] = useState<CycleStatus | null>(null);
+
+  // Fetch evolution cycle status
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchEvolutionStatus = async () => {
+      try {
+        const status = await getCycleStatus();
+        if (isMounted) {
+          setEvolutionStatus(status);
+        }
+      } catch (error) {
+        if (isMounted) {
+          // Silently handle - status card will show empty state
+        }
+      }
+    };
+
+    fetchEvolutionStatus();
+    const interval = setInterval(fetchEvolutionStatus, 30000); // Refresh every 30s
+    
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Simulated real-time updates
   useEffect(() => {
@@ -593,6 +622,77 @@ export const MLAutoPromotion: React.FC = () => {
                 ),
               }))}
             />
+          </Card>
+
+          {/* Three-Version Evolution Cycle */}
+          <Card 
+            title={<><BranchesOutlined /> Three-Version Evolution</>} 
+            className="evolution-card"
+            style={{ marginTop: 24 }}
+            extra={
+              <Link to="/admin/three-version">
+                <Button type="link" size="small">
+                  Manage <ArrowRightOutlined />
+                </Button>
+              </Link>
+            }
+          >
+            {evolutionStatus ? (
+              <Space direction="vertical" style={{ width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text>Cycle Status</Text>
+                  <Badge 
+                    status={evolutionStatus.running ? 'processing' : 'default'} 
+                    text={evolutionStatus.running ? 'Running' : 'Stopped'}
+                  />
+                </div>
+                
+                {evolutionStatus.current_cycle && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Text type="secondary">Phase</Text>
+                      <Tag color="blue">{evolutionStatus.current_cycle.phase}</Tag>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Text type="secondary">Experiments</Text>
+                      <Text strong>{evolutionStatus.current_cycle.experiments_run}</Text>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <Text type="secondary">Promotions</Text>
+                      <Text strong style={{ color: '#22c55e' }}>
+                        {evolutionStatus.current_cycle.promotions_made}
+                      </Text>
+                    </div>
+                  </>
+                )}
+                
+                <Divider style={{ margin: '12px 0' }} />
+                
+                <div style={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
+                  <div>
+                    <Tag color="orange">V1</Tag>
+                    <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Experiment</Text>
+                  </div>
+                  <ArrowRightOutlined style={{ color: '#ccc' }} />
+                  <div>
+                    <Tag color="green">V2</Tag>
+                    <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Production</Text>
+                  </div>
+                  <ArrowRightOutlined style={{ color: '#ccc' }} />
+                  <div>
+                    <Tag color="red">V3</Tag>
+                    <Text type="secondary" style={{ display: 'block', fontSize: 11 }}>Quarantine</Text>
+                  </div>
+                </div>
+              </Space>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                <SyncOutlined spin style={{ fontSize: 24, color: '#ccc' }} />
+                <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
+                  Loading evolution status...
+                </Text>
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

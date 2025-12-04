@@ -9,7 +9,7 @@
  * - Danger zone (account deletion, data export)
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Card,
   Row,
@@ -37,7 +37,6 @@ import {
   Table,
   Popconfirm,
   Descriptions,
-  Timeline,
   Progress,
 } from 'antd';
 import type { UploadProps, TabsProps, TableProps } from 'antd';
@@ -59,7 +58,6 @@ import {
   LinkOutlined,
   DisconnectOutlined,
   EyeOutlined,
-  EyeInvisibleOutlined,
   LockOutlined,
   HistoryOutlined,
   ApiOutlined,
@@ -68,7 +66,6 @@ import {
   ExclamationCircleOutlined,
   SafetyOutlined,
   GlobalOutlined,
-  TeamOutlined,
   WarningOutlined,
   ClockCircleOutlined,
   EnvironmentOutlined,
@@ -80,7 +77,7 @@ import {
   InboxOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { useAuthStore, type LoginHistory, type ApiActivity, type OAuthConnection } from '../../store/authStore';
+import { useAuthStore, type LoginHistory, type ApiActivity } from '../../store/authStore';
 import {
   useUserProfile,
   useUpdateProfile,
@@ -101,16 +98,40 @@ const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Dragger } = Upload;
 
-/** OAuth provider icons */
-const providerIcons: Record<string, React.ReactNode> = {
+/** Profile form values */
+interface ProfileFormValues {
+  name?: string;
+  bio?: string;
+  company?: string;
+  location?: string;
+  website?: string;
+}
+
+/** Extended login history with API variations */
+interface LoginHistoryRecord extends Partial<LoginHistory> {
+  device_type?: string;
+  user_agent?: string;
+  created_at?: string;
+  status?: string;
+}
+
+/** Extended API activity with API variations */
+interface ApiActivityRecord extends Partial<ApiActivity> {
+  response_time_ms?: number;
+  status_code?: number;
+  created_at?: string;
+}
+
+/** OAuth provider icons (reserved for future use) */
+const _providerIcons: Record<string, React.ReactNode> = {
   github: <GithubOutlined />,
   gitlab: <GitlabOutlined />,
   google: <GoogleOutlined />,
   microsoft: <WindowsOutlined />,
 };
 
-/** OAuth provider colors */
-const providerColors: Record<string, string> = {
+/** OAuth provider colors (reserved for future use) */
+const _providerColors: Record<string, string> = {
   github: '#24292e',
   gitlab: '#fc6d26',
   google: '#4285f4',
@@ -131,7 +152,7 @@ const ProfileInfoSection: React.FC = () => {
   const deleteAvatar = useDeleteAvatar();
 
   // Handle profile update
-  const handleSave = useCallback(async (values: any) => {
+  const handleSave = useCallback(async (values: ProfileFormValues) => {
     await updateProfile.mutateAsync(values);
     setIsEditing(false);
   }, [updateProfile]);
@@ -342,8 +363,20 @@ const AccountLinkingSection: React.FC = () => {
     { id: 'microsoft', name: 'Microsoft', icon: <WindowsOutlined />, color: '#00a4ef' },
   ];
 
-  const getConnection = (provider: string) => {
-    return connections?.find(c => c.provider === provider);
+  interface OAuthConnection {
+    provider: string;
+    connected: boolean;
+    username?: string;
+    email?: string;
+    connectedAt?: string;
+  }
+
+  const getConnection = (provider: string): OAuthConnection | undefined => {
+    if (!connections) return undefined;
+    const connectionList: OAuthConnection[] = Array.isArray(connections) 
+      ? connections 
+      : (connections as unknown as { items?: OAuthConnection[] })?.items || [];
+    return connectionList.find((c) => c.provider === provider);
   };
 
   if (isLoading) {
@@ -506,12 +539,12 @@ const ActivitySection: React.FC = () => {
     return <DesktopOutlined />;
   };
 
-  const loginColumns: TableProps<LoginHistory>['columns'] = [
+  const loginColumns: TableProps<LoginHistoryRecord>['columns'] = [
     {
       title: t('profile.activity.device', 'Device'),
       dataIndex: 'device',
       key: 'device',
-      render: (device: string, record: any) => {
+      render: (device: string | undefined, record: LoginHistoryRecord) => {
         // Handle both 'device' and 'device_type' from API
         const deviceInfo = device || record.device_type || 'desktop';
         const browserInfo = record.browser || record.user_agent?.split(' ')[0] || 'Unknown';
@@ -530,13 +563,13 @@ const ActivitySection: React.FC = () => {
     {
       title: t('profile.activity.location', 'Location'),
       key: 'location',
-      render: (_: any, record: any) => (
+      render: (_: unknown, record: LoginHistoryRecord) => (
         <Space>
           <EnvironmentOutlined />
           <div>
             <Text>{record.location || 'Unknown'}</Text>
             <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>{record.ip || record.ip_address || 'Unknown'}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>{record.ip || (record as any).ip_address || 'Unknown'}</Text>
           </div>
         </Space>
       ),
@@ -545,7 +578,7 @@ const ActivitySection: React.FC = () => {
       title: t('profile.activity.time', 'Time'),
       dataIndex: 'timestamp',
       key: 'timestamp',
-      render: (time: string, record: any) => {
+      render: (time: string | undefined, record: LoginHistoryRecord) => {
         const timestamp = time || record.created_at;
         return timestamp ? new Date(timestamp).toLocaleString() : 'Unknown';
       },
@@ -554,13 +587,13 @@ const ActivitySection: React.FC = () => {
       title: t('profile.activity.status', 'Status'),
       dataIndex: 'success',
       key: 'success',
-      render: (success: boolean, record: any) => {
+      render: (success: boolean | undefined, record: LoginHistoryRecord) => {
         // Handle both 'success' boolean and 'status' string from API
         const isSuccess = success === true || record.status === 'success';
         return isSuccess ? (
           <Tag color="green">{t('profile.activity.success', 'Success')}</Tag>
         ) : (
-          <Tooltip title={record.failureReason || record.failure_reason}>
+          <Tooltip title={record.failureReason || (record as any).failure_reason}>
             <Tag color="red">{t('profile.activity.failed', 'Failed')}</Tag>
           </Tooltip>
         );
@@ -568,7 +601,7 @@ const ActivitySection: React.FC = () => {
     },
   ];
 
-  const apiColumns: TableProps<ApiActivity>['columns'] = [
+  const apiColumns: TableProps<ApiActivityRecord>['columns'] = [
     {
       title: t('profile.activity.endpoint', 'Endpoint'),
       key: 'endpoint',
@@ -591,7 +624,7 @@ const ActivitySection: React.FC = () => {
       title: t('profile.activity.response_time', 'Response'),
       dataIndex: 'responseTime',
       key: 'responseTime',
-      render: (time: number, record: any) => {
+      render: (time: number | undefined, record: ApiActivityRecord) => {
         const responseTime = time || record.response_time_ms || 0;
         return `${responseTime}ms`;
       },
@@ -600,7 +633,7 @@ const ActivitySection: React.FC = () => {
       title: t('profile.activity.status', 'Status'),
       dataIndex: 'statusCode',
       key: 'statusCode',
-      render: (code: number, record: any) => {
+      render: (code: number | undefined, record: ApiActivityRecord) => {
         const statusCode = code || record.status_code || 200;
         return (
           <Tag color={statusCode < 300 ? 'green' : statusCode < 400 ? 'orange' : 'red'}>
@@ -613,7 +646,7 @@ const ActivitySection: React.FC = () => {
       title: t('profile.activity.time', 'Time'),
       dataIndex: 'timestamp',
       key: 'timestamp',
-      render: (time: string, record: any) => {
+      render: (time: string | undefined, record: ApiActivityRecord) => {
         const timestamp = time || record.created_at;
         return timestamp ? new Date(timestamp).toLocaleString() : 'Unknown';
       },
@@ -626,7 +659,7 @@ const ActivitySection: React.FC = () => {
       label: <><HistoryOutlined /> {t('profile.activity.login_history', 'Login History')}</>,
       children: (
         <Table
-          columns={loginColumns}
+          columns={loginColumns as any}
           dataSource={loginHistory?.items || []}
           rowKey="id"
           loading={loginLoading}
@@ -641,7 +674,7 @@ const ActivitySection: React.FC = () => {
       label: <><ApiOutlined /> {t('profile.activity.api_activity', 'API Activity')}</>,
       children: (
         <Table
-          columns={apiColumns}
+          columns={apiColumns as any}
           dataSource={apiActivity?.items || []}
           rowKey="id"
           loading={apiLoading}
@@ -671,7 +704,7 @@ const DangerZoneSection: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [confirmText, setConfirmText] = useState('');
-  const { user } = useAuthStore();
+  const { user: _user } = useAuthStore();
   
   const downloadData = useDownloadPersonalData();
   const requestDeletion = useRequestAccountDeletion();

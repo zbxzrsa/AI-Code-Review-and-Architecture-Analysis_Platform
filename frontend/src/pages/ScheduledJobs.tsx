@@ -153,7 +153,7 @@ const parseCron = (cron: string): string => {
 };
 
 export const ScheduledJobs: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [jobs, setJobs] = useState<ScheduledJob[]>(mockJobs);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [form] = Form.useForm();

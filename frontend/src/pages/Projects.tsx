@@ -63,7 +63,7 @@ const languageColors: Record<string, string> = {
 export const Projects: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { projectId } = useParams<{ projectId: string }>();
+  const { projectId: _projectId } = useParams<{ projectId: string }>();
   
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);

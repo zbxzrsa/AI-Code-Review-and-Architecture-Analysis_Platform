@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Integrations & Webhooks Page
  * 集成和Webhooks页面
  * 
@@ -22,14 +22,10 @@ import {
   Input,
   Select,
   Tag,
-  Switch,
   List,
-  Avatar,
-  Tooltip,
   message,
   Popconfirm,
   Badge,
-  Divider,
   Alert,
   Tabs,
 } from 'antd';
@@ -48,13 +44,11 @@ import {
   BellOutlined,
   CloudServerOutlined,
   SendOutlined,
-  ReloadOutlined,
-  SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface Integration {
   id: string;
@@ -106,7 +100,7 @@ export const Integrations: React.FC = () => {
   const { t } = useTranslation();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [_loading, _setLoading] = useState(false);
   const [webhookModalOpen, setWebhookModalOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<Webhook | null>(null);
   const [form] = Form.useForm();
@@ -242,7 +236,7 @@ export const Integrations: React.FC = () => {
     }
   };
 
-  const isConnected = (provider: string) => 
+  const _isConnected = (provider: string) => 
     integrations.some(i => i.provider === provider && i.status === 'connected');
 
   return (

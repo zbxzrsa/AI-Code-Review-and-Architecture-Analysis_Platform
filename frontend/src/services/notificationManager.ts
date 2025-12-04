@@ -1,6 +1,6 @@
 /**
  * Enhanced Notification Manager
- * 
+ *
  * Centralized notification system with:
  * - Multiple notification types
  * - Queue management
@@ -10,18 +10,24 @@
  * - Grouping
  */
 
-import { message, notification } from 'antd';
+import { message, notification } from "antd";
 
 // ============================================
 // Types
 // ============================================
 
-export type NotificationType = 'success' | 'error' | 'warning' | 'info';
+// API Error structure for type-safe error handling
+interface ApiErrorLike {
+  code?: string;
+  message?: string;
+}
+
+export type NotificationType = "success" | "error" | "warning" | "info";
 
 export interface NotificationAction {
   label: string;
   onClick: () => void;
-  type?: 'primary' | 'default' | 'link';
+  type?: "primary" | "default" | "link";
 }
 
 export interface NotificationOptions {
@@ -58,7 +64,8 @@ class NotificationManager {
   private history: StoredNotification[] = [];
   private maxHistory: number = 100;
   private soundEnabled: boolean = true;
-  private listeners: Set<(notifications: StoredNotification[]) => void> = new Set();
+  private listeners: Set<(notifications: StoredNotification[]) => void> =
+    new Set();
   private groupCounts: Map<string, number> = new Map();
 
   constructor() {
@@ -71,12 +78,12 @@ class NotificationManager {
 
   public show(options: NotificationOptions): string {
     const id = options.id || this.generateId();
-    
+
     // Handle grouped notifications
     if (options.group) {
       const count = (this.groupCounts.get(options.group) || 0) + 1;
       this.groupCounts.set(options.group, count);
-      
+
       if (count > 1) {
         options.title = `${options.title} (${count})`;
       }
@@ -95,8 +102,8 @@ class NotificationManager {
     }
 
     // Vibrate on mobile
-    if (options.vibrate && 'vibrate' in navigator) {
-      navigator.vibrate(options.type === 'error' ? [100, 50, 100] : [50]);
+    if (options.vibrate && "vibrate" in navigator) {
+      navigator.vibrate(options.type === "error" ? [100, 50, 100] : [50]);
     }
 
     // Store in history
@@ -121,16 +128,16 @@ class NotificationManager {
     };
 
     switch (options.type) {
-      case 'success':
+      case "success":
         message.success(config);
         break;
-      case 'error':
+      case "error":
         message.error(config);
         break;
-      case 'warning':
+      case "warning":
         message.warning(config);
         break;
-      case 'info':
+      case "info":
       default:
         message.info(config);
         break;
@@ -153,20 +160,42 @@ class NotificationManager {
   // Convenience Methods
   // ============================================
 
-  public success(title: string, message?: string, options?: Partial<NotificationOptions>): string {
-    return this.show({ type: 'success', title, message, ...options });
+  public success(
+    title: string,
+    message?: string,
+    options?: Partial<NotificationOptions>
+  ): string {
+    return this.show({ type: "success", title, message, ...options });
   }
 
-  public error(title: string, message?: string, options?: Partial<NotificationOptions>): string {
-    return this.show({ type: 'error', title, message, duration: 5, ...options });
+  public error(
+    title: string,
+    message?: string,
+    options?: Partial<NotificationOptions>
+  ): string {
+    return this.show({
+      type: "error",
+      title,
+      message,
+      duration: 5,
+      ...options,
+    });
   }
 
-  public warning(title: string, message?: string, options?: Partial<NotificationOptions>): string {
-    return this.show({ type: 'warning', title, message, ...options });
+  public warning(
+    title: string,
+    message?: string,
+    options?: Partial<NotificationOptions>
+  ): string {
+    return this.show({ type: "warning", title, message, ...options });
   }
 
-  public info(title: string, message?: string, options?: Partial<NotificationOptions>): string {
-    return this.show({ type: 'info', title, message, ...options });
+  public info(
+    title: string,
+    message?: string,
+    options?: Partial<NotificationOptions>
+  ): string {
+    return this.show({ type: "info", title, message, ...options });
   }
 
   public confirm(
@@ -176,13 +205,13 @@ class NotificationManager {
     onCancel?: () => void
   ): string {
     return this.show({
-      type: 'warning',
+      type: "warning",
       title,
       message,
       persistent: true,
       actions: [
-        { label: 'Cancel', onClick: onCancel || (() => {}), type: 'default' },
-        { label: 'Confirm', onClick: onConfirm, type: 'primary' },
+        { label: "Cancel", onClick: onCancel || (() => {}), type: "default" },
+        { label: "Confirm", onClick: onConfirm, type: "primary" },
       ],
     });
   }
@@ -191,45 +220,46 @@ class NotificationManager {
   // API Error Handler
   // ============================================
 
-  public handleApiError(error: any): string {
-    let title = 'Error';
-    let msg = 'An unexpected error occurred';
+  public handleApiError(error: ApiErrorLike | unknown): string {
+    let title = "Error";
+    let msg = "An unexpected error occurred";
 
-    if (error?.code) {
-      switch (error.code) {
-        case 'NETWORK_ERROR':
-          title = 'Connection Error';
-          msg = 'Please check your internet connection';
+    const apiError = error as ApiErrorLike;
+    if (apiError?.code) {
+      switch (apiError.code) {
+        case "NETWORK_ERROR":
+          title = "Connection Error";
+          msg = "Please check your internet connection";
           break;
-        case 'TIMEOUT':
-          title = 'Request Timeout';
-          msg = 'The request took too long. Please try again.';
+        case "TIMEOUT":
+          title = "Request Timeout";
+          msg = "The request took too long. Please try again.";
           break;
-        case 'UNAUTHORIZED':
-          title = 'Session Expired';
-          msg = 'Please log in again';
+        case "UNAUTHORIZED":
+          title = "Session Expired";
+          msg = "Please log in again";
           break;
-        case 'FORBIDDEN':
-          title = 'Access Denied';
-          msg = 'You do not have permission for this action';
+        case "FORBIDDEN":
+          title = "Access Denied";
+          msg = "You do not have permission for this action";
           break;
-        case 'RATE_LIMITED':
-          title = 'Too Many Requests';
-          msg = 'Please wait before trying again';
+        case "RATE_LIMITED":
+          title = "Too Many Requests";
+          msg = "Please wait before trying again";
           break;
-        case 'SERVER_ERROR':
-          title = 'Server Error';
-          msg = 'Something went wrong on our end';
+        case "SERVER_ERROR":
+          title = "Server Error";
+          msg = "Something went wrong on our end";
           break;
         default:
-          msg = error.message || msg;
+          msg = apiError.message || msg;
       }
-    } else if (error?.message) {
-      msg = error.message;
+    } else if (apiError?.message) {
+      msg = apiError.message;
     }
 
-    return this.error(title, msg, { 
-      persistent: error?.code === 'NETWORK_ERROR',
+    return this.error(title, msg, {
+      persistent: apiError?.code === "NETWORK_ERROR",
       sound: true,
     });
   }
@@ -240,7 +270,7 @@ class NotificationManager {
 
   private addToHistory(notification: StoredNotification): void {
     this.history.unshift(notification);
-    
+
     // Trim history if too long
     if (this.history.length > this.maxHistory) {
       this.history = this.history.slice(0, this.maxHistory);
@@ -255,11 +285,11 @@ class NotificationManager {
   }
 
   public getUnreadCount(): number {
-    return this.history.filter(n => !n.read).length;
+    return this.history.filter((n) => !n.read).length;
   }
 
   public markAsRead(id: string): void {
-    const notification = this.history.find(n => n.id === id);
+    const notification = this.history.find((n) => n.id === id);
     if (notification) {
       notification.read = true;
       this.saveToStorage();
@@ -268,7 +298,7 @@ class NotificationManager {
   }
 
   public markAllAsRead(): void {
-    this.history.forEach(n => n.read = true);
+    this.history.forEach((n) => (n.read = true));
     this.saveToStorage();
     this.notifyListeners();
   }
@@ -292,13 +322,15 @@ class NotificationManager {
   // Listeners
   // ============================================
 
-  public subscribe(callback: (notifications: StoredNotification[]) => void): () => void {
+  public subscribe(
+    callback: (notifications: StoredNotification[]) => void
+  ): () => void {
     this.listeners.add(callback);
     return () => this.listeners.delete(callback);
   }
 
   private notifyListeners(): void {
-    this.listeners.forEach(callback => callback(this.getHistory()));
+    this.listeners.forEach((callback) => callback(this.getHistory()));
   }
 
   // ============================================
@@ -307,7 +339,7 @@ class NotificationManager {
 
   public setSoundEnabled(enabled: boolean): void {
     this.soundEnabled = enabled;
-    localStorage.setItem('notification_sound', String(enabled));
+    localStorage.setItem("notification_sound", String(enabled));
   }
 
   public isSoundEnabled(): boolean {
@@ -321,7 +353,8 @@ class NotificationManager {
   private playSound(type: NotificationType): void {
     // Simple beep using Web Audio API
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 
@@ -337,10 +370,13 @@ class NotificationManager {
       };
 
       oscillator.frequency.value = frequencies[type];
-      oscillator.type = 'sine';
-      
+      oscillator.type = "sine";
+
       gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      gainNode.gain.exponentialRampToValueAtTime(
+        0.01,
+        audioContext.currentTime + 0.2
+      );
 
       oscillator.start(audioContext.currentTime);
       oscillator.stop(audioContext.currentTime + 0.2);
@@ -355,7 +391,10 @@ class NotificationManager {
 
   private saveToStorage(): void {
     try {
-      localStorage.setItem('notification_history', JSON.stringify(this.history.slice(0, 50)));
+      localStorage.setItem(
+        "notification_history",
+        JSON.stringify(this.history.slice(0, 50))
+      );
     } catch (e) {
       // Storage full or not available
     }
@@ -363,17 +402,18 @@ class NotificationManager {
 
   private loadFromStorage(): void {
     try {
-      const stored = localStorage.getItem('notification_history');
+      const stored = localStorage.getItem("notification_history");
       if (stored) {
-        this.history = JSON.parse(stored).map((n: any) => ({
+        const parsed = JSON.parse(stored) as StoredNotification[];
+        this.history = parsed.map((n) => ({
           ...n,
           timestamp: new Date(n.timestamp),
         }));
       }
 
-      const soundSetting = localStorage.getItem('notification_sound');
+      const soundSetting = localStorage.getItem("notification_sound");
       if (soundSetting !== null) {
-        this.soundEnabled = soundSetting === 'true';
+        this.soundEnabled = soundSetting === "true";
       }
     } catch (e) {
       // Invalid data

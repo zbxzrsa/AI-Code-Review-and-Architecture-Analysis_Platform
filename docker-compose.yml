@@ -4,9 +4,9 @@ services:
     image: postgres:16-alpine
     container_name: platform-postgres
     environment:
-      POSTGRES_USER: coderev
-      POSTGRES_PASSWORD: dev_password
-      POSTGRES_DB: code_review_platform
+      POSTGRES_USER: ${POSTGRES_USER:-coderev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_in_production}
+      POSTGRES_DB: ${POSTGRES_DB:-code_review_platform}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/schemas/01-auth-schema.sql:/docker-entrypoint-initdb.d/01-auth.sql
@@ -29,13 +29,20 @@ services:
   redis:
     image: redis:7-alpine
     container_name: platform-redis
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-dev_password_change_in_production}
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "-a",
+          "${REDIS_PASSWORD:-dev_password_change_in_production}",
+          "ping",
+        ]
       interval: 10s
       timeout: 3s
       retries: 5
@@ -46,16 +53,20 @@ services:
     image: neo4j:5-community
     container_name: platform-neo4j
     environment:
-      NEO4J_AUTH: neo4j/dev_password
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-dev_password_change_in_production}
       NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
     volumes:
       - neo4j_data:/data
       - ./database/neo4j/schema.cypher:/docker-entrypoint-initdb.d/schema.cypher
     ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
     healthcheck:
-      test: ["CMD-SHELL", "cypher-shell -u neo4j -p dev_password 'RETURN 1'"]
+      test:
+        [
+          "CMD-SHELL",
+          "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-dev_password_change_in_production} 'RETURN 1'",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -67,13 +78,13 @@ services:
     container_name: platform-minio
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: dev_password
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-dev_password_change_in_production}
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"  # S3 API
-      - "9001:9001"  # Console
+      - "9000:9000" # S3 API
+      - "9001:9001" # Console
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -367,6 +378,207 @@ services:
     networks:
       - platform-network
 
+  # ==================== Three-Version AI Services ====================
+  
+  # V1 Version Control AI (Experimental)
+  v1-vc-ai:
+    build:
+      context: ./backend/services/v1-vc-ai-service
+      dockerfile: Dockerfile
+    container_name: platform-v1-vc-ai
+    environment:
+      ENVIRONMENT: experimentation
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dev_password_change_in_production}@redis:6379/0
+      OLLAMA_HOST: http://ollama:11434
+      VERSION: v1
+      MODE: experimental
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8011:8011"
+    networks:
+      - platform-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # V1 Code Review AI (Shadow Testing)
+  v1-cr-ai:
+    build:
+      context: ./backend/services/v1-cr-ai-service
+      dockerfile: Dockerfile
+    container_name: platform-v1-cr-ai
+    environment:
+      ENVIRONMENT: experimentation
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dev_password_change_in_production}@redis:6379/0
+      OLLAMA_HOST: http://ollama:11434
+      VERSION: v1
+      MODE: shadow_testing
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8012:8012"
+    networks:
+      - platform-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # V2 Version Control AI (Production - Admin)
+  v2-vc-ai:
+    build:
+      context: ./backend/services/v2-vc-ai-service
+      dockerfile: Dockerfile
+    container_name: platform-v2-vc-ai
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dev_password_change_in_production}@redis:6379/0
+      OLLAMA_HOST: http://ollama:11434
+      VERSION: v2
+      MODE: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8021:8021"
+    networks:
+      - platform-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8021/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # V2 Code Review AI (Production - User-Facing)
+  v2-cr-ai:
+    build:
+      context: ./backend/services/v2-cr-ai-service
+      dockerfile: Dockerfile
+    container_name: platform-v2-cr-ai
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dev_password_change_in_production}@redis:6379/0
+      OLLAMA_HOST: http://ollama:11434
+      VERSION: v2
+      MODE: user_facing
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8022:8022"
+    networks:
+      - platform-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8022/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # V3 Version Control AI (Quarantine - Read-Only)
+  v3-vc-ai:
+    build:
+      context: ./backend/services/v3-vc-ai-service
+      dockerfile: Dockerfile
+    container_name: platform-v3-vc-ai
+    environment:
+      ENVIRONMENT: quarantine
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dev_password_change_in_production}@redis:6379/0
+      VERSION: v3
+      MODE: read_only
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8014:8014"
+    networks:
+      - platform-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8014/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # V3 Code Review AI (Quarantine - Read-Only)
+  v3-cr-ai:
+    build:
+      context: ./backend/services/v3-cr-ai-service
+      dockerfile: Dockerfile
+    container_name: platform-v3-cr-ai
+    environment:
+      ENVIRONMENT: quarantine
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dev_password_change_in_production}@redis:6379/0
+      VERSION: v3
+      MODE: read_only
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8013:8013"
+    networks:
+      - platform-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8013/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Three-Version Evolution Service (Orchestrator)
+  three-version-service:
+    build:
+      context: ./backend/services/three-version-service
+      dockerfile: Dockerfile
+    container_name: platform-three-version-service
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
+      REDIS_URL: redis://:${REDIS_PASSWORD:-dev_password_change_in_production}@redis:6379/0
+      V1_VCAI_URL: http://v1-vc-ai:8011
+      V1_CRAI_URL: http://v1-cr-ai:8012
+      V2_VCAI_URL: http://v2-vc-ai:8021
+      V2_CRAI_URL: http://v2-cr-ai:8022
+      V3_VCAI_URL: http://v3-vc-ai:8014
+      V3_CRAI_URL: http://v3-cr-ai:8013
+    depends_on:
+      - v1-vc-ai
+      - v1-cr-ai
+      - v2-vc-ai
+      - v2-cr-ai
+      - v3-vc-ai
+      - v3-cr-ai
+    ports:
+      - "8030:8030"
+    networks:
+      - platform-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8030/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   # ==================== Policy Engine ====================
   opa:
     image: openpolicyagent/opa:latest
@@ -396,8 +608,8 @@ services:
       - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
     ports:
       - "9090:9090"
     networks:
@@ -441,9 +653,9 @@ services:
       - ./observability/tempo-config.yml:/etc/tempo.yaml
       - tempo_data:/tmp/tempo
     ports:
-      - "3200:3200"  # Tempo HTTP
-      - "4317:4317"  # OTLP gRPC
-      - "4318:4318"  # OTLP HTTP
+      - "3200:3200" # Tempo HTTP
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
     networks:
       - platform-network
 
@@ -454,9 +666,9 @@ services:
     volumes:
       - ./observability/otel-collector-config.yml:/etc/otel-collector-config.yaml
     ports:
-      - "4319:4317"  # OTLP gRPC
-      - "4320:4318"  # OTLP HTTP
-      - "8888:8888"  # Prometheus metrics
+      - "4319:4317" # OTLP gRPC
+      - "4320:4318" # OTLP HTTP
+      - "8888:8888" # Prometheus metrics
     networks:
       - platform-network
 

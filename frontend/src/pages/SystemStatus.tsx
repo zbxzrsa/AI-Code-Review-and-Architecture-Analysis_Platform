@@ -1,6 +1,6 @@
-/**
+﻿/**
  * System Status Page
- * 系统状态页�?
+ * 系统状态页�?
  * 
  * Features:
  * - Service health monitoring
@@ -17,10 +17,8 @@ import {
   Typography,
   Space,
   Tag,
-  Progress,
   Timeline,
   Statistic,
-  Badge,
   Tooltip,
   Alert,
   Divider,
@@ -36,7 +34,6 @@ import {
   DatabaseOutlined,
   RobotOutlined,
   ThunderboltOutlined,
-  ClockCircleOutlined,
   GlobalOutlined,
   SafetyCertificateOutlined,
   LineChartOutlined,
@@ -44,7 +41,7 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface Service {
   id: string;

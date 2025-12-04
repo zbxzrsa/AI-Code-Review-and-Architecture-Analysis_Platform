@@ -597,10 +597,8 @@ class CacheService {
   private startCleanupInterval(): void {
     // Clean expired items every 5 minutes
     setInterval(() => {
-      const cleared = this.clearExpired();
-      if (cleared > 0) {
-        console.log(`[Cache] Cleared ${cleared} expired items`);
-      }
+      this.clearExpired();
+      // Cleanup runs silently - no logging in production
     }, 5 * 60 * 1000);
   }
 }

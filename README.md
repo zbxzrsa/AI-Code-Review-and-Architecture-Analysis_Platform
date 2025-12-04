@@ -107,6 +107,9 @@ A revolutionary intelligent code review platform with a **three-version self-evo
 git clone <repo-url>
 cd AI-Code-Review-and-Architecture-Analysis_Platform
 
+# Copy environment configuration
+cp .env.example .env
+
 # Start all services with Docker Compose
 docker-compose up -d
 
@@ -117,8 +120,20 @@ python scripts/init-databases.py
 python scripts/run-migrations.py
 
 # Start frontend development server
-cd frontend && npm install && npm start
+cd frontend && npm install && npm run dev
 ```
+
+### Access Points
+
+| Service     | URL                                  | Description           |
+| ----------- | ------------------------------------ | --------------------- |
+| Frontend    | http://localhost:5173                | Main application      |
+| AI Hub      | http://localhost:5173/ai-hub         | Three-version AI chat |
+| Code Review | http://localhost:5173/ai-code-review | AI code analysis      |
+| Admin VCAI  | http://localhost:5173/admin/vcai     | Version control AI    |
+| API Docs    | http://localhost:8010/docs           | Evolution API docs    |
+| Dev API     | http://localhost:8000/docs           | Dev server API docs   |
+| Grafana     | http://localhost:3001                | Monitoring dashboards |
 
 ## 🔄 Evolution Cycle
 
@@ -140,6 +155,40 @@ V1 (Experiment)
 - **Cost**: API calls, compute resources
 - **Error Rate**: Failed analyses
 - **User Satisfaction**: Feedback scores
+
+### Three-Version Evolution Service
+
+The platform includes a dedicated **spiral evolution management service** with:
+
+```bash
+# Start evolution service
+make start-three-version
+
+# View admin UI
+# Navigate to: /admin/three-version
+
+# API documentation
+# http://localhost:8010/docs
+```
+
+**8-Phase Spiral Cycle:**
+
+1. **Experimentation** - V1 tests new technologies
+2. **Error Remediation** - V2 fixes V1 errors
+3. **Evaluation** - Check promotion criteria
+4. **Promotion** - V1 → V2
+5. **Stabilization** - V2 optimizes
+6. **Degradation** - V2 → V3 poor performers
+7. **Comparison** - V3 baseline analysis
+8. **Re-evaluation** - V3 → V1 retry
+
+**Key Commands:**
+
+```bash
+make verify-three-version      # Verify implementation
+make test-three-version        # Run tests
+make logs-three-version        # View logs
+```
 
 ## 📊 Key Features
 
@@ -178,6 +227,24 @@ V1 (Experiment)
 - ✅ Multi-model routing with fallback chains
 - ✅ User-provided API key support
 - ✅ HPA scaling (3-50 pods)
+
+### AI Interaction Pages (Frontend)
+
+- ✅ **AI Hub** (`/ai-hub`) - Three-version AI chat interface
+  - Switch between V1/V2/V3 models
+  - Compare mode for side-by-side responses
+  - Real-time streaming responses
+  - Quick prompts for common tasks
+- ✅ **Code Review AI** (`/ai-code-review`) - User-facing code analysis
+  - Paste code for instant AI review
+  - Multi-type analysis (security, performance, quality, bugs)
+  - One-click auto-fix
+  - User feedback collection
+- ✅ **Version Control AI** (`/admin/vcai`) - Admin AI management
+  - Technology management (promote/degrade)
+  - Evolution cycle control (start/stop)
+  - Experiment tracking
+  - Re-evaluation requests
 
 ### Enterprise Features
 

@@ -39,7 +39,6 @@ import {
   message,
   Descriptions,
   Empty,
-  Collapse,
 } from 'antd';
 import type { TabsProps, TableProps } from 'antd';
 import {
@@ -89,7 +88,43 @@ import './ProjectSettings.css';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
-const { Panel } = Collapse;
+// const { Panel } = Collapse;
+
+/** Project data interface */
+interface ProjectData {
+  id: string;
+  name: string;
+  description?: string;
+  visibility?: 'public' | 'private';
+  defaultBranch?: string;
+  repositoryUrl?: string;
+  archived?: boolean;
+  createdAt?: string;
+  [key: string]: unknown;
+}
+
+/** Project form values */
+interface ProjectFormValues {
+  name?: string;
+  description?: string;
+  visibility?: 'public' | 'private';
+  defaultBranch?: string;
+}
+
+/** Webhook form values */
+interface WebhookFormValues {
+  url: string;
+  events: string[];
+  secret?: string;
+  isActive?: boolean;
+}
+
+/** API Key form values */
+interface ApiKeyFormValues {
+  name: string;
+  permissions: string[];
+  expiresAt?: string;
+}
 
 /** Role options */
 const roleOptions = [
@@ -122,8 +157,8 @@ const apiPermissionOptions = [
  * Project Information Section
  */
 const ProjectInfoSection: React.FC<{
-  project: any;
-  onSave: (values: any) => void;
+  project: ProjectData;
+  onSave: (values: ProjectFormValues) => void;
   isSaving: boolean;
 }> = ({ project, onSave, isSaving }) => {
   const { t } = useTranslation();
@@ -176,16 +211,16 @@ const ProjectInfoSection: React.FC<{
 
       <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
         <Descriptions.Item label={t('projects.settings.owner', 'Owner')}>
-          {project?.owner_name || '-'}
+          {(project as any)?.owner_name || '-'}
         </Descriptions.Item>
         <Descriptions.Item label={t('projects.settings.created', 'Created')}>
-          {project?.created_at ? new Date(project.created_at).toLocaleDateString() : '-'}
+          {(project as any)?.created_at ? new Date((project as any).created_at).toLocaleDateString() : '-'}
         </Descriptions.Item>
         <Descriptions.Item label={t('projects.settings.language', 'Language')}>
-          <Tag>{project?.language}</Tag>
+          <Tag>{String((project as any)?.language || '')}</Tag>
         </Descriptions.Item>
         <Descriptions.Item label={t('projects.settings.status', 'Status')}>
-          <Badge status={project?.status === 'active' ? 'processing' : 'default'} text={project?.status} />
+          <Badge status={(project as any)?.status === 'active' ? 'processing' : 'default'} text={String((project as any)?.status || '')} />
         </Descriptions.Item>
       </Descriptions>
 
@@ -351,7 +386,7 @@ const WebhooksSection: React.FC<{ projectId: string }> = ({ projectId }) => {
   const deleteWebhook = useDeleteWebhook(projectId);
   const testWebhook = useTestWebhook(projectId);
 
-  const handleSubmit = useCallback(async (values: any) => {
+  const handleSubmit = useCallback(async (values: WebhookFormValues) => {
     if (editingWebhook) {
       await updateWebhook.mutateAsync({ webhookId: editingWebhook.id, data: values });
     } else {
@@ -521,7 +556,7 @@ const ApiKeysSection: React.FC<{ projectId: string }> = ({ projectId }) => {
   const createApiKey = useCreateApiKey(projectId);
   const revokeApiKey = useRevokeApiKey(projectId);
 
-  const handleCreate = useCallback(async (values: any) => {
+  const handleCreate = useCallback(async (values: ApiKeyFormValues) => {
     const result = await createApiKey.mutateAsync(values);
     setNewKey(result.key);
     form.resetFields();
@@ -736,7 +771,7 @@ const ActivitySection: React.FC<{ projectId: string }> = ({ projectId }) => {
  * Danger Zone Section
  */
 const DangerZoneSection: React.FC<{
-  project: any;
+  project: ProjectData | null;
   onArchive: () => void;
   onDelete: () => void;
   isArchiving: boolean;
@@ -858,7 +893,7 @@ export const ProjectSettings: React.FC = () => {
   const archiveProject = useArchiveProject();
   
   // Handle save
-  const handleSave = useCallback(async (values: any) => {
+  const handleSave = useCallback(async (values: ProjectFormValues) => {
     if (!id) return;
     await updateProject.mutateAsync({ id, data: values });
     setUnsavedChanges(false);
@@ -898,7 +933,7 @@ export const ProjectSettings: React.FC = () => {
       label: <><SettingOutlined /> {t('projects.settings.general', 'General')}</>,
       children: project ? (
         <ProjectInfoSection
-          project={project}
+          project={project as any}
           onSave={handleSave}
           isSaving={updateProject.isPending}
         />
@@ -929,7 +964,7 @@ export const ProjectSettings: React.FC = () => {
       label: <><WarningOutlined /> {t('projects.settings.danger', 'Danger Zone')}</>,
       children: project ? (
         <DangerZoneSection
-          project={project}
+          project={project as any}
           onArchive={handleArchive}
           onDelete={handleDelete}
           isArchiving={archiveProject.isPending}

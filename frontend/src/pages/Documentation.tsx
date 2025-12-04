@@ -35,11 +35,11 @@ import {
   QuestionCircleOutlined,
   BulbOutlined,
   FileTextOutlined,
-  PlayCircleOutlined,
   TeamOutlined,
   LinkOutlined,
   RightOutlined,
   HomeOutlined,
+  BranchesOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import './Documentation.css';
@@ -118,6 +118,22 @@ const docSections: DocSection[] = [
       { title: 'Team Collaboration', slug: 'collaboration', tags: ['team'] },
     ],
   },
+  {
+    key: 'three-version',
+    title: 'Three-Version Evolution',
+    icon: <BranchesOutlined />,
+    description: 'Self-evolving AI architecture',
+    articles: [
+      { title: 'Architecture Overview', slug: 'three-version-overview', tags: ['architecture', 'admin'] },
+      { title: 'V1 Experimentation Zone', slug: 'v1-experimentation', tags: ['v1', 'experiments'] },
+      { title: 'V2 Production Zone', slug: 'v2-production', tags: ['v2', 'production'] },
+      { title: 'V3 Quarantine Zone', slug: 'v3-quarantine', tags: ['v3', 'quarantine'] },
+      { title: 'Dual-AI System', slug: 'dual-ai', tags: ['ai', 'vcai', 'crai'] },
+      { title: 'Spiral Evolution Cycle', slug: 'spiral-evolution', tags: ['evolution', 'cycle'] },
+      { title: 'Promotion & Degradation', slug: 'promotion-degradation', tags: ['promotion', 'degradation'] },
+      { title: 'Admin Control Panel', slug: 'admin-control', tags: ['admin', 'ui'] },
+    ],
+  },
 ];
 
 const faqs = [
@@ -140,6 +156,14 @@ const faqs = [
   {
     question: 'Can I customize the analysis rules?',
     answer: 'Yes, you can create custom rules, disable specific checks, and adjust severity levels. Rules can be configured globally or per-project.',
+  },
+  {
+    question: 'What is the Three-Version Evolution system?',
+    answer: 'The Three-Version system enables safe AI experimentation through V1 (experiments), V2 (production), and V3 (quarantine) zones. New technologies are tested in V1, promoted to V2 when proven, and quarantined in V3 if they fail. This ensures zero-error user experience while enabling continuous AI improvement.',
+  },
+  {
+    question: 'How do the Dual-AI models work?',
+    answer: 'Each version has two AI instances: VC-AI (Version Control AI) for admin-only version management decisions, and CR-AI (Code Review AI) for user-facing code analysis. Users only access V2 CR-AI, ensuring stable production quality.',
   },
 ];
 
@@ -175,7 +199,7 @@ export const Documentation: React.FC = () => {
         {[
           { icon: <RocketOutlined />, title: 'Quick Start', color: '#22c55e', key: 'getting-started' },
           { icon: <ApiOutlined />, title: 'API Docs', color: '#3b82f6', key: 'api-reference' },
-          { icon: <PlayCircleOutlined />, title: 'Tutorials', color: '#8b5cf6', key: 'getting-started' },
+          { icon: <BranchesOutlined />, title: 'Three-Version', color: '#8b5cf6', key: 'three-version' },
           { icon: <QuestionCircleOutlined />, title: 'FAQ', color: '#f59e0b', key: 'faq' },
         ].map(item => (
           <Col key={item.title} xs={12} sm={6}>

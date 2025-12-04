@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import {
   Card,
   Table,
@@ -30,8 +30,8 @@ import { useTranslation } from 'react-i18next';
 import { apiService } from '../../services/api';
 import './ExperimentManagement.css';
 
-const { Title, Text } = Typography;
-const { TextArea } = Input;
+const { Title } = Typography;
+// const { TextArea } = Input;
 
 interface Experiment {
   id: string;

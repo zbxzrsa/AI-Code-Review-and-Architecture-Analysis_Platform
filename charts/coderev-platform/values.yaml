@@ -197,6 +197,61 @@ evaluationPipeline:
       memory: "1Gi"
 
 # ============================================================
+# Three-Version Evolution Service
+# ============================================================
+threeVersionService:
+  enabled: true
+
+  image:
+    repository: three-version-service
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  replicas: 2
+
+  service:
+    type: ClusterIP
+    port: 8010
+    metricsPort: 9090
+
+  resources:
+    limits:
+      cpu: "1"
+      memory: "2Gi"
+    requests:
+      cpu: "250m"
+      memory: "512Mi"
+
+  config:
+    cycleIntervalHours: 6
+    promotionThresholds:
+      accuracy: 0.85
+      errorRate: 0.05
+      latencyP95Ms: 3000
+      minSamples: 1000
+    degradationThresholds:
+      errorRate: 0.10
+      accuracy: 0.75
+    quarantine:
+      reevalCooldownDays: 30
+      permanentExclusionThreshold: 3
+
+  probes:
+    liveness:
+      path: /api/v1/evolution/health
+      initialDelaySeconds: 30
+      periodSeconds: 30
+    readiness:
+      path: /api/v1/evolution/health
+      initialDelaySeconds: 10
+      periodSeconds: 10
+
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    path: /api/v1/evolution/prometheus
+
+# ============================================================
 # Semantic Cache (Offline Mode)
 # ============================================================
 semanticCache:

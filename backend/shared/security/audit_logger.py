@@ -7,7 +7,7 @@ import logging
 import json
 import hashlib
 from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from cryptography.hazmat.primitives import hashes, serialization
@@ -154,7 +154,7 @@ class TamperProofAuditLogger:
                 "resource_id": resource_id,
                 "payload": payload,
                 "status": status,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "prev_hash": prev_hash
             }
 
@@ -284,7 +284,7 @@ class TamperProofAuditLogger:
                 "verified_count": len(logs),
                 "tampered_logs": tampered_logs,
                 "broken_chains": broken_chains,
-                "verification_time": datetime.utcnow().isoformat()
+                "verification_time": datetime.now(timezone.utc).isoformat()
             }
 
             if is_valid:

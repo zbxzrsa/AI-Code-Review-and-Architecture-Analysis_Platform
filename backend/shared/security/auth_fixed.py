@@ -360,8 +360,10 @@ class SessionManager:
                 payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM], options={"verify_exp": False})
                 if jti := payload.get("jti"):
                     TokenManager.revoke_token(jti)
-            except:
-                pass
+            except JWTError as e:
+                logger.debug(f"Could not decode token for revocation: {e}")
+            except Exception as e:
+                logger.warning(f"Unexpected error during token revocation: {e}")
             
             logger.info(f"Session invalidated for user {user_id}")
             return True

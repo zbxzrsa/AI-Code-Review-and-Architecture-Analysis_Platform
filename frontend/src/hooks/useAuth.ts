@@ -1,7 +1,38 @@
-import { useCallback, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore, type UserRole } from '../store/authStore';
-import { api } from '../services/api';
+import { useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { AxiosError } from "axios";
+import { useAuthStore, type UserRole } from "../store/authStore";
+import { api } from "../services/api";
+
+// API Error Response types
+interface ValidationError {
+  msg?: string;
+  message?: string;
+  loc?: string[];
+  type?: string;
+}
+
+interface ApiErrorDetail {
+  msg?: string;
+  message?: string;
+}
+
+type ApiErrorResponse = string | ValidationError[] | ApiErrorDetail;
+
+// Helper to extract error message from API response
+function extractErrorMessage(error: unknown, defaultMessage: string): string {
+  if (error instanceof AxiosError) {
+    const detail = error.response?.data?.detail as ApiErrorResponse | undefined;
+    if (typeof detail === "string") {
+      return detail;
+    } else if (Array.isArray(detail)) {
+      return detail.map((e) => e.msg || e.message || String(e)).join(", ");
+    } else if (detail && typeof detail === "object") {
+      return detail.msg || detail.message || defaultMessage;
+    }
+  }
+  return defaultMessage;
+}
 
 interface LoginCredentials {
   email: string;
@@ -42,13 +73,13 @@ export function useAuth() {
     setTokens,
     setLoading,
     setError,
-    logout: clearAuth
+    logout: clearAuth,
   } = useAuthStore();
 
   // Check if token is expired
   const isTokenExpired = useCallback((token: string): boolean => {
     try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
+      const payload = JSON.parse(atob(token.split(".")[1]));
       return payload.exp * 1000 < Date.now();
     } catch {
       return true;
@@ -60,8 +91,8 @@ export function useAuth() {
     if (!refreshToken) return null;
 
     try {
-      const response = await api.post<AuthResponse>('/auth/refresh', {
-        refresh_token: refreshToken
+      const response = await api.post<AuthResponse>("/auth/refresh", {
+        refresh_token: refreshToken,
       });
 
       const { access_token, refresh_token: newRefreshToken } = response.data;
@@ -74,79 +105,65 @@ export function useAuth() {
   }, [refreshToken, setTokens, clearAuth]);
 
   // Login
-  const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
+  const login = useCallback(
+    async (credentials: LoginCredentials): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const response = await api.post<AuthResponse>('/auth/login', credentials);
-      const { access_token, refresh_token, user } = response.data;
+      try {
+        const response = await api.post<AuthResponse>(
+          "/auth/login",
+          credentials
+        );
+        const { access_token, refresh_token, user } = response.data;
 
-      setTokens(access_token, refresh_token);
-      setUser(user);
+        setTokens(access_token, refresh_token);
+        setUser(user);
 
-      return true;
-    } catch (error: any) {
-      const detail = error.response?.data?.detail;
-      let message: string;
-      if (typeof detail === 'string') {
-        message = detail;
-      } else if (Array.isArray(detail)) {
-        message = detail.map((e: any) => e.msg || e.message || String(e)).join(', ');
-      } else if (detail && typeof detail === 'object') {
-        message = detail.msg || detail.message || 'Login failed';
-      } else {
-        message = 'Login failed';
+        return true;
+      } catch (error: unknown) {
+        setError(extractErrorMessage(error, "Login failed"));
+        return false;
+      } finally {
+        setLoading(false);
       }
-      setError(message);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [setLoading, setError, setTokens, setUser]);
+    },
+    [setLoading, setError, setTokens, setUser]
+  );
 
   // Register
-  const register = useCallback(async (data: RegisterData): Promise<boolean> => {
-    setLoading(true);
-    setError(null);
+  const register = useCallback(
+    async (data: RegisterData): Promise<boolean> => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const response = await api.post<AuthResponse>('/auth/register', data);
-      const { access_token, refresh_token, user } = response.data;
+      try {
+        const response = await api.post<AuthResponse>("/auth/register", data);
+        const { access_token, refresh_token, user } = response.data;
 
-      setTokens(access_token, refresh_token);
-      setUser(user);
+        setTokens(access_token, refresh_token);
+        setUser(user);
 
-      return true;
-    } catch (error: any) {
-      const detail = error.response?.data?.detail;
-      let message: string;
-      if (typeof detail === 'string') {
-        message = detail;
-      } else if (Array.isArray(detail)) {
-        // Pydantic validation errors are returned as an array
-        message = detail.map((e: any) => e.msg || e.message || String(e)).join(', ');
-      } else if (detail && typeof detail === 'object') {
-        message = detail.msg || detail.message || 'Registration failed';
-      } else {
-        message = 'Registration failed';
+        return true;
+      } catch (error: unknown) {
+        setError(extractErrorMessage(error, "Registration failed"));
+        return false;
+      } finally {
+        setLoading(false);
       }
-      setError(message);
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }, [setLoading, setError, setTokens, setUser]);
+    },
+    [setLoading, setError, setTokens, setUser]
+  );
 
   // Logout
   const logout = useCallback(async (): Promise<void> => {
     try {
-      await api.post('/auth/logout');
+      await api.post("/auth/logout");
     } catch {
       // Ignore logout errors
     } finally {
       clearAuth();
-      navigate('/login');
+      navigate("/login");
     }
   }, [clearAuth, navigate]);
 
@@ -157,7 +174,7 @@ export function useAuth() {
     setLoading(true);
 
     try {
-      const response = await api.get('/auth/me');
+      const response = await api.get("/auth/me");
       setUser(response.data);
     } catch (error) {
       // Token might be invalid
@@ -194,16 +211,19 @@ export function useAuth() {
   }, [token, isTokenExpired, refreshAccessToken]);
 
   // Check if user has specific role
-  const hasRole = useCallback((role: string | string[]): boolean => {
-    if (!user) return false;
+  const hasRole = useCallback(
+    (role: string | string[]): boolean => {
+      if (!user) return false;
 
-    const roles = Array.isArray(role) ? role : [role];
-    return roles.includes(user.role);
-  }, [user]);
+      const roles = Array.isArray(role) ? role : [role];
+      return roles.includes(user.role);
+    },
+    [user]
+  );
 
   // Check if user is admin
   const isAdmin = useCallback((): boolean => {
-    return hasRole('admin');
+    return hasRole("admin");
   }, [hasRole]);
 
   return {
@@ -218,7 +238,7 @@ export function useAuth() {
     refreshAccessToken,
     fetchCurrentUser,
     hasRole,
-    isAdmin
+    isAdmin,
   };
 }
 

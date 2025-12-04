@@ -43,17 +43,17 @@ export interface RequestOptions extends AxiosRequestConfig {
   offline?: boolean;
 }
 
-interface CacheEntry {
-  data: any;
+interface CacheEntry<T = unknown> {
+  data: T;
   timestamp: number;
   ttl: number;
 }
 
-interface PendingRequest {
+interface PendingRequest<T = unknown> {
   id: string;
   config: RequestOptions;
-  resolve: (value: any) => void;
-  reject: (reason: any) => void;
+  resolve: (value: T) => void;
+  reject: (reason: unknown) => void;
   retryCount: number;
   timestamp: number;
 }
@@ -355,7 +355,7 @@ class EnhancedApi {
         this.offlineQueue.push({
           id: this.generateRequestId(),
           config,
-          resolve,
+          resolve: resolve as (value: unknown) => void,
           reject,
           retryCount: 0,
           timestamp: Date.now(),

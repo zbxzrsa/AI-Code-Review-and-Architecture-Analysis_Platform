@@ -67,6 +67,7 @@ class TokenManager:
     @staticmethod
     def create_refresh_token(
         user_id: str,
+        role: str = "user",
         expires_delta: Optional[timedelta] = None
     ) -> str:
         """Create refresh token."""
@@ -77,6 +78,7 @@ class TokenManager:
             expire = datetime.now(timezone.utc) + expires_delta
             to_encode = {
                 "sub": user_id,
+                "role": role,  # Include role for token refresh
                 "type": "refresh",
                 "exp": expire,
                 "iat": datetime.now(timezone.utc),
@@ -97,7 +99,7 @@ class TokenManager:
         """Create both access and refresh tokens."""
         try:
             access_token = TokenManager.create_access_token(user_id, role)
-            refresh_token = TokenManager.create_refresh_token(user_id)
+            refresh_token = TokenManager.create_refresh_token(user_id, role)
             return access_token, refresh_token
         except Exception as e:
             logger.error(f"Failed to create tokens: {e}")
@@ -206,15 +208,21 @@ class CurrentUser:
 
     @staticmethod
     async def get_current_user_optional(
-        credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+        credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
     ) -> Optional[Dict[str, Any]]:
-        """Get current user (optional)."""
+        """Get current user (optional - returns None if no token)."""
         if credentials is None:
             return None
 
         try:
-            return await CurrentUser.get_current_user(credentials)
-        except HTTPException:
+            token = credentials.credentials
+            payload = TokenManager.verify_token(token, token_type="access")
+            return {
+                "id": payload.get("sub"),
+                "role": payload.get("role"),
+                "exp": payload.get("exp")
+            }
+        except Exception:
             return None
 
 
@@ -251,19 +259,15 @@ class RoleBasedAccess:
 
         return role_checker
 
-    @staticmethod
-    def require_admin(
-        user: Dict[str, Any] = Depends(CurrentUser.get_current_user)
-    ) -> Dict[str, Any]:
-        """Require admin role."""
-        return RoleBasedAccess.require_role("admin")(user)
+    @classmethod
+    def require_admin(cls):
+        """Require admin role dependency."""
+        return cls.require_role("admin")
 
-    @staticmethod
-    def require_user(
-        user: Dict[str, Any] = Depends(CurrentUser.get_current_user)
-    ) -> Dict[str, Any]:
-        """Require user role or higher."""
-        return RoleBasedAccess.require_role("user")(user)
+    @classmethod
+    def require_user(cls):
+        """Require user role or higher dependency."""
+        return cls.require_role("user")
 
 
 class PermissionManager:

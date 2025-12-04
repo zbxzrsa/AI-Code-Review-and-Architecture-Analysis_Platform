@@ -92,8 +92,8 @@ import './UserManagement.css';
 const { Title, Text } = Typography;
 const { Search } = Input;
 
-/** Status colors */
-const statusColors: Record<UserStatus, string> = {
+/** Status colors (reserved for future use) */
+const _statusColors: Record<UserStatus, string> = {
   active: 'green',
   inactive: 'orange',
   suspended: 'red',
@@ -131,7 +131,7 @@ const UserStatsSection: React.FC = () => {
     return null;
   }
 
-  const roleData = stats.byRole.map((r, i) => ({
+  const roleData = (stats.byRole || []).map((r, i) => ({
     name: r.role,
     value: r.count,
     color: CHART_COLORS[i % CHART_COLORS.length],
@@ -459,7 +459,7 @@ export const UserManagement: React.FC = () => {
   const {
     userFilters,
     userPagination,
-    userSort,
+    userSort: _userSort,
     selectedUserIds,
     setUserFilters,
     resetUserFilters,

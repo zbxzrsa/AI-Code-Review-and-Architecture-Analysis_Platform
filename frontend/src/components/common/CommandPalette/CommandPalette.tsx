@@ -9,7 +9,8 @@ import {
   BugOutlined,
   ExperimentOutlined,
   DashboardOutlined,
-  LogoutOutlined
+  LogoutOutlined,
+  BranchesOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -19,8 +20,8 @@ import './CommandPalette.css';
 
 const { Text } = Typography;
 
-// Simple keyboard shortcut display component
-const Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+// Simple keyboard shortcut display component (reserved for future use)
+const _Kbd: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span style={{
     display: 'inline-block',
     padding: '2px 6px',
@@ -173,6 +174,15 @@ export const CommandPalette: React.FC = () => {
           category: 'navigation',
           action: () => navigate('/admin/experiments'),
           keywords: ['v1', 'test']
+        },
+        {
+          id: 'go-three-version',
+          title: t('commands.go_three_version', 'Go to Three-Version Control'),
+          icon: <BranchesOutlined />,
+          shortcut: ['g', 'v'],
+          category: 'navigation',
+          action: () => navigate('/admin/three-version'),
+          keywords: ['v1', 'v2', 'v3', 'evolution', 'spiral', 'promotion', 'degradation']
         },
         {
           id: 'go-audit',

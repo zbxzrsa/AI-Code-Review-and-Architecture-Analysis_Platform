@@ -33,7 +33,7 @@ import {
   MetricBar,
 } from '../components/common/ArtisticWidgets';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 const WelcomeDashboard: React.FC = () => {
   const { t: _t } = useTranslation();

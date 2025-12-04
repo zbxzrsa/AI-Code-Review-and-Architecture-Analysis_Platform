@@ -1,0 +1,259 @@
+groups:
+  - name: three-version-evolution
+    interval: 30s
+    rules:
+      # =============================================================================
+      # Cycle Health Alerts
+      # =============================================================================
+      - alert: EvolutionCycleStopped
+        expr: evolution_cycle_running == 0
+        for: 5m
+        labels:
+          severity: warning
+          component: evolution
+        annotations:
+          summary: "Evolution cycle is not running"
+          description: "The three-version evolution cycle has been stopped for more than 5 minutes."
+          runbook_url: "https://docs.example.com/runbooks/evolution-cycle-stopped"
+
+      - alert: EvolutionCycleStuck
+        expr: increase(evolution_cycles_total[1h]) == 0 and evolution_cycle_running == 1
+        for: 2h
+        labels:
+          severity: warning
+          component: evolution
+        annotations:
+          summary: "Evolution cycle appears stuck"
+          description: "No evolution cycles completed in the last 2 hours while cycle is running."
+
+      # =============================================================================
+      # AI Instance Alerts
+      # =============================================================================
+      - alert: AIInstanceDown
+        expr: ai_instance_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: ai
+        annotations:
+          summary: "AI instance {{ $labels.version }} {{ $labels.ai_type }} is down"
+          description: "The {{ $labels.ai_type }} for version {{ $labels.version }} has been offline for more than 2 minutes."
+
+      - alert: V2CRAIDown
+        expr: ai_instance_status{version="v2", ai_type="cr_ai"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: ai
+          pager: "true"
+        annotations:
+          summary: "V2 Code Review AI is DOWN - Users affected!"
+          description: "The user-facing V2 Code Review AI is offline. Users cannot access AI code review."
+
+      - alert: AIInstanceHighErrorRate
+        expr: ai_instance_error_rate > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: ai
+        annotations:
+          summary: "High error rate for {{ $labels.version }} {{ $labels.ai_type }}"
+          description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.ai_type }} on {{ $labels.version }}."
+
+      - alert: AIInstanceCriticalErrorRate
+        expr: ai_instance_error_rate > 0.25
+        for: 2m
+        labels:
+          severity: critical
+          component: ai
+        annotations:
+          summary: "Critical error rate for {{ $labels.version }} {{ $labels.ai_type }}"
+          description: "Error rate is {{ $value | humanizePercentage }} - consider degrading this component."
+
+      # =============================================================================
+      # V1 Experimentation Alerts
+      # =============================================================================
+      - alert: V1ExperimentFailureSpike
+        expr: rate(v1_experiments_total{status="failed"}[15m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: v1
+        annotations:
+          summary: "High V1 experiment failure rate"
+          description: "V1 experiments are failing at an elevated rate. Check experiment configurations."
+
+      - alert: V1ErrorsSpike
+        expr: rate(v1_errors_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: v1
+        annotations:
+          summary: "Spike in V1 errors"
+          description: "V1 is reporting errors at a high rate. V2 may need to generate fixes."
+
+      - alert: V1SecurityErrors
+        expr: increase(v1_errors_total{error_type="security"}[1h]) > 3
+        for: 1m
+        labels:
+          severity: critical
+          component: v1
+        annotations:
+          summary: "Security errors detected in V1"
+          description: "Multiple security-related errors detected in V1 experimentation zone."
+
+      # =============================================================================
+      # V2 Fix Alerts
+      # =============================================================================
+      - alert: V2FixSuccessRateLow
+        expr: v2_fix_success_rate < 0.7
+        for: 30m
+        labels:
+          severity: warning
+          component: v2
+        annotations:
+          summary: "V2 fix success rate is low"
+          description: "V2 fix success rate is {{ $value | humanizePercentage }}. Review fix generation logic."
+
+      - alert: V2FixSuccessRateCritical
+        expr: v2_fix_success_rate < 0.5
+        for: 15m
+        labels:
+          severity: critical
+          component: v2
+        annotations:
+          summary: "V2 fix success rate is critically low"
+          description: "V2 is failing to generate effective fixes ({{ $value | humanizePercentage }} success rate)."
+
+      - alert: V2FixBacklog
+        expr: increase(v2_fixes_total{status="pending"}[1h]) - increase(v2_fixes_total{status="verified"}[1h]) > 10
+        for: 1h
+        labels:
+          severity: warning
+          component: v2
+        annotations:
+          summary: "V2 fix backlog growing"
+          description: "Pending fixes are accumulating faster than they are being verified."
+
+      # =============================================================================
+      # V3 Quarantine Alerts
+      # =============================================================================
+      - alert: QuarantineGrowthHigh
+        expr: increase(quarantine_technologies_total[24h]) > 5
+        for: 1m
+        labels:
+          severity: warning
+          component: v3
+        annotations:
+          summary: "High quarantine rate"
+          description: "{{ $value }} technologies quarantined in the last 24 hours. Review V1 experiments."
+
+      - alert: PermanentExclusionsHigh
+        expr: permanent_exclusions_total > 20
+        for: 1m
+        labels:
+          severity: info
+          component: v3
+        annotations:
+          summary: "High number of permanent exclusions"
+          description: "{{ $value }} technologies permanently excluded. Consider reviewing exclusion criteria."
+
+      - alert: QuarantineSecurityIssues
+        expr: increase(quarantine_by_reason{reason="security_vulnerability"}[24h]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          component: v3
+        annotations:
+          summary: "Technology quarantined for security reasons"
+          description: "A technology was quarantined due to security vulnerability. Review immediately."
+
+      # =============================================================================
+      # Promotion/Degradation Alerts
+      # =============================================================================
+      - alert: PromotionBacklog
+        expr: pending_promotions > 10
+        for: 2h
+        labels:
+          severity: warning
+          component: evolution
+        annotations:
+          summary: "High promotion backlog"
+          description: "{{ $value }} promotions pending. Check promotion evaluation process."
+
+      - alert: DegradationBacklog
+        expr: pending_degradations > 5
+        for: 1h
+        labels:
+          severity: warning
+          component: evolution
+        annotations:
+          summary: "High degradation backlog"
+          description: "{{ $value }} degradations pending. V2 stability may be affected."
+
+      - alert: NoPromotionsLongTime
+        expr: increase(promotions_total{status="completed"}[7d]) == 0 and v1_experiments_active > 0
+        for: 1d
+        labels:
+          severity: info
+          component: evolution
+        annotations:
+          summary: "No promotions in 7 days"
+          description: "No technologies promoted from V1 to V2 in the last week despite active experiments."
+
+      - alert: HighDegradationRate
+        expr: rate(degradations_total{status="completed"}[24h]) > rate(promotions_total{status="completed"}[24h])
+        for: 3d
+        labels:
+          severity: warning
+          component: evolution
+        annotations:
+          summary: "Degradation rate exceeds promotion rate"
+          description: "More technologies are being degraded than promoted over the last 3 days."
+
+      # =============================================================================
+      # Learning Progress Alerts
+      # =============================================================================
+      - alert: NoLearningProgress
+        expr: increase(fix_templates_learned_total[7d]) == 0 and increase(v2_fixes_total{status="verified"}[7d]) > 0
+        for: 1d
+        labels:
+          severity: info
+          component: learning
+        annotations:
+          summary: "No new fix templates learned"
+          description: "V2 has verified fixes but no new templates have been learned in 7 days."
+
+      - alert: ErrorPatternsGrowing
+        expr: rate(error_patterns_recorded_total[24h]) > rate(fix_templates_learned_total[24h]) * 2
+        for: 3d
+        labels:
+          severity: warning
+          component: learning
+        annotations:
+          summary: "Error patterns growing faster than fixes"
+          description: "New error patterns are being recorded faster than fix templates are being learned."
+
+      # =============================================================================
+      # Service Health Alerts
+      # =============================================================================
+      - alert: ThreeVersionServiceDown
+        expr: up{job="three-version-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: service
+        annotations:
+          summary: "Three-version service is down"
+          description: "The three-version evolution service is not responding."
+
+      - alert: ThreeVersionServiceHighLatency
+        expr: histogram_quantile(0.95, rate(ai_instance_latency_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: service
+        annotations:
+          summary: "High latency in AI instance requests"
+          description: "P95 latency is {{ $value | humanizeDuration }} for {{ $labels.version }} {{ $labels.ai_type }}."

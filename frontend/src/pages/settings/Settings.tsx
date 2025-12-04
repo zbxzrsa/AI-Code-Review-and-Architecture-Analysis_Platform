@@ -10,7 +10,7 @@
  * - Data & Privacy
  */
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Tabs,
@@ -34,21 +34,14 @@ import {
   Skeleton,
   Empty,
   Badge,
-  Tooltip,
-  InputNumber,
   TimePicker,
-  Checkbox,
-  Progress,
-  Statistic,
   Steps,
   Avatar,
 } from 'antd';
 import type { TabsProps, TableProps } from 'antd';
 import {
-  UserOutlined,
   LockOutlined,
   BellOutlined,
-  GlobalOutlined,
   SafetyOutlined,
   ApiOutlined,
   DeleteOutlined,
@@ -57,10 +50,7 @@ import {
   SettingOutlined,
   EditOutlined,
   CopyOutlined,
-  ReloadOutlined,
-  ExclamationCircleOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
   DesktopOutlined,
   MobileOutlined,
   LaptopOutlined,
@@ -69,17 +59,11 @@ import {
   SlackOutlined,
   WindowsOutlined,
   LinkOutlined,
-  DisconnectOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
   MailOutlined,
-  SoundOutlined,
   MoonOutlined,
   SunOutlined,
   CodeOutlined,
   ThunderboltOutlined,
-  HistoryOutlined,
-  QrcodeOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -87,10 +71,8 @@ import { useUIStore } from '../../store/uiStore';
 import { 
   useAuthStore, 
   type Session, 
-  type UserApiKey, 
-  type Integration,
+  type UserApiKey,
   type UserWebhook,
-  defaultUserSettings,
 } from '../../store/authStore';
 import {
   useUserSettings,
@@ -109,9 +91,7 @@ import {
   useCreateApiKey,
   useRevokeApiKey,
   useIntegrations,
-  useConnectSlack,
   useDisconnectSlack,
-  useConnectTeams,
   useDisconnectTeams,
   useUserWebhooks,
   useCreateUserWebhook,
@@ -310,9 +290,9 @@ const SecuritySection: React.FC = () => {
   const { data: sessions, isLoading: sessionsLoading } = useSessions();
   const revokeSession = useRevokeSession();
   const revokeAllSessions = useRevokeAllSessions();
-  const { data: ipWhitelist } = useIpWhitelist();
-  const addIp = useAddIpToWhitelist();
-  const removeIp = useRemoveIpFromWhitelist();
+  const { data: _ipWhitelist } = useIpWhitelist();
+  const _addIp = useAddIpToWhitelist();
+  const _removeIp = useRemoveIpFromWhitelist();
   const { data: loginAlerts } = useLoginAlerts();
   const updateLoginAlerts = useUpdateLoginAlerts();
 
@@ -891,7 +871,7 @@ const IntegrationsSection: React.FC = () => {
   const [editingWebhook, setEditingWebhook] = useState<UserWebhook | null>(null);
   const [webhookForm] = Form.useForm();
 
-  const { data: integrations, isLoading } = useIntegrations();
+  const { data: integrations, isLoading: _isLoading } = useIntegrations();
   const disconnectSlack = useDisconnectSlack();
   const disconnectTeams = useDisconnectTeams();
   const { data: webhooks } = useUserWebhooks();

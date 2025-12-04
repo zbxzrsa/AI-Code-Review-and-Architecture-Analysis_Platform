@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Auto-Fix Dashboard
  * 
  * Comprehensive dashboard for the AI auto-fix cycle:
@@ -45,11 +45,11 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useAutoFix } from '../../hooks/useAutoFix';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 const AutoFixDashboard: React.FC = () => {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const {
     status,
     vulnerabilities,

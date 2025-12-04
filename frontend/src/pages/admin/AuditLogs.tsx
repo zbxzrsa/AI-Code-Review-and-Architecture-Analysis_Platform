@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Audit Logs Page
  * 
  * Admin page for viewing audit logs with:
@@ -93,9 +93,9 @@ import {
 } from '../../hooks/useAdmin';
 import './AuditLogs.css';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { Search } = Input;
-const { RangePicker } = DatePicker;
+const { RangePicker: _RangePicker } = DatePicker;
 
 /** Action icons */
 const actionIcons: Record<AuditAction, React.ReactNode> = {
@@ -232,7 +232,7 @@ const AuditStatsSection: React.FC = () => {
 const AuditAnalyticsSection: React.FC = () => {
   const { t } = useTranslation();
   const { data: analytics } = useAuditAnalytics();
-  const { data: loginPatterns } = useLoginPatterns();
+  const { data: _loginPatterns } = useLoginPatterns();
 
   if (!analytics) {
     return <Skeleton active paragraph={{ rows: 4 }} />;

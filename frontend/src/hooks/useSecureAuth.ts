@@ -11,8 +11,10 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { useAuthStore } from "../store/authStore";
+import { AxiosError } from "axios";
+import { useAuthStore, type User } from "../store/authStore";
 import { apiService } from "../services/api";
+
 import {
   csrfManager,
   sessionSecurity,
@@ -23,6 +25,16 @@ import {
   rateLimiter,
 } from "../services/security";
 import { useNotification } from "../components/common/NotificationCenter";
+
+// Type-safe error extraction
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof AxiosError) {
+    return (
+      error.response?.data?.message || error.response?.data?.detail || fallback
+    );
+  }
+  return fallback;
+}
 
 /**
  * Login credentials
@@ -41,7 +53,7 @@ interface LoginResult {
   success: boolean;
   requiresTwoFactor?: boolean;
   error?: string;
-  user?: any;
+  user?: User;
 }
 
 /**
@@ -206,8 +218,8 @@ export function useSecureAuth() {
         navigate(returnUrl || "/dashboard");
 
         return { success: true, user: data.user };
-      } catch (error: any) {
-        const message = error.response?.data?.message || "Login failed";
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, "Login failed");
         setError(message);
         notify.error(message);
         return { success: false, error: message };
@@ -285,8 +297,8 @@ export function useSecureAuth() {
         navigate(returnUrl || "/dashboard");
 
         return { success: true, user: data.user };
-      } catch (error: any) {
-        const message = error.response?.data?.message || "Verification failed";
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, "Verification failed");
         notify.error(message);
         return { success: false, error: message };
       } finally {
@@ -351,8 +363,8 @@ export function useSecureAuth() {
         );
 
         return { success: true };
-      } catch (error: any) {
-        const message = error.response?.data?.message || "Registration failed";
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, "Registration failed");
         setError(message);
         notify.error(message);
         return { success: false, error: message };
@@ -410,9 +422,8 @@ export function useSecureAuth() {
         await apiService.user.requestPasswordReset(email);
         notify.success("Password reset email sent. Check your inbox.");
         return { success: true };
-      } catch (error: any) {
-        const message =
-          error.response?.data?.message || "Failed to send reset email";
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, "Failed to send reset email");
         notify.error(message);
         return { success: false, error: message };
       } finally {
@@ -441,9 +452,8 @@ export function useSecureAuth() {
         notify.success("Password reset successful. You can now log in.");
         navigate("/login");
         return { success: true };
-      } catch (error: any) {
-        const message =
-          error.response?.data?.message || "Password reset failed";
+      } catch (error: unknown) {
+        const message = getErrorMessage(error, "Password reset failed");
         notify.error(message);
         return { success: false, error: message };
       } finally {

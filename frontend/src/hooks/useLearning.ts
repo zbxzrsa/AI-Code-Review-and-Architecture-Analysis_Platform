@@ -1,6 +1,6 @@
 /**
  * Learning Cycle Hook
- * 
+ *
  * Hook for interacting with the learning cycle API:
  * - Get learning status
  * - Manage learning sources
@@ -8,17 +8,17 @@
  * - Control learning cycle
  */
 
-import { useState, useCallback, useEffect } from 'react';
-import { message } from 'antd';
+import { useState, useCallback, useEffect } from "react";
+import { message } from "antd";
 
 export interface LearningSource {
   id: string;
   name: string;
-  type: 'github' | 'papers' | 'blogs' | 'docs' | 'feedback';
+  type: "github" | "papers" | "blogs" | "docs" | "feedback";
   enabled: boolean;
   lastSync: string;
   itemsProcessed: number;
-  status: 'active' | 'syncing' | 'error' | 'paused';
+  status: "active" | "syncing" | "error" | "paused";
 }
 
 export interface KnowledgeUpdate {
@@ -27,7 +27,7 @@ export interface KnowledgeUpdate {
   title: string;
   type: string;
   timestamp: string;
-  impact: 'high' | 'medium' | 'low';
+  impact: "high" | "medium" | "low";
 }
 
 export interface LearningStatus {
@@ -68,9 +68,9 @@ export function useLearning(): UseLearningReturn {
       setError(null);
 
       const [statusRes, sourcesRes, updatesRes] = await Promise.all([
-        fetch('/api/learning/status').then((r) => r.json()),
-        fetch('/api/learning/sources').then((r) => r.json()),
-        fetch('/api/learning/updates').then((r) => r.json()),
+        fetch("/api/learning/status").then((r) => r.json()),
+        fetch("/api/learning/sources").then((r) => r.json()),
+        fetch("/api/learning/updates").then((r) => r.json()),
       ]);
 
       setStatus({
@@ -85,21 +85,21 @@ export function useLearning(): UseLearningReturn {
       });
       setSources(
         Array.isArray(sourcesRes)
-          ? sourcesRes.map((s: any) => ({
-              id: s.id,
-              name: s.name,
-              type: s.type,
-              enabled: s.enabled,
-              lastSync: s.last_sync || new Date().toISOString(),
-              itemsProcessed: s.items_processed,
-              status: s.status,
+          ? sourcesRes.map((s: Record<string, unknown>) => ({
+              id: String(s.id),
+              name: String(s.name),
+              type: s.type as LearningSource["type"],
+              enabled: Boolean(s.enabled),
+              lastSync: String(s.last_sync || new Date().toISOString()),
+              itemsProcessed: Number(s.items_processed || 0),
+              status: s.status as LearningSource["status"],
             }))
           : []
       );
       setUpdates(Array.isArray(updatesRes) ? updatesRes : []);
     } catch (err) {
-      console.error('Failed to fetch learning data:', err);
-      setError('Failed to load learning data');
+      console.error("Failed to fetch learning data:", err);
+      setError("Failed to load learning data");
 
       // Set mock data as fallback
       setStatus({
@@ -108,7 +108,7 @@ export function useLearning(): UseLearningReturn {
         totalKnowledgeItems: 32040,
         itemsToday: 245,
         learningAccuracy: 0.94,
-        modelVersion: 'v2.3.1',
+        modelVersion: "v2.3.1",
         lastFineTune: new Date(Date.now() - 86400000).toISOString(),
         nextScheduledTune: new Date(Date.now() + 43200000).toISOString(),
       });
@@ -127,16 +127,16 @@ export function useLearning(): UseLearningReturn {
 
   const syncAll = useCallback(async () => {
     try {
-      const res = await fetch('/api/learning/sync', { method: 'POST' });
+      const res = await fetch("/api/learning/sync", { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        message.success('Sync started for all sources');
+        message.success("Sync started for all sources");
         await fetchData();
       } else {
-        message.warning(data.message || 'Failed to start sync');
+        message.warning(data.message || "Failed to start sync");
       }
     } catch (err) {
-      message.error('Failed to start sync');
+      message.error("Failed to start sync");
     }
   }, [fetchData]);
 
@@ -144,15 +144,15 @@ export function useLearning(): UseLearningReturn {
     async (sourceId: string) => {
       try {
         const res = await fetch(`/api/learning/sources/${sourceId}/sync`, {
-          method: 'POST',
+          method: "POST",
         });
         const data = await res.json();
         if (data.success) {
-          message.success('Sync started');
+          message.success("Sync started");
           await fetchData();
         }
       } catch (err) {
-        message.error('Failed to start sync');
+        message.error("Failed to start sync");
       }
     },
     [fetchData]
@@ -162,13 +162,13 @@ export function useLearning(): UseLearningReturn {
     async (sourceId: string, enabled: boolean) => {
       try {
         const res = await fetch(`/api/learning/sources/${sourceId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ enabled }),
         });
         const data = await res.json();
         if (data.success) {
-          message.success(enabled ? 'Source enabled' : 'Source disabled');
+          message.success(enabled ? "Source enabled" : "Source disabled");
           setSources((prev) =>
             prev.map((s) => (s.id === sourceId ? { ...s, enabled } : s))
           );
@@ -185,27 +185,27 @@ export function useLearning(): UseLearningReturn {
 
   const pauseLearning = useCallback(async () => {
     try {
-      const res = await fetch('/api/learning/pause', { method: 'POST' });
+      const res = await fetch("/api/learning/pause", { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        message.success('Learning paused');
+        message.success("Learning paused");
         setStatus((prev) => (prev ? { ...prev, running: false } : null));
       }
     } catch (err) {
-      message.error('Failed to pause learning');
+      message.error("Failed to pause learning");
     }
   }, []);
 
   const resumeLearning = useCallback(async () => {
     try {
-      const res = await fetch('/api/learning/resume', { method: 'POST' });
+      const res = await fetch("/api/learning/resume", { method: "POST" });
       const data = await res.json();
       if (data.success) {
-        message.success('Learning resumed');
+        message.success("Learning resumed");
         setStatus((prev) => (prev ? { ...prev, running: true } : null));
       }
     } catch (err) {
-      message.error('Failed to resume learning');
+      message.error("Failed to resume learning");
     }
   }, []);
 

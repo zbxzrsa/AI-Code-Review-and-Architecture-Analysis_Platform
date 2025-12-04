@@ -222,6 +222,16 @@ export const Sidebar: React.FC = () => {
       path: '/docs',
     },
     {
+      key: 'ai',
+      label: t('nav.ai', 'AI Assistant'),
+      icon: <RobotOutlined />,
+      children: [
+        { key: 'ai-hub', label: t('nav.ai_hub', 'AI Hub'), path: '/ai-hub', icon: <RobotOutlined /> },
+        { key: 'ai-code-review', label: t('nav.ai_code_review', 'Code Review AI'), path: '/ai-code-review', icon: <CodeOutlined /> },
+        { key: 'ai-assistant', label: t('nav.ai_assistant', 'Chat Assistant'), path: '/ai-assistant', icon: <RobotOutlined /> },
+      ],
+    },
+    {
       key: 'admin',
       label: t('nav.admin', 'Administration'),
       icon: <SettingOutlined />,
@@ -243,6 +253,8 @@ export const Sidebar: React.FC = () => {
         { key: 'admin-health', label: t('nav.system_health', 'System Health'), path: '/admin/health', icon: <DesktopOutlined /> },
         { key: 'admin-learning', label: t('nav.learning', 'Learning Cycle'), path: '/admin/learning', icon: <BookOutlined /> },
         { key: 'admin-ml-promotion', label: t('nav.ml_promotion', 'ML Auto-Promotion'), path: '/admin/ml-promotion', icon: <RocketOutlined /> },
+        { key: 'admin-three-version', label: t('nav.three_version', 'Three-Version Control'), path: '/admin/three-version', icon: <ExperimentOutlined /> },
+        { key: 'admin-vcai', label: t('nav.vcai', 'Version Control AI'), path: '/admin/vcai', icon: <RobotOutlined /> },
         { key: 'admin-audit', label: t('nav.audit', 'Audit Logs'), path: '/admin/audit', icon: <AuditOutlined /> },
       ],
     },

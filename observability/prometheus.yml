@@ -49,6 +49,11 @@ scrape_configs:
       - targets: ["provider-service:9090"]
     metrics_path: /metrics
 
+  - job_name: "three-version-service"
+    static_configs:
+      - targets: ["three-version-service:8010"]
+    metrics_path: /api/v1/evolution/prometheus
+
   - job_name: "redis"
     static_configs:
       - targets: ["redis:6379"]

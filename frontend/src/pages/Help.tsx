@@ -26,7 +26,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import './Help.css';
 
-const { Title, Text, Paragraph, Link } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { Search } = Input;
 const { Panel } = Collapse;
 

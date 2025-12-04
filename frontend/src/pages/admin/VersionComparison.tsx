@@ -19,14 +19,12 @@ import {
   Alert,
   Tabs,
   Table,
-  Tooltip,
   Badge,
   Divider,
   Modal,
   Input,
   message,
   Statistic,
-  Progress,
 } from 'antd';
 import {
   SyncOutlined,
@@ -37,7 +35,6 @@ import {
   ExperimentOutlined,
   SafetyCertificateOutlined,
   ThunderboltOutlined,
-  DollarOutlined,
   HistoryOutlined,
   DiffOutlined,
 } from '@ant-design/icons';
@@ -271,7 +268,7 @@ const VersionComparison: React.FC = () => {
 
         {/* Issues List */}
         <div style={{ maxHeight: 300, overflow: 'auto' }}>
-          {output.issues.map((issue, index) => (
+          {output.issues.map((issue) => (
             <Alert
               key={issue.id}
               type={

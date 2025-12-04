@@ -65,3 +65,31 @@ export type {
   ComparisonStats,
   RollbackStats,
 } from "./lifecycleApi";
+
+// Three-Version Evolution Service
+export * from "./threeVersionService";
+export {
+  getCycleStatus,
+  startCycle,
+  stopCycle,
+  reportV1Error,
+  getV1Experiments,
+  getV2Status,
+  getV2Fixes,
+  getV3QuarantineStatus,
+  getExclusionList,
+  triggerPromotion,
+  triggerDegradation,
+  requestReEvaluation,
+  getAllAIStatus,
+  getUserAIStatus,
+  getCycleHistory,
+  getEvolutionMetrics,
+  healthCheck as evolutionHealthCheck,
+  threeVersionQueryKeys,
+  getPhaseDisplayName,
+  getErrorTypeDisplayName,
+  getAIStatusColor,
+  formatSuccessRate,
+  isCycleHealthy,
+} from "./threeVersionService";

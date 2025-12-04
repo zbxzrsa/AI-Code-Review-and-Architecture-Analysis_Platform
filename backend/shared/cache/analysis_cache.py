@@ -84,7 +84,8 @@ class LRUCache:
                 return len(json.dumps(value).encode('utf-8'))
             else:
                 return sys.getsizeof(value)
-        except:
+        except (TypeError, ValueError, UnicodeEncodeError) as e:
+            # Size estimation failed, use default
             return 1024  # Default estimate
     
     async def get(self, key: str) -> Optional[Any]:

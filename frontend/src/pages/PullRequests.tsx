@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Pull Requests Page
  * 拉取请求页面
  * 
@@ -14,30 +14,24 @@ import {
   Card,
   Row,
   Col,
-  Table,
   Button,
   Tag,
   Space,
   Typography,
   Avatar,
-  Badge,
   Tooltip,
   Select,
   Input,
-  Tabs,
   Progress,
-  Timeline,
   Divider,
   Modal,
   List,
   message,
 } from 'antd';
-import type { TableProps } from 'antd';
 import {
   PullRequestOutlined,
   MergeOutlined,
   CloseCircleOutlined,
-  CheckCircleOutlined,
   CommentOutlined,
   EyeOutlined,
   BranchesOutlined,
@@ -46,12 +40,8 @@ import {
   RobotOutlined,
   CodeOutlined,
   WarningOutlined,
-  SyncOutlined,
   PlusOutlined,
-  SearchOutlined,
-  FilterOutlined,
   SafetyCertificateOutlined,
-  ThunderboltOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
@@ -214,7 +204,7 @@ export const PullRequests: React.FC = () => {
     return true;
   });
 
-  const getStatusBadge = (status: string) => {
+  const _getStatusBadge = (status: string) => {
     const configs: Record<string, { color: string; icon: React.ReactNode; bgColor: string }> = {
       open: { color: '#22c55e', icon: <PullRequestOutlined />, bgColor: '#dcfce7' },
       merged: { color: '#8b5cf6', icon: <MergeOutlined />, bgColor: '#ede9fe' },
@@ -382,7 +372,7 @@ export const PullRequests: React.FC = () => {
                         <Text type="secondary">{pr.author.name}</Text>
                       </Space>
                       <Text type="secondary">
-                        <BranchesOutlined /> {pr.sourceBranch} �?{pr.targetBranch}
+                        <BranchesOutlined /> {pr.sourceBranch} �?{pr.targetBranch}
                       </Text>
                       <Text type="secondary">
                         <ClockCircleOutlined /> {new Date(pr.createdAt).toLocaleDateString()}

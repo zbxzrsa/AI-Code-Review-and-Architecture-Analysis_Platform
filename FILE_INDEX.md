@@ -155,6 +155,7 @@ Complete guide to all files in the AI Code Review Platform.
 - `v2-deployment.yaml` - V2 production deployment with HPA
 - `v1-deployment.yaml` - V1 experimentation deployment
 - `v3-deployment.yaml` - V3 quarantine deployment
+- `three-version-service.yaml` - Three-version evolution service
 
 ### Configuration (`kubernetes/config/`)
 
@@ -219,6 +220,7 @@ Complete guide to all files in the AI Code Review Platform.
   - Pagination
 
 - `operations.md` - Operations runbook
+
   - Daily operations
   - Health checks
   - Experiment management
@@ -230,6 +232,35 @@ Complete guide to all files in the AI Code Review Platform.
   - Maintenance windows
   - Cost optimization
   - Security operations
+
+- `three-version-evolution.md` - Three-version spiral evolution system
+  - V1/V2/V3 architecture
+  - Dual-AI per version (VC-AI + CR-AI)
+  - 8-phase spiral evolution cycle
+  - API reference
+  - Python SDK usage
+  - Monitoring and alerting
+  - Deployment guide
+
+## Three-Version Service (`backend/services/three-version-service/`)
+
+- `api.py` - REST API endpoints
+- `main.py` - FastAPI application
+- `metrics.py` - Prometheus metrics
+- `requirements.txt` - Dependencies
+- `Dockerfile` - Container configuration
+- `README.md` - Service documentation
+
+## AI Core Three-Version (`ai_core/three_version_cycle/`)
+
+- `cross_version_feedback.py` - V2 fixes V1 errors
+- `v3_comparison_engine.py` - Comparison and exclusion
+- `dual_ai_coordinator.py` - VCAI + CRAI management
+- `spiral_evolution_manager.py` - 8-phase orchestration
+- `version_manager.py` - V1/V2/V3 state management
+- `version_ai_engine.py` - Version-specific AI engines
+- `experiment_framework.py` - V1 experiments
+- `self_evolution_cycle.py` - Self-evolution cycle
 
 ## File Organization Summary
 

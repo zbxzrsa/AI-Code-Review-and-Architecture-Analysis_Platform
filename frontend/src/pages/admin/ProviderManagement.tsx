@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Provider Management Page
  * 
  * Admin page for managing AI providers with:
@@ -88,7 +88,7 @@ import {
 } from '../../hooks/useAdmin';
 import './ProviderManagement.css';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 /** Provider icons */
 const providerIcons: Record<ProviderType, React.ReactNode> = {

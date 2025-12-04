@@ -17,7 +17,6 @@ import {
   Space,
   Tag,
   Input,
-  Collapse,
   Alert,
 } from 'antd';
 import {
@@ -36,8 +35,8 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 
-const { Title, Text, Paragraph } = Typography;
-const { Panel } = Collapse;
+const { Title, Text } = Typography;
+// const { Panel } = Collapse;
 
 interface Shortcut {
   keys: string[];

@@ -19,10 +19,10 @@ export type EventPriority = "low" | "normal" | "high" | "critical";
 export interface EventOptions {
   priority?: EventPriority;
   once?: boolean;
-  filter?: (payload: any) => boolean;
+  filter?: (payload: unknown) => boolean;
 }
 
-export interface EventListener<T = any> {
+export interface EventListener<T = unknown> {
   id: string;
   callback: (payload: T) => void | Promise<void>;
   priority: EventPriority;
@@ -32,7 +32,7 @@ export interface EventListener<T = any> {
 
 export interface EventEntry {
   type: string;
-  payload: any;
+  payload: unknown;
   timestamp: Date;
   source?: string;
 }

@@ -34,7 +34,7 @@ import { useAuthStore } from '../store/authStore';
 import { apiService } from '../services/api';
 import './Profile.css';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface Activity {
   id: string;

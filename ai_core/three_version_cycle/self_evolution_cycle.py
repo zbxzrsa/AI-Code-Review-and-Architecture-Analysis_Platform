@@ -1,5 +1,17 @@
 """
 Self-Evolution Cycle - Orchestrates V1→V2→V3 flow.
+
+This module provides the core self-evolution cycle that enables:
+- V1 (New): Tests new technologies through trial and error
+- V2 (Stable): Remains stable for users; fixes V1 errors; optimizes compatibility
+- V3 (Old): Provides comparison baseline; excludes poor performers
+
+The cycle creates a spiral of continuous improvement:
+V1 experiments → V2 validates & fixes → promote to V2 → degrade to V3 → re-evaluate → V1
+
+Each version has its own dedicated:
+- Version Control AI (VC-AI): Admin-only, manages version decisions
+- Code Review AI (CR-AI): User-facing (V2 only), performs code analysis
 """
 
 import asyncio
@@ -203,3 +215,123 @@ class SelfEvolutionCycle:
             "v2_metrics": self.v2_ai.get_metrics(),
             "v3_metrics": self.v3_ai.get_metrics(),
         }
+
+
+# =============================================================================
+# Enhanced Self-Evolution with Spiral Manager
+# =============================================================================
+
+class EnhancedSelfEvolutionCycle:
+    """
+    Enhanced self-evolution cycle with full spiral management.
+    
+    Integrates:
+    - SpiralEvolutionManager: Full cycle orchestration
+    - DualAICoordinator: VCAI + CRAI per version
+    - CrossVersionFeedbackSystem: V2 fixes V1 errors
+    - V3ComparisonEngine: Baseline comparison and exclusion
+    
+    Usage:
+        cycle = EnhancedSelfEvolutionCycle()
+        await cycle.start()
+        
+        # Report V1 error for V2 to fix
+        await cycle.report_v1_error("tech_123", "new_attention", "compatibility", "Error X")
+        
+        # Manual promotion
+        await cycle.trigger_promotion("tech_123")
+        
+        # Check status
+        status = cycle.get_full_status()
+    """
+    
+    def __init__(
+        self,
+        version_manager: Optional[VersionManager] = None,
+        event_bus=None,
+    ):
+        # Import here to avoid circular imports
+        from .spiral_evolution_manager import SpiralEvolutionManager, SpiralCycleConfig
+        
+        self.version_manager = version_manager or VersionManager()
+        self.event_bus = event_bus
+        
+        # Initialize spiral evolution manager
+        config = SpiralCycleConfig(
+            cycle_interval_hours=6,
+            experiment_duration_hours=24,
+            stabilization_duration_hours=48,
+            quarantine_cooldown_days=30,
+            min_accuracy=0.85,
+            max_error_rate=0.05,
+            max_latency_p95_ms=3000,
+            min_samples=1000,
+            auto_promote=False,
+            auto_degrade=True,
+            auto_reeval=False,
+        )
+        
+        self.spiral_manager = SpiralEvolutionManager(
+            version_manager=self.version_manager,
+            event_bus=event_bus,
+            config=config,
+        )
+        
+        self._running = False
+    
+    async def start(self):
+        """Start the enhanced evolution cycle."""
+        if self._running:
+            return
+        
+        self._running = True
+        await self.spiral_manager.start()
+        
+        logger.info("Enhanced Self-Evolution Cycle started with full spiral management")
+    
+    async def stop(self):
+        """Stop the enhanced evolution cycle."""
+        self._running = False
+        await self.spiral_manager.stop()
+        
+        logger.info("Enhanced Self-Evolution Cycle stopped")
+    
+    async def report_v1_error(
+        self,
+        tech_id: str,
+        tech_name: str,
+        error_type: str,
+        description: str,
+    ) -> Dict[str, Any]:
+        """Report a V1 error for V2 to analyze and fix."""
+        return await self.spiral_manager.report_v1_error(
+            tech_id, tech_name, error_type, description
+        )
+    
+    async def trigger_promotion(self, tech_id: str) -> Dict[str, Any]:
+        """Manually trigger promotion of a technology."""
+        return await self.spiral_manager.trigger_promotion(tech_id)
+    
+    async def trigger_degradation(self, tech_id: str, reason: str) -> Dict[str, Any]:
+        """Manually trigger degradation of a technology."""
+        return await self.spiral_manager.trigger_degradation(tech_id, reason)
+    
+    async def request_reevaluation(self, tech_id: str) -> Dict[str, Any]:
+        """Request re-evaluation of a quarantined technology."""
+        return await self.spiral_manager.request_reevaluation(tech_id)
+    
+    def get_full_status(self) -> Dict[str, Any]:
+        """Get comprehensive status of the evolution cycle."""
+        return {
+            "running": self._running,
+            "spiral_status": self.spiral_manager.get_cycle_status(),
+            "cycle_history": self.spiral_manager.get_cycle_history(5),
+        }
+    
+    def get_dual_ai_status(self) -> Dict[str, Any]:
+        """Get status of all AI instances per version."""
+        return self.spiral_manager.dual_ai.get_all_status()
+    
+    def get_user_ai_status(self) -> Dict[str, Any]:
+        """Get status of user-accessible AI (V2 CR-AI)."""
+        return self.spiral_manager.dual_ai.get_user_ai_status()

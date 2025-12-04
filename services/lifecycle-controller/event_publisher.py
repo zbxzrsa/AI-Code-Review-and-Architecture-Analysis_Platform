@@ -63,6 +63,37 @@ class EventType(str, Enum):
     # Cycle health
     CYCLE_HEALTH_DEGRADED = "cycle_health_degraded"
     CYCLE_HEALTH_RESTORED = "cycle_health_restored"
+    
+    # Three-Version Spiral Evolution Events
+    EVOLUTION_CYCLE_STARTED = "evolution_cycle_started"
+    EVOLUTION_CYCLE_STOPPED = "evolution_cycle_stopped"
+    EVOLUTION_CYCLE_COMPLETED = "evolution_cycle_completed"
+    
+    # V1 Experimentation
+    V1_EXPERIMENT_STARTED = "v1_experiment_started"
+    V1_EXPERIMENT_COMPLETED = "v1_experiment_completed"
+    V1_ERROR_REPORTED = "v1_error_reported"
+    
+    # V2 Error Remediation
+    V2_FIX_GENERATED = "v2_fix_generated"
+    V2_FIX_APPLIED = "v2_fix_applied"
+    V2_FIX_VERIFIED = "v2_fix_verified"
+    V2_FIX_FAILED = "v2_fix_failed"
+    
+    # V3 Quarantine
+    V3_TECHNOLOGY_QUARANTINED = "v3_technology_quarantined"
+    V3_PERMANENT_EXCLUSION = "v3_permanent_exclusion"
+    V3_TEMPORARY_EXCLUSION = "v3_temporary_exclusion"
+    V3_REEVAL_REQUESTED = "v3_reeval_requested"
+    V3_REEVAL_APPROVED = "v3_reeval_approved"
+    
+    # Dual-AI Events
+    AI_STATUS_CHANGED = "ai_status_changed"
+    AI_REQUEST_ROUTED = "ai_request_routed"
+    
+    # Cross-Version Communication
+    CROSS_VERSION_HANDOFF = "cross_version_handoff"
+    TECHNOLOGY_KNOWLEDGE_TRANSFERRED = "technology_knowledge_transferred"
 
 
 @dataclass

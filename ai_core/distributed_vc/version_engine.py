@@ -533,8 +533,8 @@ class AutoMerger:
                 else:
                     conflict.resolved_by = MergeStrategy.THEIRS
                     return conflict.theirs_content
-            except:
-                pass
+            except (ValueError, AttributeError):
+                pass  # Version parsing failed, try other strategies
         
         # Content conflicts: try three-way merge
         if conflict.conflict_type == ConflictType.CONTENT_CONFLICT and conflict.base_content:
@@ -555,8 +555,8 @@ class AutoMerger:
                 merged_deps = ours_deps | theirs_deps
                 conflict.resolved_by = MergeStrategy.AI_RESOLVED
                 return ",".join(sorted(merged_deps))
-            except:
-                pass
+            except (ValueError, AttributeError):
+                pass  # Dependency parsing failed
         
         # Default: prefer theirs (target)
         conflict.resolved_by = MergeStrategy.THEIRS
@@ -620,7 +620,7 @@ class AutoMerger:
             ]
             
             return ".".join(str(x) for x in result)
-        except:
+        except (ValueError, IndexError, AttributeError):
             return f"{target}-merged"
     
     def get_success_rate(self) -> float:

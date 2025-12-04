@@ -1,0 +1,320 @@
+---
+# Three-Version Evolution Service Deployment
+# Manages the V1/V2/V3 spiral self-evolution cycle
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: three-version-service
+  namespace: platform-infrastructure
+  labels:
+    app: three-version-service
+    component: evolution
+    tier: management
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: three-version-service
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: three-version-service
+        component: evolution
+        tier: management
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8010"
+        prometheus.io/path: "/api/v1/evolution/prometheus"
+    spec:
+      serviceAccountName: three-version-service
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: three-version-service
+          image: coderev/three-version-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8010
+              protocol: TCP
+            - name: metrics
+              containerPort: 9090
+              protocol: TCP
+          env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: database-url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: redis-url
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: "kafka.platform-infrastructure.svc:9092"
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: EVOLUTION_CYCLE_INTERVAL_HOURS
+              value: "6"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          readinessProbe:
+            httpGet:
+              path: /api/v1/evolution/health
+              port: 8010
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /api/v1/evolution/health
+              port: 8010
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /app/.cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - three-version-service
+                topologyKey: kubernetes.io/hostname
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: three-version-service
+
+---
+# Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: three-version-service
+  namespace: platform-infrastructure
+  labels:
+    app: three-version-service
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8010
+      targetPort: 8010
+      protocol: TCP
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  selector:
+    app: three-version-service
+
+---
+# ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: three-version-service
+  namespace: platform-infrastructure
+  labels:
+    app: three-version-service
+
+---
+# HorizontalPodAutoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: three-version-service
+  namespace: platform-infrastructure
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: three-version-service
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 0
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+
+---
+# PodDisruptionBudget
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: three-version-service
+  namespace: platform-infrastructure
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: three-version-service
+
+---
+# ServiceMonitor for Prometheus
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: three-version-service
+  namespace: platform-monitoring
+  labels:
+    app: three-version-service
+spec:
+  selector:
+    matchLabels:
+      app: three-version-service
+  namespaceSelector:
+    matchNames:
+      - platform-infrastructure
+  endpoints:
+    - port: http
+      path: /api/v1/evolution/prometheus
+      interval: 30s
+      scrapeTimeout: 10s
+
+---
+# NetworkPolicy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: three-version-service
+  namespace: platform-infrastructure
+spec:
+  podSelector:
+    matchLabels:
+      app: three-version-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from nginx ingress
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8010
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-monitoring
+      ports:
+        - protocol: TCP
+          port: 8010
+        - protocol: TCP
+          port: 9090
+    # Allow from other platform services
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+      ports:
+        - protocol: TCP
+          port: 8010
+  egress:
+    # Allow to PostgreSQL
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+          podSelector:
+            matchLabels:
+              app: postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow to Redis
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+          podSelector:
+            matchLabels:
+              app: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow to Kafka
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-infrastructure
+          podSelector:
+            matchLabels:
+              app: kafka
+      ports:
+        - protocol: TCP
+          port: 9092
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53

@@ -1,13 +1,14 @@
 /**
  * Admin Hooks
- * 
+ *
  * React Query hooks for admin dashboard - users, providers, and audit management.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { message } from 'antd';
-import { apiService } from '../services/api';
-import { 
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { message } from "antd";
+import { AxiosError } from "axios";
+import { apiService } from "../services/api";
+import {
   useAdminStore,
   type AdminUser,
   type UserStats,
@@ -20,40 +21,63 @@ import {
   type AuditFilters,
   type AuditAnalytics,
   type SecurityAlert,
-} from '../store/adminStore';
+} from "../store/adminStore";
+
+// Type-safe error extraction for API errors
+interface ApiError {
+  detail?: string;
+  message?: string;
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof AxiosError) {
+    const data = error.response?.data as ApiError | undefined;
+    return data?.detail || data?.message || fallback;
+  }
+  return fallback;
+}
 
 // ============================================
 // Query Keys
 // ============================================
 
 export const adminKeys = {
-  all: ['admin'] as const,
-  
+  all: ["admin"] as const,
+
   // Users
-  users: () => [...adminKeys.all, 'users'] as const,
-  usersList: (filters: UserFilters, page: number, pageSize: number, sort: { field: string; order: string }) =>
-    [...adminKeys.users(), 'list', filters, page, pageSize, sort] as const,
+  users: () => [...adminKeys.all, "users"] as const,
+  usersList: (
+    filters: UserFilters,
+    page: number,
+    pageSize: number,
+    sort: { field: string; order: string }
+  ) => [...adminKeys.users(), "list", filters, page, pageSize, sort] as const,
   user: (userId: string) => [...adminKeys.users(), userId] as const,
-  userStats: () => [...adminKeys.users(), 'stats'] as const,
-  
+  userStats: () => [...adminKeys.users(), "stats"] as const,
+
   // Providers
-  providers: () => [...adminKeys.all, 'providers'] as const,
-  providersList: () => [...adminKeys.providers(), 'list'] as const,
-  provider: (providerId: string) => [...adminKeys.providers(), providerId] as const,
-  providerHealth: (providerId: string) => [...adminKeys.providers(), providerId, 'health'] as const,
-  providerMetrics: (providerId: string, period?: string) => 
-    [...adminKeys.providers(), providerId, 'metrics', period] as const,
-  providerModels: (providerId: string) => [...adminKeys.providers(), providerId, 'models'] as const,
-  
+  providers: () => [...adminKeys.all, "providers"] as const,
+  providersList: () => [...adminKeys.providers(), "list"] as const,
+  provider: (providerId: string) =>
+    [...adminKeys.providers(), providerId] as const,
+  providerHealth: (providerId: string) =>
+    [...adminKeys.providers(), providerId, "health"] as const,
+  providerMetrics: (providerId: string, period?: string) =>
+    [...adminKeys.providers(), providerId, "metrics", period] as const,
+  providerModels: (providerId: string) =>
+    [...adminKeys.providers(), providerId, "models"] as const,
+
   // Audit
-  audit: () => [...adminKeys.all, 'audit'] as const,
+  audit: () => [...adminKeys.all, "audit"] as const,
   auditLogs: (filters: AuditFilters, page: number, pageSize: number) =>
-    [...adminKeys.audit(), 'logs', filters, page, pageSize] as const,
-  auditLog: (logId: string) => [...adminKeys.audit(), 'log', logId] as const,
-  auditAnalytics: (period?: string) => [...adminKeys.audit(), 'analytics', period] as const,
+    [...adminKeys.audit(), "logs", filters, page, pageSize] as const,
+  auditLog: (logId: string) => [...adminKeys.audit(), "log", logId] as const,
+  auditAnalytics: (period?: string) =>
+    [...adminKeys.audit(), "analytics", period] as const,
   securityAlerts: (params?: { severity?: string; resolved?: boolean }) =>
-    [...adminKeys.audit(), 'alerts', params] as const,
-  loginPatterns: (period?: string) => [...adminKeys.audit(), 'login-patterns', period] as const,
+    [...adminKeys.audit(), "alerts", params] as const,
+  loginPatterns: (period?: string) =>
+    [...adminKeys.audit(), "login-patterns", period] as const,
 };
 
 // ============================================
@@ -65,22 +89,27 @@ export const adminKeys = {
  */
 export function useAdminUsers() {
   const { userFilters, userPagination, userSort, setUsers } = useAdminStore();
-  
+
   return useQuery({
-    queryKey: adminKeys.usersList(userFilters, userPagination.page, userPagination.pageSize, userSort),
+    queryKey: adminKeys.usersList(
+      userFilters,
+      userPagination.page,
+      userPagination.pageSize,
+      userSort
+    ),
     queryFn: async () => {
       const response = await apiService.admin.users.list({
         page: userPagination.page,
         limit: userPagination.pageSize,
         search: userFilters.search || undefined,
-        role: userFilters.role !== 'all' ? userFilters.role : undefined,
-        status: userFilters.status !== 'all' ? userFilters.status : undefined,
+        role: userFilters.role !== "all" ? userFilters.role : undefined,
+        status: userFilters.status !== "all" ? userFilters.status : undefined,
         sort_field: userSort.field,
         sort_order: userSort.order,
         start_date: userFilters.dateRange?.[0],
         end_date: userFilters.dateRange?.[1],
       });
-      
+
       const data = response.data as { items: AdminUser[]; total: number };
       setUsers(data.items);
       return data;
@@ -107,7 +136,7 @@ export function useAdminUser(userId: string) {
  */
 export function useUserStats() {
   const { setUserStats } = useAdminStore();
-  
+
   return useQuery({
     queryKey: adminKeys.userStats(),
     queryFn: async () => {
@@ -124,18 +153,24 @@ export function useUserStats() {
  */
 export function useUpdateUser() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ userId, data }: { userId: string; data: Parameters<typeof apiService.admin.users.update>[1] }) => {
+    mutationFn: async ({
+      userId,
+      data,
+    }: {
+      userId: string;
+      data: Parameters<typeof apiService.admin.users.update>[1];
+    }) => {
       const response = await apiService.admin.users.update(userId, data);
       return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.users() });
-      message.success('User updated successfully');
+      message.success("User updated successfully");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to update user');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to update user"));
     },
   });
 }
@@ -145,17 +180,17 @@ export function useUpdateUser() {
  */
 export function useDeleteUser() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (userId: string) => {
       await apiService.admin.users.delete(userId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.users() });
-      message.success('User deleted successfully');
+      message.success("User deleted successfully");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to delete user');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to delete user"));
     },
   });
 }
@@ -165,17 +200,23 @@ export function useDeleteUser() {
  */
 export function useSuspendUser() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
+    mutationFn: async ({
+      userId,
+      reason,
+    }: {
+      userId: string;
+      reason?: string;
+    }) => {
       await apiService.admin.users.suspend(userId, reason);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.users() });
-      message.success('User suspended');
+      message.success("User suspended");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to suspend user');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to suspend user"));
     },
   });
 }
@@ -185,17 +226,17 @@ export function useSuspendUser() {
  */
 export function useReactivateUser() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (userId: string) => {
       await apiService.admin.users.reactivate(userId);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.users() });
-      message.success('User reactivated');
+      message.success("User reactivated");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to reactivate user');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to reactivate user"));
     },
   });
 }
@@ -209,10 +250,10 @@ export function useResetUserPassword() {
       await apiService.admin.users.resetPassword(userId);
     },
     onSuccess: () => {
-      message.success('Password reset email sent');
+      message.success("Password reset email sent");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to reset password');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to reset password"));
     },
   });
 }
@@ -226,10 +267,10 @@ export function useResendWelcome() {
       await apiService.admin.users.resendWelcome(userId);
     },
     onSuccess: () => {
-      message.success('Welcome email sent');
+      message.success("Welcome email sent");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to send email');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to send email"));
     },
   });
 }
@@ -240,9 +281,11 @@ export function useResendWelcome() {
 export function useBulkUserAction() {
   const queryClient = useQueryClient();
   const { clearUserSelection } = useAdminStore();
-  
+
   return useMutation({
-    mutationFn: async (data: Parameters<typeof apiService.admin.users.bulk>[0]) => {
+    mutationFn: async (
+      data: Parameters<typeof apiService.admin.users.bulk>[0]
+    ) => {
       await apiService.admin.users.bulk(data);
     },
     onSuccess: (_, variables) => {
@@ -250,8 +293,8 @@ export function useBulkUserAction() {
       clearUserSelection();
       message.success(`Bulk ${variables.action} completed`);
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Bulk operation failed');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Bulk operation failed"));
     },
   });
 }
@@ -261,7 +304,7 @@ export function useBulkUserAction() {
  */
 export function useImportUsers() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (file: File) => {
       const response = await apiService.admin.users.import(file);
@@ -271,8 +314,8 @@ export function useImportUsers() {
       queryClient.invalidateQueries({ queryKey: adminKeys.users() });
       message.success(`Imported ${data.imported} users`);
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Import failed');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Import failed"));
     },
   });
 }
@@ -282,24 +325,26 @@ export function useImportUsers() {
  */
 export function useExportUsers() {
   return useMutation({
-    mutationFn: async (params?: Parameters<typeof apiService.admin.users.export>[0]) => {
+    mutationFn: async (
+      params?: Parameters<typeof apiService.admin.users.export>[0]
+    ) => {
       const response = await apiService.admin.users.export(params);
       return response.data;
     },
     onSuccess: (data, variables) => {
-      const format = variables?.format || 'csv';
+      const format = variables?.format || "csv";
       const url = window.URL.createObjectURL(new Blob([data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `users.${format}`);
+      link.setAttribute("download", `users.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      message.success('Export started');
+      message.success("Export started");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Export failed');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Export failed"));
     },
   });
 }
@@ -313,7 +358,7 @@ export function useExportUsers() {
  */
 export function useProviders() {
   const { setProviders } = useAdminStore();
-  
+
   return useQuery({
     queryKey: adminKeys.providersList(),
     queryFn: async () => {
@@ -345,22 +390,28 @@ export function useProvider(providerId: string) {
 export function useUpdateProvider() {
   const queryClient = useQueryClient();
   const { updateProvider } = useAdminStore();
-  
+
   return useMutation({
-    mutationFn: async ({ providerId, data }: { 
-      providerId: string; 
-      data: Parameters<typeof apiService.admin.providers.update>[1] 
+    mutationFn: async ({
+      providerId,
+      data,
+    }: {
+      providerId: string;
+      data: Parameters<typeof apiService.admin.providers.update>[1];
     }) => {
-      const response = await apiService.admin.providers.update(providerId, data);
+      const response = await apiService.admin.providers.update(
+        providerId,
+        data
+      );
       return response.data;
     },
     onSuccess: (data, { providerId }) => {
       updateProvider(providerId, data);
       queryClient.invalidateQueries({ queryKey: adminKeys.providers() });
-      message.success('Provider updated');
+      message.success("Provider updated");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to update provider');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to update provider"));
     },
   });
 }
@@ -370,17 +421,23 @@ export function useUpdateProvider() {
  */
 export function useUpdateProviderApiKey() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ providerId, apiKey }: { providerId: string; apiKey: string }) => {
+    mutationFn: async ({
+      providerId,
+      apiKey,
+    }: {
+      providerId: string;
+      apiKey: string;
+    }) => {
       await apiService.admin.providers.updateApiKey(providerId, apiKey);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.providers() });
-      message.success('API key updated');
+      message.success("API key updated");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to update API key');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to update API key"));
     },
   });
 }
@@ -392,17 +449,21 @@ export function useTestProvider() {
   return useMutation({
     mutationFn: async (providerId: string) => {
       const response = await apiService.admin.providers.test(providerId);
-      return response.data as { success: boolean; latency: number; message?: string };
+      return response.data as {
+        success: boolean;
+        latency: number;
+        message?: string;
+      };
     },
     onSuccess: (data) => {
       if (data.success) {
         message.success(`Connection successful (${data.latency}ms)`);
       } else {
-        message.warning(data.message || 'Connection failed');
+        message.warning(data.message || "Connection failed");
       }
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Connection test failed');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Connection test failed"));
     },
   });
 }
@@ -425,11 +486,16 @@ export function useProviderHealth(providerId: string) {
 /**
  * Fetch provider metrics
  */
-export function useProviderMetrics(providerId: string, period?: 'hour' | 'day' | 'week' | 'month') {
+export function useProviderMetrics(
+  providerId: string,
+  period?: "hour" | "day" | "week" | "month"
+) {
   return useQuery({
     queryKey: adminKeys.providerMetrics(providerId, period),
     queryFn: async () => {
-      const response = await apiService.admin.providers.getMetrics(providerId, { period });
+      const response = await apiService.admin.providers.getMetrics(providerId, {
+        period,
+      });
       return response.data as ProviderMetrics;
     },
     enabled: !!providerId,
@@ -441,7 +507,7 @@ export function useProviderMetrics(providerId: string, period?: 'hour' | 'day' |
  */
 export function useProviderModels(providerId: string) {
   const { setProviderModels } = useAdminStore();
-  
+
   return useQuery({
     queryKey: adminKeys.providerModels(providerId),
     queryFn: async () => {
@@ -459,26 +525,32 @@ export function useProviderModels(providerId: string) {
  */
 export function useUpdateProviderModel() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ 
-      providerId, 
-      modelId, 
-      data 
-    }: { 
-      providerId: string; 
+    mutationFn: async ({
+      providerId,
+      modelId,
+      data,
+    }: {
+      providerId: string;
       modelId: string;
       data: Parameters<typeof apiService.admin.providers.updateModel>[2];
     }) => {
-      const response = await apiService.admin.providers.updateModel(providerId, modelId, data);
+      const response = await apiService.admin.providers.updateModel(
+        providerId,
+        modelId,
+        data
+      );
       return response.data;
     },
     onSuccess: (_, { providerId }) => {
-      queryClient.invalidateQueries({ queryKey: adminKeys.providerModels(providerId) });
-      message.success('Model configuration updated');
+      queryClient.invalidateQueries({
+        queryKey: adminKeys.providerModels(providerId),
+      });
+      message.success("Model configuration updated");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to update model');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to update model"));
     },
   });
 }
@@ -488,17 +560,17 @@ export function useUpdateProviderModel() {
  */
 export function useSetFallbackOrder() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (providerIds: string[]) => {
       await apiService.admin.providers.setFallbackOrder(providerIds);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.providers() });
-      message.success('Fallback order updated');
+      message.success("Fallback order updated");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to update fallback order');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to update fallback order"));
     },
   });
 }
@@ -512,22 +584,27 @@ export function useSetFallbackOrder() {
  */
 export function useAuditLogs() {
   const { auditFilters, auditPagination, setAuditLogs } = useAdminStore();
-  
+
   return useQuery({
-    queryKey: adminKeys.auditLogs(auditFilters, auditPagination.page, auditPagination.pageSize),
+    queryKey: adminKeys.auditLogs(
+      auditFilters,
+      auditPagination.page,
+      auditPagination.pageSize
+    ),
     queryFn: async () => {
       const response = await apiService.admin.audit.list({
         page: auditPagination.page,
         limit: auditPagination.pageSize,
         search: auditFilters.search || undefined,
-        action: auditFilters.action !== 'all' ? auditFilters.action : undefined,
-        resource: auditFilters.resource !== 'all' ? auditFilters.resource : undefined,
-        status: auditFilters.status !== 'all' ? auditFilters.status : undefined,
+        action: auditFilters.action !== "all" ? auditFilters.action : undefined,
+        resource:
+          auditFilters.resource !== "all" ? auditFilters.resource : undefined,
+        status: auditFilters.status !== "all" ? auditFilters.status : undefined,
         user_id: auditFilters.userId,
         start_date: auditFilters.dateRange?.[0],
         end_date: auditFilters.dateRange?.[1],
       });
-      
+
       const data = response.data as { items: AuditLog[]; total: number };
       setAuditLogs(data.items);
       return data;
@@ -554,14 +631,15 @@ export function useAuditLog(logId: string) {
  */
 export function useExportAuditLogs() {
   const { auditFilters } = useAdminStore();
-  
+
   return useMutation({
-    mutationFn: async (format: 'csv' | 'json' | 'pdf' = 'csv') => {
+    mutationFn: async (format: "csv" | "json" | "pdf" = "csv") => {
       const response = await apiService.admin.audit.export({
         format,
-        action: auditFilters.action !== 'all' ? auditFilters.action : undefined,
-        resource: auditFilters.resource !== 'all' ? auditFilters.resource : undefined,
-        status: auditFilters.status !== 'all' ? auditFilters.status : undefined,
+        action: auditFilters.action !== "all" ? auditFilters.action : undefined,
+        resource:
+          auditFilters.resource !== "all" ? auditFilters.resource : undefined,
+        status: auditFilters.status !== "all" ? auditFilters.status : undefined,
         start_date: auditFilters.dateRange?.[0],
         end_date: auditFilters.dateRange?.[1],
       });
@@ -569,17 +647,17 @@ export function useExportAuditLogs() {
     },
     onSuccess: ({ data, format }) => {
       const url = window.URL.createObjectURL(new Blob([data]));
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.setAttribute('download', `audit-logs.${format}`);
+      link.setAttribute("download", `audit-logs.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      message.success('Export completed');
+      message.success("Export completed");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Export failed');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Export failed"));
     },
   });
 }
@@ -587,9 +665,9 @@ export function useExportAuditLogs() {
 /**
  * Fetch audit analytics
  */
-export function useAuditAnalytics(period?: 'day' | 'week' | 'month') {
+export function useAuditAnalytics(period?: "day" | "week" | "month") {
   const { setAuditAnalytics } = useAdminStore();
-  
+
   return useQuery({
     queryKey: adminKeys.auditAnalytics(period),
     queryFn: async () => {
@@ -604,9 +682,12 @@ export function useAuditAnalytics(period?: 'day' | 'week' | 'month') {
 /**
  * Fetch security alerts
  */
-export function useSecurityAlerts(params?: { severity?: string; resolved?: boolean }) {
+export function useSecurityAlerts(params?: {
+  severity?: string;
+  resolved?: boolean;
+}) {
   const { setSecurityAlerts } = useAdminStore();
-  
+
   return useQuery({
     queryKey: adminKeys.securityAlerts(params),
     queryFn: async () => {
@@ -623,17 +704,23 @@ export function useSecurityAlerts(params?: { severity?: string; resolved?: boole
  */
 export function useResolveAlert() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async ({ alertId, notes }: { alertId: string; notes?: string }) => {
+    mutationFn: async ({
+      alertId,
+      notes,
+    }: {
+      alertId: string;
+      notes?: string;
+    }) => {
       await apiService.admin.audit.resolveAlert(alertId, notes);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: adminKeys.securityAlerts() });
-      message.success('Alert resolved');
+      message.success("Alert resolved");
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to resolve alert');
+    onError: (error: unknown) => {
+      message.error(getErrorMessage(error, "Failed to resolve alert"));
     },
   });
 }
@@ -641,11 +728,13 @@ export function useResolveAlert() {
 /**
  * Fetch login patterns
  */
-export function useLoginPatterns(period?: 'day' | 'week' | 'month') {
+export function useLoginPatterns(period?: "day" | "week" | "month") {
   return useQuery({
     queryKey: adminKeys.loginPatterns(period),
     queryFn: async () => {
-      const response = await apiService.admin.audit.getLoginPatterns({ period });
+      const response = await apiService.admin.audit.getLoginPatterns({
+        period,
+      });
       return response.data as { hour: number; day: number; count: number }[];
     },
   });

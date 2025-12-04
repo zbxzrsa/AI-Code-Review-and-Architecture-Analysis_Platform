@@ -105,8 +105,14 @@ const PerformanceMonitor = lazy(() => import('./pages/admin/PerformanceMonitor')
 const SecurityScanner = lazy(() => import('./pages/admin/SecurityScanner'));
 const CodeQualityDashboard = lazy(() => import('./pages/admin/CodeQualityDashboard'));
 const VersionComparison = lazy(() => import('./pages/admin/VersionComparison'));
+const ThreeVersionControl = lazy(() => import('./pages/admin/ThreeVersionControl'));
 const WelcomeDashboard = lazy(() => import('./pages/WelcomeDashboard'));
 const MLAutoPromotion = lazy(() => import('./pages/MLAutoPromotion'));
+
+// AI Interaction pages / AI交互页面
+const AIInteractionHub = lazy(() => import('./pages/ai/AIInteractionHub'));
+const VersionControlAI = lazy(() => import('./pages/ai/VersionControlAI'));
+const CodeReviewAI = lazy(() => import('./pages/ai/CodeReviewAI'));
 
 // Query client for React Query
 const queryClient = new QueryClient({
@@ -243,6 +249,8 @@ export default function App() {
                   <Route path="/changelog" element={<Changelog />} />
                   <Route path="/shortcuts" element={<Shortcuts />} />
                   <Route path="/ai-assistant" element={<AIAssistant />} />
+                  <Route path="/ai-hub" element={<AIInteractionHub />} />
+                  <Route path="/ai-code-review" element={<CodeReviewAI />} />
                   <Route path="/webhooks" element={<Webhooks />} />
                   <Route path="/metrics" element={<CodeMetrics />} />
                   <Route path="/scheduled-jobs" element={<ScheduledJobs />} />
@@ -333,6 +341,16 @@ export default function App() {
                   <Route path="/admin/ml-promotion" element={
                     <AdminRoute>
                       <MLAutoPromotion />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/three-version" element={
+                    <AdminRoute>
+                      <ThreeVersionControl />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/vcai" element={
+                    <AdminRoute>
+                      <VersionControlAI />
                     </AdminRoute>
                   } />
                 </Route>

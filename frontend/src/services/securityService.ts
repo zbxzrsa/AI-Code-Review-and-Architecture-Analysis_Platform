@@ -306,7 +306,7 @@ class SecurityService {
         }
         break;
 
-      case "number":
+      case "number": {
         const num = typeof value === "string" ? parseFloat(value) : value;
         if (typeof num !== "number" || isNaN(num)) {
           return { valid: false, error: "Must be a number" };
@@ -322,8 +322,9 @@ class SecurityService {
           return { valid: false, error: `Maximum value is ${rules.max}` };
         }
         break;
+      }
 
-      case "email":
+      case "email": {
         if (typeof value !== "string") {
           return { valid: false, error: "Must be a string" };
         }
@@ -333,8 +334,9 @@ class SecurityService {
           return { valid: false, error: "Invalid email format" };
         }
         break;
+      }
 
-      case "url":
+      case "url": {
         if (typeof value !== "string") {
           return { valid: false, error: "Must be a string" };
         }
@@ -345,6 +347,7 @@ class SecurityService {
         }
         sanitized = sanitizedUrl;
         break;
+      }
 
       case "pattern":
         if (typeof value !== "string") {
@@ -576,6 +579,77 @@ class SecurityService {
    */
   clearSecurityEvents(): void {
     this.securityEvents = [];
+  }
+
+  // ==================== Three-Version Access Control ====================
+
+  /**
+   * Check if a user role has access to a specific version and resource type
+   *
+   * Access Rules:
+   * - Users can only access V2 CR-AI (Code Review AI)
+   * - Admins can access all versions and both AI types
+   * - VC-AI (Version Control AI) is admin-only on all versions
+   */
+  checkVersionAccess(
+    role: string,
+    version: string,
+    resourceType: string
+  ): boolean {
+    const isAdmin = role === "admin" || role === "system";
+    const isVCAI = resourceType === "vc_ai";
+    const isV2 = version === "v2";
+    const isCRAI = resourceType === "cr_ai";
+
+    // VC-AI is always admin-only
+    if (isVCAI && !isAdmin) {
+      this.logSecurityEvent({
+        type: "access",
+        severity: "medium",
+        message: `Unauthorized VC-AI access attempt`,
+        details: { role, version, resourceType },
+      });
+      return false;
+    }
+
+    // Admins have full access
+    if (isAdmin) {
+      return true;
+    }
+
+    // Regular users can only access V2 CR-AI
+    if (isCRAI && isV2) {
+      return true;
+    }
+
+    // Deny all other access for non-admins
+    this.logSecurityEvent({
+      type: "access",
+      severity: "medium",
+      message: `Unauthorized version access attempt`,
+      details: { role, version, resourceType },
+    });
+    return false;
+  }
+
+  /**
+   * Get user's accessible versions based on role
+   */
+  getAccessibleVersions(role: string): string[] {
+    if (role === "admin" || role === "system") {
+      return ["v1", "v2", "v3"];
+    }
+    return ["v2"]; // Users only get V2
+  }
+
+  /**
+   * Get user's accessible AI types based on role
+   */
+  getAccessibleAITypes(role: string): string[] {
+    if (role === "admin" || role === "system") {
+      return ["cr_ai", "vc_ai"];
+    }
+    return ["cr_ai"]; // Users only get CR-AI
   }
 
   // ==================== Private Helpers ====================

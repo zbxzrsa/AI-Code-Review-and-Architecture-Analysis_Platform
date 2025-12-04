@@ -2,7 +2,7 @@
 Security utilities for authentication.
 """
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
@@ -68,12 +68,12 @@ class SecurityManager:
         if expires_delta is None:
             expires_delta = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
         to_encode = {
             "sub": user_id,
             "role": role,
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(timezone.utc),
             "type": "access",
         }
 
@@ -85,15 +85,16 @@ class SecurityManager:
         return encoded_jwt
 
     @staticmethod
-    def create_refresh_token(user_id: str) -> str:
+    def create_refresh_token(user_id: str, role: str = "user") -> str:
         """Create JWT refresh token."""
-        expire = datetime.utcnow() + timedelta(
+        expire = datetime.now(timezone.utc) + timedelta(
             days=settings.REFRESH_TOKEN_EXPIRE_DAYS
         )
         to_encode = {
             "sub": user_id,
+            "role": role,  # Include role for token refresh
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(timezone.utc),
             "type": "refresh",
         }
 
@@ -188,7 +189,7 @@ class RateLimiter:
             True if within limit, False if exceeded
         """
         key = f"login:{ip_address}"
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         if key not in RateLimiter._login_attempts:
             RateLimiter._login_attempts[key] = []
@@ -213,7 +214,7 @@ class RateLimiter:
         key = f"login:{ip_address}"
         if key not in RateLimiter._login_attempts:
             RateLimiter._login_attempts[key] = []
-        RateLimiter._login_attempts[key].append(datetime.utcnow())
+        RateLimiter._login_attempts[key].append(datetime.now(timezone.utc))
 
     @staticmethod
     def reset_login_attempts(ip_address: str) -> None:
@@ -236,7 +237,7 @@ class AccountLockout:
             return False
 
         lockout_until = AccountLockout._lockouts[user_id]
-        if datetime.utcnow() > lockout_until:
+        if datetime.now(timezone.utc) > lockout_until:
             del AccountLockout._lockouts[user_id]
             return False
 
@@ -245,7 +246,7 @@ class AccountLockout:
     @staticmethod
     def lock_account(user_id: str, duration_minutes: int = 30) -> None:
         """Lock account for specified duration."""
-        lockout_until = datetime.utcnow() + timedelta(minutes=duration_minutes)
+        lockout_until = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
         AccountLockout._lockouts[user_id] = lockout_until
         logger.warning(f"Account locked: {user_id} until {lockout_until}")
 

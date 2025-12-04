@@ -1,4 +1,4 @@
-/**
+﻿/**
  * API Keys Management Page
  * API密钥管理页面
  * 
@@ -26,9 +26,7 @@ import {
   Popconfirm,
   Progress,
   Alert,
-  Descriptions,
   Badge,
-  Switch,
 } from 'antd';
 import type { TableProps } from 'antd';
 import {
@@ -38,17 +36,14 @@ import {
   DeleteOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
-  WarningOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined,
-  ApiOutlined,
   LockOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface APIKey {
   id: string;

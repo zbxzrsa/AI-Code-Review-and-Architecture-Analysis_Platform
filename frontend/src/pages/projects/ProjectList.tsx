@@ -257,7 +257,7 @@ export const ProjectList: React.FC = () => {
     setFilters({ language: value });
   }, [setFilters]);
   
-  const handleSortChange = useCallback((field: string) => {
+  const _handleSortChange = useCallback((field: string) => {
     const newOrder = filters.sortField === field && filters.sortOrder === 'asc' ? 'desc' : 'asc';
     setFilters({ sortField: field as any, sortOrder: newOrder });
   }, [filters.sortField, filters.sortOrder, setFilters]);

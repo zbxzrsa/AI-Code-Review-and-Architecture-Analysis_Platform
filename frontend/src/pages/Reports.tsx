@@ -173,7 +173,7 @@ export const Reports: React.FC = () => {
   const { t } = useTranslation();
   const [reports, setReports] = useState<Report[]>(mockReports);
   const [scheduledReports, setScheduledReports] = useState<ScheduledReport[]>(mockScheduledReports);
-  const [loading, setLoading] = useState(false);
+  const [loading, _setLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('reports');

@@ -17,14 +17,12 @@ import {
   Input,
   Select,
   Form,
-  Radio,
   Space,
   Typography,
   Tooltip,
   message,
   Segmented,
   Tag,
-  Progress,
 } from 'antd';
 import {
   SmileOutlined,

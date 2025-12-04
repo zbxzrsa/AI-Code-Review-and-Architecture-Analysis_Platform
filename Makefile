@@ -34,6 +34,14 @@ help:
 	@echo "  make k8s-status    - Show deployment status"
 	@echo "  make k8s-logs      - Show service logs"
 	@echo ""
+	@echo "Three-Version Evolution:"
+	@echo "  make verify-three-version     - Verify three-version implementation"
+	@echo "  make verify-three-version-api - Verify with API tests (requires running service)"
+	@echo "  make test-three-version       - Run three-version unit tests"
+	@echo "  make start-three-version      - Start three-version service"
+	@echo "  make stop-three-version       - Stop three-version service"
+	@echo "  make logs-three-version       - View three-version service logs"
+	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean         - Clean build artifacts"
 	@echo "  make seal-secrets  - Seal secrets with kubeseal"
@@ -106,6 +114,28 @@ lint-fix:
 	cd frontend && npm run lint:fix
 
 # ============================================================
+# Verification
+# ============================================================
+
+verify-three-version:
+	python scripts/verify_three_version.py
+
+verify-three-version-api:
+	python scripts/verify_three_version.py --api-test
+
+test-three-version:
+	cd tests && pytest backend/test_three_version_cycle.py -v
+
+start-three-version:
+	docker-compose up -d three-version-service
+
+stop-three-version:
+	docker-compose stop three-version-service
+
+logs-three-version:
+	docker-compose logs -f three-version-service
+
+# ============================================================
 # Build
 # ============================================================
 
@@ -122,6 +152,7 @@ build-images:
 	docker build -t $(REGISTRY)/crai:$(VERSION) -f backend/Dockerfile.crai .
 	docker build -t $(REGISTRY)/lifecycle-controller:$(VERSION) -f services/lifecycle-controller/Dockerfile .
 	docker build -t $(REGISTRY)/evaluation-pipeline:$(VERSION) -f services/evaluation-pipeline/Dockerfile .
+	docker build -t $(REGISTRY)/three-version-service:$(VERSION) -f backend/services/three-version-service/Dockerfile backend/services/three-version-service
 	docker build -t $(REGISTRY)/frontend:$(VERSION) -f frontend/Dockerfile .
 
 push-images:
@@ -129,6 +160,7 @@ push-images:
 	docker push $(REGISTRY)/crai:$(VERSION)
 	docker push $(REGISTRY)/lifecycle-controller:$(VERSION)
 	docker push $(REGISTRY)/evaluation-pipeline:$(VERSION)
+	docker push $(REGISTRY)/three-version-service:$(VERSION)
 	docker push $(REGISTRY)/frontend:$(VERSION)
 
 sign-images:
@@ -136,6 +168,7 @@ sign-images:
 	cosign sign --yes $(REGISTRY)/crai:$(VERSION)
 	cosign sign --yes $(REGISTRY)/lifecycle-controller:$(VERSION)
 	cosign sign --yes $(REGISTRY)/evaluation-pipeline:$(VERSION)
+	cosign sign --yes $(REGISTRY)/three-version-service:$(VERSION)
 	cosign sign --yes $(REGISTRY)/frontend:$(VERSION)
 
 # ============================================================

@@ -45,7 +45,7 @@ interface ApiKey {
 export const Settings: React.FC = () => {
   const { t, i18n } = useTranslation();
   const { theme, setTheme, language, setLanguage } = useUIStore();
-  const { user } = useAuthStore();
+  const { user: _user } = useAuthStore();
   const [passwordForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([
