@@ -1,0 +1,140 @@
+{{- if .Values.vcai.ingress.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vcai-ingress
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: vcai
+  annotations:
+    {{- with .Values.vcai.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    # Shadow traffic to V1
+    {{- if .Values.gateway.shadowTraffic.enabled }}
+    nginx.ingress.kubernetes.io/mirror-uri: "/api/v1"
+    nginx.ingress.kubernetes.io/mirror-host: "vcai-v1.{{ .Values.versions.v1.namespace }}.svc.cluster.local"
+    nginx.ingress.kubernetes.io/mirror-request-body: "on"
+    {{- end }}
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-connections: "50"
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    # Body size
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+spec:
+  ingressClassName: {{ .Values.vcai.ingress.className }}
+  {{- if .Values.vcai.ingress.tls }}
+  tls:
+    {{- range .Values.vcai.ingress.tls }}
+    - secretName: {{ .secretName }}
+      hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.vcai.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: vcai-v2
+                port:
+                  number: {{ $.Values.vcai.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+---
+{{- if .Values.frontend.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: frontend-ingress
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: frontend
+  annotations:
+    {{- with .Values.frontend.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  ingressClassName: {{ .Values.frontend.ingress.className }}
+  {{- if .Values.frontend.ingress.tls }}
+  tls:
+    {{- range .Values.frontend.ingress.tls }}
+    - secretName: {{ .secretName }}
+      hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.frontend.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: {{ $.Values.frontend.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}
+---
+# Admin Ingress (Internal only)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin-ingress
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12"
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: admin-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "Admin Area"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: admin.coderev.internal
+      http:
+        paths:
+          - path: /lifecycle
+            pathType: Prefix
+            backend:
+              service:
+                name: lifecycle-controller
+                port:
+                  number: {{ .Values.lifecycleController.service.port }}
+          - path: /evaluation
+            pathType: Prefix
+            backend:
+              service:
+                name: evaluation-pipeline
+                port:
+                  number: {{ .Values.evaluationPipeline.service.port }}
+          - path: /opa
+            pathType: Prefix
+            backend:
+              service:
+                name: opa
+                port:
+                  number: 8181

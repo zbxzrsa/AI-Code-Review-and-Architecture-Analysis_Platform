@@ -1,0 +1,9 @@
+# V1 Experiment Priority Class - Lower priority than V2
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: experiment-priority
+value: 100
+globalDefault: false
+description: "Priority for V1 experiment workloads - can be preempted by V2"
+preemptionPolicy: PreemptLowerPriority

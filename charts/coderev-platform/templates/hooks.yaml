@@ -1,0 +1,194 @@
+# Helm Hooks for Pre/Post Installation Tasks
+---
+# Pre-install: Database Migration Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "coderev.fullname" . }}-db-migrate
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: db-migrate
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: {{ .Values.global.imageRegistry }}/db-migrate:{{ .Chart.AppVersion }}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Running database migrations..."
+              alembic upgrade head
+              echo "Migrations completed successfully"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: url
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+---
+# Pre-install: Wait for Dependencies
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "coderev.fullname" . }}-wait-deps
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app: wait-deps
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: wait
+          image: busybox:1.36
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL..."
+              until nc -z {{ .Release.Name }}-postgresql 5432; do
+                echo "PostgreSQL not ready, sleeping..."
+                sleep 5
+              done
+              echo "PostgreSQL is ready!"
+              
+              echo "Waiting for Redis..."
+              until nc -z {{ .Release.Name }}-redis-master 6379; do
+                echo "Redis not ready, sleeping..."
+                sleep 5
+              done
+              echo "Redis is ready!"
+              
+              echo "All dependencies are ready!"
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+---
+# Post-install: Smoke Test
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "coderev.fullname" . }}-smoke-test
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  ttlSecondsAfterFinished: 600
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: smoke-test
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: smoke-test
+          image: curlimages/curl:8.5.0
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Running smoke tests..."
+              
+              # Test VCAI health
+              echo "Testing VCAI health..."
+              curl -sf http://vcai-v2:{{ .Values.vcai.service.port }}/health || exit 1
+              echo "VCAI health: OK"
+              
+              # Test CRAI health
+              echo "Testing CRAI health..."
+              curl -sf http://crai-v2:{{ .Values.crai.service.port }}/health || exit 1
+              echo "CRAI health: OK"
+              
+              # Test Lifecycle Controller
+              echo "Testing Lifecycle Controller..."
+              curl -sf http://lifecycle-controller.platform-control-plane:{{ .Values.lifecycleController.service.port }}/health || exit 1
+              echo "Lifecycle Controller: OK"
+              
+              echo "All smoke tests passed!"
+          resources:
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+---
+# Pre-delete: Backup Job (optional)
+{{- if .Values.backup.enabled | default false }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "coderev.fullname" . }}-backup
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  ttlSecondsAfterFinished: 3600
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: backup
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: backup
+          image: postgres:16-alpine
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Creating pre-delete backup..."
+              TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+              pg_dump $DATABASE_URL > /backup/coderev_${TIMESTAMP}.sql
+              echo "Backup created: coderev_${TIMESTAMP}.sql"
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: url
+          volumeMounts:
+            - name: backup-volume
+              mountPath: /backup
+      volumes:
+        - name: backup-volume
+          persistentVolumeClaim:
+            claimName: backup-pvc
+{{- end }}

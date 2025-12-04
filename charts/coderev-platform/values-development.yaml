@@ -1,0 +1,226 @@
+# Development Values for CodeRev Platform
+# Use: helm install coderev-dev . -f values-development.yaml
+#
+# Optimized for local development:
+# - Minimal replicas
+# - Reduced resource requirements
+# - Debug logging enabled
+# - All databases run in-cluster
+
+# Global settings
+global:
+  imageRegistry: localhost:5000
+  imagePullSecrets: []
+
+# Version Configuration - minimal for development
+versions:
+  v1:
+    enabled: true
+    namespace: dev-v1-exp
+    replicas: 1
+    autoscaling:
+      enabled: false
+    resources:
+      limits:
+        cpu: "1"
+        memory: "2Gi"
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+
+  v2:
+    enabled: true
+    namespace: dev-v2-stable
+    replicas: 1
+    autoscaling:
+      enabled: false
+    resources:
+      limits:
+        cpu: "2"
+        memory: "4Gi"
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+    podDisruptionBudget:
+      enabled: false
+
+  v3:
+    enabled: true
+    namespace: dev-v3-legacy
+    replicas: 1
+    autoscaling:
+      enabled: false
+
+# VCAI Service
+vcai:
+  image:
+    tag: "dev"
+    pullPolicy: Never # Use local images
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations: {}
+    hosts:
+      - host: api.coderev.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  env:
+    LOG_LEVEL: DEBUG
+    ENVIRONMENT: development
+
+  probes:
+    liveness:
+      initialDelaySeconds: 60
+      periodSeconds: 30
+    readiness:
+      initialDelaySeconds: 30
+      periodSeconds: 10
+
+# Lifecycle Controller
+lifecycleController:
+  enabled: true
+  replicas: 1
+
+  image:
+    tag: "dev"
+    pullPolicy: Never
+
+  resources:
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
+    requests:
+      cpu: "100m"
+      memory: "256Mi"
+
+  config:
+    evaluationIntervalSeconds: 60 # Faster for testing
+    promotionThresholds:
+      p95LatencyMs: 5000 # More lenient
+      errorRate: 0.05
+      accuracyDelta: 0.01
+      securityPassRate: 0.95
+      costIncreaseMax: 0.20
+      statisticalSignificanceP: 0.10
+
+# Evaluation Pipeline
+evaluationPipeline:
+  enabled: true
+  replicas: 1
+
+  image:
+    tag: "dev"
+    pullPolicy: Never
+
+# Gateway
+gateway:
+  shadowTraffic:
+    enabled: true
+    percentage: 100
+
+  grayScale:
+    enabled: false # Disable for faster deployments
+    phases: [50, 100]
+    pauseBetweenPhases: false
+
+# Argo Rollouts - disabled for development
+argoRollouts:
+  enabled: false
+
+# OPA
+opa:
+  enabled: true
+  replicas: 1
+
+# Semantic Cache - disabled for development
+semanticCache:
+  enabled: false
+
+# Frontend
+frontend:
+  enabled: true
+  replicas: 1
+
+  image:
+    tag: "dev"
+    pullPolicy: Never
+
+  ingress:
+    enabled: true
+    className: nginx
+    hosts:
+      - host: coderev.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+# Monitoring - minimal
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false # Use pod annotations instead
+      interval: 30s
+
+  grafana:
+    enabled: false # Optional for dev
+
+  alerts:
+    enabled: false
+
+# AI Models
+aiModels:
+  openai:
+    enabled: true
+    apiKeySecret: openai-dev-secret
+
+  anthropic:
+    enabled: false
+
+  local:
+    enabled: false
+
+# Compliance
+compliance:
+  mode: standard
+
+  audit:
+    enabled: false
+    retentionDays: 7
+
+# Network Policies - disabled for development
+networkPolicies:
+  enabled: false
+
+# Resource Quotas - disabled for development
+resourceQuotas:
+  enabled: false
+
+# PostgreSQL - in-cluster for development
+postgresql:
+  enabled: true
+  auth:
+    username: coderev
+    password: devpassword
+    database: coderev
+  primary:
+    persistence:
+      size: 5Gi
+  readReplicas:
+    replicaCount: 0
+
+# Redis - in-cluster for development
+redis:
+  enabled: true
+  auth:
+    password: devpassword
+  master:
+    persistence:
+      size: 1Gi
+  replica:
+    replicaCount: 0

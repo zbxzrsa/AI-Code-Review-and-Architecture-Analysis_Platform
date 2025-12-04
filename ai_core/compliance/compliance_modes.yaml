@@ -1,0 +1,268 @@
+# Compliance Modes Configuration
+# Industry-specific compliance settings for financial, healthcare, etc.
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-modes
+  namespace: platform-control-plane
+data:
+  compliance_modes.yaml: |
+    compliance_modes:
+      # ============================================================
+      # Financial Services (SOC 2, PCI-DSS)
+      # ============================================================
+      - id: financial
+        name: "Financial Services Mode"
+        description: "Compliance mode for financial institutions (SOC 2, PCI-DSS)"
+        enabled: true
+        
+        restrictions:
+          # Model restrictions
+          models:
+            blocked:
+              - "*-local"  # No local models (audit trail required)
+            required_providers:
+              - openai
+              - anthropic
+            data_residency: "us-only"
+          
+          # Data handling
+          data:
+            no_persistent_code_storage: true
+            encryption_required: true
+            encryption_algorithm: "AES-256-GCM"
+            pii_detection_enabled: true
+            pii_redaction_enabled: true
+          
+          # External calls
+          network:
+            allow_external_api: true
+            allowed_domains:
+              - "api.openai.com"
+              - "api.anthropic.com"
+            block_external_data_egress: true
+          
+          # Audit requirements
+          audit:
+            log_all_requests: true
+            log_all_responses: true
+            log_model_versions: true
+            immutable_logs: true
+            retention_days: 2555  # 7 years
+            tamper_proof: true
+        
+        thresholds:
+          # Stricter thresholds
+          p95_latency_ms: 5000
+          error_rate: 0.01
+          accuracy_delta: 0.03
+          security_pass_rate: 0.995
+          cost_increase_max: 0.05
+        
+        security:
+          mfa_required: true
+          session_timeout_minutes: 30
+          ip_whitelist_enabled: true
+          rate_limiting:
+            requests_per_minute: 100
+            requests_per_day: 10000
+
+      # ============================================================
+      # Healthcare (HIPAA)
+      # ============================================================
+      - id: hipaa
+        name: "HIPAA Compliance Mode"
+        description: "Compliance mode for healthcare (HIPAA)"
+        enabled: true
+        
+        restrictions:
+          models:
+            blocked:
+              - "gpt-*"
+              - "claude-*"
+              - "*-cloud"
+            allowed:
+              - "codellama-34b"
+              - "deepseek-coder-33b"
+            data_residency: "on-premise"
+            air_gapped: true
+          
+          data:
+            no_code_transmission: true
+            no_external_api: true
+            phi_detection_enabled: true
+            phi_redaction_enabled: true
+            encryption_required: true
+            encryption_at_rest: true
+            encryption_in_transit: true
+          
+          network:
+            allow_external_api: false
+            internal_only: true
+            vpn_required: true
+          
+          audit:
+            log_all_access: true
+            access_control_audit: true
+            retention_days: 2190  # 6 years
+            breach_notification: true
+        
+        thresholds:
+          p95_latency_ms: 10000  # Local models may be slower
+          error_rate: 0.02
+          accuracy_delta: 0.02
+          security_pass_rate: 0.99
+        
+        security:
+          baa_required: true
+          role_based_access: true
+          minimum_necessary_access: true
+          workforce_training_required: true
+
+      # ============================================================
+      # Government (FedRAMP)
+      # ============================================================
+      - id: fedramp
+        name: "FedRAMP Compliance Mode"
+        description: "Compliance mode for US government (FedRAMP)"
+        enabled: true
+        
+        restrictions:
+          models:
+            allowed_providers:
+              - openai  # If FedRAMP authorized
+            data_residency: "us-gov"
+            fips_140_2_required: true
+          
+          data:
+            classification_required: true
+            cui_handling: true
+            encryption_fips: true
+          
+          network:
+            gov_cloud_only: true
+            boundary_controls: true
+          
+          audit:
+            continuous_monitoring: true
+            vulnerability_scanning: true
+            incident_response_plan: true
+            retention_days: 1095  # 3 years minimum
+        
+        thresholds:
+          security_pass_rate: 0.999
+        
+        security:
+          piv_cac_required: true
+          session_timeout_minutes: 15
+
+      # ============================================================
+      # GDPR (European Union)
+      # ============================================================
+      - id: gdpr
+        name: "GDPR Compliance Mode"
+        description: "Compliance mode for EU data protection (GDPR)"
+        enabled: true
+        
+        restrictions:
+          models:
+            data_residency: "eu-only"
+            allowed_regions:
+              - "europe-west1"
+              - "europe-west2"
+              - "europe-west3"
+          
+          data:
+            data_subject_rights: true
+            right_to_erasure: true
+            data_portability: true
+            consent_required: true
+            purpose_limitation: true
+            data_minimization: true
+          
+          audit:
+            processing_records: true
+            dpo_access: true
+            retention_days: 1825  # 5 years
+        
+        security:
+          privacy_by_design: true
+          dpia_required: true
+
+      # ============================================================
+      # Standard (Default)
+      # ============================================================
+      - id: standard
+        name: "Standard Mode"
+        description: "Default compliance mode for general use"
+        enabled: true
+        
+        restrictions:
+          models:
+            blocked: []
+            data_residency: "any"
+          
+          data:
+            encryption_required: true
+          
+          network:
+            allow_external_api: true
+          
+          audit:
+            log_all_requests: true
+            retention_days: 365
+        
+        thresholds:
+          p95_latency_ms: 3000
+          error_rate: 0.02
+          accuracy_delta: 0.02
+          security_pass_rate: 0.99
+          cost_increase_max: 0.10
+
+    # Mode selection rules
+    mode_selection:
+      # Automatic mode detection based on project labels
+      auto_detect:
+        - label: "compliance/financial"
+          mode: financial
+        - label: "compliance/hipaa"
+          mode: hipaa
+        - label: "compliance/fedramp"
+          mode: fedramp
+        - label: "compliance/gdpr"
+          mode: gdpr
+      
+      # Default mode if no label matches
+      default_mode: standard
+      
+      # Mode inheritance (more restrictive wins)
+      inheritance:
+        - hipaa > financial > gdpr > standard
+        - fedramp > financial > standard
+
+    # Offline/Private Deployment Settings
+    offline_deployment:
+      enabled: false
+      
+      local_models:
+        - id: codellama-34b
+          path: "/models/codellama-34b"
+          quantization: "int8"
+          gpu_required: true
+        
+        - id: deepseek-coder-33b
+          path: "/models/deepseek-coder-33b"
+          quantization: "int8"
+          gpu_required: true
+      
+      caching:
+        enabled: true
+        embedding_cache: true
+        response_cache: true
+        cache_ttl_hours: 24
+      
+      updates:
+        mode: "airgapped"
+        update_channel: "stable"
+        signature_verification: true

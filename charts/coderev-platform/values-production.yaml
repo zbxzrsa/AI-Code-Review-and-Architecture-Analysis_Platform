@@ -1,0 +1,229 @@
+# Production Values for CodeRev Platform
+# Use: helm install coderev . -f values-production.yaml
+
+# Global settings
+global:
+  imageRegistry: gcr.io/coderev-platform
+  imagePullSecrets:
+    - name: gcr-pull-secret
+
+# Version Configuration
+versions:
+  v1:
+    enabled: true
+    namespace: platform-v1-exp
+    replicas: 2
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 20
+      targetCPUUtilization: 70
+    resources:
+      limits:
+        cpu: "4"
+        memory: "8Gi"
+      requests:
+        cpu: "1"
+        memory: "2Gi"
+
+  v2:
+    enabled: true
+    namespace: platform-v2-stable
+    replicas: 5
+    autoscaling:
+      enabled: true
+      minReplicas: 5
+      maxReplicas: 50
+      targetCPUUtilization: 60
+    resources:
+      limits:
+        cpu: "8"
+        memory: "16Gi"
+      requests:
+        cpu: "2"
+        memory: "4Gi"
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 3
+
+  v3:
+    enabled: true
+    namespace: platform-v3-legacy
+    replicas: 1
+    autoscaling:
+      enabled: true
+      minReplicas: 0
+      maxReplicas: 5
+
+# VCAI Service
+vcai:
+  image:
+    tag: "1.0.0"
+    pullPolicy: Always
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+      nginx.ingress.kubernetes.io/rate-limit: "100"
+    hosts:
+      - host: api.coderev.io
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-tls
+        hosts:
+          - api.coderev.io
+
+  env:
+    LOG_LEVEL: INFO
+    ENVIRONMENT: production
+
+# Lifecycle Controller
+lifecycleController:
+  enabled: true
+  replicas: 3
+
+  config:
+    evaluationIntervalSeconds: 300
+    promotionThresholds:
+      p95LatencyMs: 3000
+      errorRate: 0.02
+      accuracyDelta: 0.02
+      securityPassRate: 0.99
+      costIncreaseMax: 0.10
+      statisticalSignificanceP: 0.05
+
+# Evaluation Pipeline
+evaluationPipeline:
+  enabled: true
+  replicas: 2
+
+# Gateway
+gateway:
+  shadowTraffic:
+    enabled: true
+    percentage: 100
+
+  grayScale:
+    enabled: true
+    phases: [1, 5, 25, 50, 100]
+    pauseBetweenPhases: true
+
+# Argo Rollouts
+argoRollouts:
+  enabled: true
+
+  analysis:
+    enabled: true
+    successCondition: "0.98"
+    failureLimit: 3
+
+# OPA
+opa:
+  enabled: true
+  replicas: 3
+
+# Frontend
+frontend:
+  enabled: true
+  replicas: 3
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: coderev.io
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: frontend-tls
+        hosts:
+          - coderev.io
+
+# Monitoring
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 15s
+
+  grafana:
+    enabled: true
+    dashboards:
+      enabled: true
+
+  alerts:
+    enabled: true
+
+# AI Models
+aiModels:
+  openai:
+    enabled: true
+    apiKeySecret: openai-prod-secret
+
+  anthropic:
+    enabled: true
+    apiKeySecret: anthropic-prod-secret
+
+  local:
+    enabled: false
+
+# Compliance
+compliance:
+  mode: standard
+
+  audit:
+    enabled: true
+    retentionDays: 365
+
+  encryption:
+    atRest: true
+    inTransit: true
+
+# Network Policies
+networkPolicies:
+  enabled: true
+  strictIsolation: true
+
+# Resource Quotas
+resourceQuotas:
+  enabled: true
+
+  v1:
+    cpu: "40"
+    memory: "80Gi"
+    pods: "100"
+
+  v2:
+    cpu: "200"
+    memory: "400Gi"
+    pods: "200"
+
+  v3:
+    cpu: "20"
+    memory: "40Gi"
+    pods: "50"
+
+# PostgreSQL (external in production)
+postgresql:
+  enabled: false
+
+# Redis (external in production)
+redis:
+  enabled: false
+
+# External Database (use in production)
+externalDatabase:
+  url: "postgresql://coderev:${DB_PASSWORD}@db.coderev.io:5432/coderev"
+
+# External Redis (use in production)
+externalRedis:
+  url: "redis://:${REDIS_PASSWORD}@redis.coderev.io:6379/0"

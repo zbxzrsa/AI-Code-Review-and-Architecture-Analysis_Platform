@@ -1,0 +1,197 @@
+# ConfigMaps for Offline Deployment
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: offline-model-config
+  namespace: platform-offline
+data:
+  model_registry.yaml: |
+    models:
+      - id: codellama-34b-local
+        provider: local
+        version: "1.0.0"
+        endpoint: "http://codellama-server.platform-offline.svc:8000/v1"
+        capabilities:
+          - code-review
+          - security-audit
+          - documentation
+          - refactoring
+        constraints:
+          max_tokens: 16384
+          cost_per_1k_input: 0.0001
+          cost_per_1k_output: 0.0001
+          rate_limit_rpm: 100
+        slo:
+          p95_latency_ms: 8000
+          availability: 99.0
+        status: active
+        offline_only: true
+
+      - id: deepseek-coder-33b-local
+        provider: local
+        version: "1.0.0"
+        endpoint: "http://deepseek-server.platform-offline.svc:8000/v1"
+        capabilities:
+          - code-review
+          - code-completion
+          - bug-detection
+        constraints:
+          max_tokens: 16384
+          cost_per_1k_input: 0.0001
+          cost_per_1k_output: 0.0001
+          rate_limit_rpm: 100
+        slo:
+          p95_latency_ms: 8000
+          availability: 99.0
+        status: active
+        offline_only: true
+
+    model_groups:
+      - name: offline-primary
+        description: "Primary models for offline deployment"
+        models:
+          - codellama-34b-local
+          - deepseek-coder-33b-local
+        timeout_cascade_ms: [8000, 8000]
+        selection_strategy: round-robin
+
+    version_assignments:
+      v1:
+        primary: codellama-34b-local
+        secondary: deepseek-coder-33b-local
+      v2:
+        primary: codellama-34b-local
+        secondary: deepseek-coder-33b-local
+      v3:
+        primary: codellama-34b-local
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: offline-routing-config
+  namespace: platform-offline
+data:
+  routing_policies.yaml: |
+    routing_policies:
+      - id: offline-routing
+        version: "1.0.0"
+        priority: 1000
+        status: active
+        
+        conditions:
+          environment: offline
+        
+        rules:
+          - name: use-local-models-only
+            condition:
+              type: always
+            actions:
+              - model_group: offline-primary
+                budget:
+                  max_cost_usd: 0.01
+                  max_latency_ms: 15000
+                cache:
+                  enabled: true
+                  semantic_cache: true
+                  ttl_hours: 168
+          
+          - name: complexity-routing
+            condition:
+              type: complexity
+            actions:
+              - when: "complexity <= 0.5"
+                prefer_model: deepseek-coder-33b-local
+              - when: "complexity > 0.5"
+                prefer_model: codellama-34b-local
+
+    cascade_config:
+      timeout_behavior:
+        on_timeout: cascade_next
+        max_retries: 2
+        backoff_multiplier: 1.5
+      
+      health_fallback:
+        on_unhealthy: cascade_next
+        unhealthy_threshold: 2
+        recovery_check_interval: 60s
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: offline-compliance-config
+  namespace: platform-offline
+data:
+  compliance_mode.yaml: |
+    mode: hipaa
+
+    restrictions:
+      models:
+        blocked:
+          - "gpt-*"
+          - "claude-*"
+          - "*-cloud"
+        allowed:
+          - "codellama-34b-local"
+          - "deepseek-coder-33b-local"
+        data_residency: on-premise
+        air_gapped: true
+      
+      data:
+        no_code_transmission: true
+        no_external_api: true
+        phi_detection_enabled: true
+        phi_redaction_enabled: true
+        encryption_required: true
+        encryption_at_rest: true
+        encryption_in_transit: true
+      
+      network:
+        allow_external_api: false
+        internal_only: true
+      
+      audit:
+        log_all_access: true
+        access_control_audit: true
+        retention_days: 2190
+        breach_notification: true
+
+    thresholds:
+      p95_latency_ms: 15000
+      error_rate: 0.02
+      accuracy_delta: 0.02
+      security_pass_rate: 0.99
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: offline-cache-config
+  namespace: platform-offline
+data:
+  cache.yaml: |
+    semantic_cache:
+      enabled: true
+      similarity_threshold: 0.92
+      embedding_model: "http://embedding-server.platform-offline.svc:80"
+      max_cache_size_gb: 50
+      ttl_hours: 168
+
+    response_cache:
+      enabled: true
+      levels:
+        - name: memory
+          ttl_minutes: 30
+          max_size_mb: 512
+        - name: redis
+          ttl_hours: 24
+          max_size_gb: 10
+
+    code_hash_cache:
+      enabled: true
+      algorithm: sha256
+      ttl_hours: 168
+
+    warm_up:
+      enabled: true
+      common_patterns_path: /data/common-patterns/
+      run_on_startup: true

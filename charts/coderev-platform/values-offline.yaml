@@ -1,0 +1,279 @@
+# Offline/Air-Gapped Values for CodeRev Platform
+# Use: helm install coderev . -f values-offline.yaml
+#
+# This configuration is designed for environments with:
+# - No internet access
+# - Local AI models only
+# - Strict network isolation
+# - Pre-loaded model weights
+
+# Global settings
+global:
+  imageRegistry: internal-registry.local:5000
+  imagePullSecrets:
+    - name: internal-registry-secret
+
+# Version Configuration
+versions:
+  v1:
+    enabled: true
+    namespace: platform-v1-exp-offline
+    replicas: 1
+    autoscaling:
+      enabled: true
+      minReplicas: 0
+      maxReplicas: 5
+      targetCPUUtilization: 70
+    resources:
+      limits:
+        cpu: "8"
+        memory: "32Gi"
+        nvidia.com/gpu: "1"
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+
+  v2:
+    enabled: true
+    namespace: platform-v2-stable-offline
+    replicas: 2
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilization: 60
+    resources:
+      limits:
+        cpu: "8"
+        memory: "32Gi"
+        nvidia.com/gpu: "1"
+      requests:
+        cpu: "2"
+        memory: "8Gi"
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+
+  v3:
+    enabled: true
+    namespace: platform-v3-legacy-offline
+    replicas: 1
+
+# VCAI Service
+vcai:
+  image:
+    repository: coderev/vcai
+    tag: "1.0.0-offline"
+    pullPolicy: IfNotPresent
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      # Block all external access
+      nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    hosts:
+      - host: api.coderev.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  env:
+    LOG_LEVEL: INFO
+    ENVIRONMENT: production
+    OFFLINE_MODE: "true"
+
+# CRAI Service
+crai:
+  image:
+    repository: coderev/crai
+    tag: "1.0.0-offline"
+    pullPolicy: IfNotPresent
+
+# Lifecycle Controller
+lifecycleController:
+  enabled: true
+  replicas: 2
+
+  image:
+    repository: coderev/lifecycle-controller
+    tag: "1.0.0-offline"
+
+  config:
+    evaluationIntervalSeconds: 600 # Less frequent for offline
+    promotionThresholds:
+      p95LatencyMs: 15000 # Higher for local models
+      errorRate: 0.02
+      accuracyDelta: 0.02
+      securityPassRate: 0.99
+      costIncreaseMax: 0.10 # Cost is fixed for local models
+
+# Gateway
+gateway:
+  shadowTraffic:
+    enabled: true
+    percentage: 100
+
+  grayScale:
+    enabled: true
+    phases: [5, 25, 50, 100]
+    pauseBetweenPhases: true
+
+# Argo Rollouts
+argoRollouts:
+  enabled: true
+
+  analysis:
+    enabled: true
+    successCondition: "0.95" # Slightly lower threshold
+    failureLimit: 5
+
+# AI Models - LOCAL ONLY
+aiModels:
+  # DISABLED - No external API access
+  openai:
+    enabled: false
+
+  anthropic:
+    enabled: false
+
+  # LOCAL MODELS
+  local:
+    enabled: true
+    storageClass: local-path
+    storageSize: 500Gi
+
+    codellama:
+      enabled: true
+      image: internal-registry.local:5000/vllm/vllm-openai:v0.3.0
+      modelPath: /models/codellama-34b-instruct
+      gpuCount: 1
+
+    deepseek:
+      enabled: true
+      image: internal-registry.local:5000/vllm/vllm-openai:v0.3.0
+      modelPath: /models/deepseek-coder-33b-instruct
+      gpuCount: 1
+
+# Semantic Cache - REQUIRED for offline
+semanticCache:
+  enabled: true
+  replicas: 2
+
+  config:
+    similarityThreshold: 0.90 # Slightly lower for more cache hits
+    maxCacheSize: 500000
+    maxCacheSizeMB: 50000
+    ttlHours: 720 # 30 days
+    embeddingServerUrl: http://embedding-server:8102
+
+  embeddingServer:
+    replicas: 2
+    image: internal-registry.local:5000/sentence-transformers/all-MiniLM-L6-v2:latest
+    model: all-MiniLM-L6-v2
+
+# Frontend
+frontend:
+  enabled: true
+  replicas: 2
+
+  image:
+    repository: coderev/frontend
+    tag: "1.0.0-offline"
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    hosts:
+      - host: coderev.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+# Monitoring
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+
+  grafana:
+    enabled: true
+
+  alerts:
+    enabled: true
+
+# Compliance - Standard (adjust as needed)
+compliance:
+  mode: standard
+
+  audit:
+    enabled: true
+    retentionDays: 365
+
+  encryption:
+    atRest: true
+    inTransit: true
+
+# Network Policies - STRICT
+networkPolicies:
+  enabled: true
+  strictIsolation: true
+
+# Resource Quotas
+resourceQuotas:
+  enabled: true
+
+  v1:
+    cpu: "50"
+    memory: "200Gi"
+    pods: "50"
+
+  v2:
+    cpu: "100"
+    memory: "400Gi"
+    pods: "100"
+
+  v3:
+    cpu: "20"
+    memory: "80Gi"
+    pods: "20"
+
+# PostgreSQL - in-cluster
+postgresql:
+  enabled: true
+  image:
+    registry: internal-registry.local:5000
+    repository: bitnami/postgresql
+    tag: "16"
+  auth:
+    username: coderev
+    database: coderev
+    existingSecret: postgresql-secret
+  primary:
+    persistence:
+      size: 100Gi
+      storageClass: local-path
+  readReplicas:
+    replicaCount: 1
+
+# Redis - in-cluster
+redis:
+  enabled: true
+  image:
+    registry: internal-registry.local:5000
+    repository: bitnami/redis
+    tag: "7"
+  auth:
+    existingSecret: redis-secret
+  master:
+    persistence:
+      size: 20Gi
+      storageClass: local-path
+  replica:
+    replicaCount: 1

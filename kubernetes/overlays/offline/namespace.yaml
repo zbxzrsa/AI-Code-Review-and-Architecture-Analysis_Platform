@@ -1,0 +1,106 @@
+# Offline Deployment Namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-offline
+  labels:
+    name: platform-offline
+    environment: offline
+    compliance: hipaa
+    tier: platform
+  annotations:
+    description: "Air-gapped deployment with local models only"
+    network-isolation: strict
+    external-api: disabled
+---
+# Resource Quota for Offline Namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: offline-quota
+  namespace: platform-offline
+spec:
+  hard:
+    requests.cpu: "64"
+    requests.memory: "256Gi"
+    requests.nvidia.com/gpu: "4"
+    limits.cpu: "128"
+    limits.memory: "512Gi"
+    limits.nvidia.com/gpu: "4"
+    persistentvolumeclaims: "10"
+    pods: "50"
+    services: "20"
+---
+# Limit Range
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: offline-limits
+  namespace: platform-offline
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: "2"
+        memory: "4Gi"
+      defaultRequest:
+        cpu: "500m"
+        memory: "1Gi"
+      max:
+        cpu: "32"
+        memory: "128Gi"
+        nvidia.com/gpu: "4"
+---
+# Network Policy - Block ALL external traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: offline-strict-isolation
+  namespace: platform-offline
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from same namespace
+    - from:
+        - podSelector: {}
+    # Allow from platform namespaces
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: platform
+    # Allow from monitoring
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: platform-monitoring
+  egress:
+    # Allow to same namespace
+    - to:
+        - podSelector: {}
+    # Allow to platform namespaces
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              tier: platform
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Block all external (0.0.0.0/0 is NOT allowed)
+    # Only RFC1918 private ranges allowed
+    - to:
+        - ipBlock:
+            cidr: 10.0.0.0/8
+        - ipBlock:
+            cidr: 172.16.0.0/12
+        - ipBlock:
+            cidr: 192.168.0.0/16

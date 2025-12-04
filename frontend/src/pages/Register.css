@@ -24,28 +24,49 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #6366f1 100%);
     z-index: 0;
 }
 
+/* Pixel grid pattern */
 .register-background::before {
     content: '';
     position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 60%);
-    animation: rotate 30s linear infinite;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 8px 8px;
 }
 
-@keyframes rotate {
-    from {
-        transform: rotate(0deg);
+/* Floating pixel decorations */
+.register-background::after {
+    content: '';
+    position: absolute;
+    top: 15%;
+    right: 15%;
+    width: 8px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.35);
+    box-shadow:
+        16px 8px 0 rgba(255, 255, 255, 0.25),
+        8px 24px 0 rgba(255, 255, 255, 0.2),
+        -60vw 20vh 0 rgba(255, 255, 255, 0.3),
+        -58vw 22vh 0 rgba(255, 255, 255, 0.2),
+        30vw 60vh 0 rgba(255, 255, 255, 0.25),
+        32vw 58vh 0 rgba(255, 255, 255, 0.15);
+    animation: pixelFloat 5s ease-in-out infinite;
+}
+
+@keyframes pixelFloat {
+
+    0%,
+    100% {
+        transform: translateY(0);
     }
 
-    to {
-        transform: rotate(360deg);
+    50% {
+        transform: translateY(-6px);
     }
 }
 
@@ -54,9 +75,24 @@
     width: 100%;
     max-width: 440px;
     border-radius: 16px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 25px 60px rgba(20, 184, 166, 0.3);
     position: relative;
     z-index: 1;
+    background: white;
+}
+
+/* Gradient border effect */
+.register-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(135deg, #14b8a6, #06b6d4, #6366f1);
+    border-radius: 18px;
+    z-index: -1;
+    opacity: 0.5;
 }
 
 /* 头部样式 / Header styles */

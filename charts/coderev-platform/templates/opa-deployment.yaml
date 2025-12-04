@@ -1,0 +1,95 @@
+{{- if .Values.opa.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: opa
+spec:
+  replicas: {{ .Values.opa.replicas }}
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+        {{- include "coderev.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8181"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: opa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      priorityClassName: control-plane-priority
+      containers:
+        - name: opa
+          image: {{ .Values.opa.image.repository }}:{{ .Values.opa.image.tag }}
+          imagePullPolicy: IfNotPresent
+          args:
+            - "run"
+            - "--server"
+            - "--addr=0.0.0.0:8181"
+            - "--diagnostic-addr=0.0.0.0:8282"
+            - "--set=decision_logs.console=true"
+            - "--set=status.console=true"
+            - "/policies"
+          ports:
+            - containerPort: 8181
+              name: http
+              protocol: TCP
+            - containerPort: 8282
+              name: diagnostic
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+          livenessProbe:
+            httpGet:
+              path: /health?plugins
+              port: 8181
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health?plugins
+              port: 8181
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: policies
+              mountPath: /policies
+              readOnly: true
+      volumes:
+        - name: policies
+          configMap:
+            name: {{ .Values.opa.policies.configMapName }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: opa
+                topologyKey: kubernetes.io/hostname
+{{- end }}

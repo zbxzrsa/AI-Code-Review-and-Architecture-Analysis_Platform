@@ -1,0 +1,394 @@
+{
+  "dashboard": {
+    "title": "Three-Version Comparison Dashboard",
+    "uid": "three-version-comparison",
+    "tags": ["platform", "v1", "v2", "v3", "comparison"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "templating": {
+      "list": [
+        {
+          "name": "timeRange",
+          "type": "interval",
+          "options": ["5m", "15m", "1h", "6h", "24h", "7d"]
+        }
+      ]
+    },
+    "panels": [
+      {
+        "title": "System Overview",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}
+      },
+      {
+        "title": "V1 Shadow Traffic",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 0, "y": 1},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{namespace=\"platform-v1-exp\"}[$timeRange]))",
+            "legendFormat": "Shadow RPS"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "blue", "value": null}
+              ]
+            },
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "title": "V2 Production Traffic",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 8, "y": 1},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{namespace=\"platform-v2-stable\"}[$timeRange]))",
+            "legendFormat": "Production RPS"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null}
+              ]
+            },
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "title": "V3 Recovery Traffic",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 16, "y": 1},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{namespace=\"platform-v3-legacy\"}[$timeRange]))",
+            "legendFormat": "Recovery RPS"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "orange", "value": null}
+              ]
+            },
+            "unit": "reqps"
+          }
+        }
+      },
+      {
+        "title": "Latency Comparison",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 5}
+      },
+      {
+        "title": "P95 Latency Comparison (V1 vs V2 vs V3)",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 6},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"platform-v1-exp\"}[$timeRange])) by (le)) * 1000",
+            "legendFormat": "V1 Shadow P95"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"platform-v2-stable\"}[$timeRange])) by (le)) * 1000",
+            "legendFormat": "V2 Production P95"
+          },
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"platform-v3-legacy\"}[$timeRange])) by (le)) * 1000",
+            "legendFormat": "V3 Legacy P95"
+          },
+          {
+            "expr": "3000",
+            "legendFormat": "SLO Threshold (3000ms)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "ms",
+            "custom": {
+              "thresholdsStyle": {"mode": "line"}
+            },
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 2000},
+                {"color": "red", "value": 3000}
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "SLO Threshold (3000ms)"},
+              "properties": [
+                {"id": "color", "value": {"mode": "fixed", "fixedColor": "red"}},
+                {"id": "custom.lineStyle", "value": {"fill": "dash"}}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "title": "Accuracy Comparison",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 14}
+      },
+      {
+        "title": "Accuracy Score Comparison",
+        "type": "timeseries",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 15},
+        "targets": [
+          {
+            "expr": "avg(analysis_accuracy{namespace=\"platform-v1-exp\"})",
+            "legendFormat": "V1 Shadow Accuracy"
+          },
+          {
+            "expr": "avg(analysis_accuracy{namespace=\"platform-v2-stable\"})",
+            "legendFormat": "V2 Production Accuracy (Baseline)"
+          },
+          {
+            "expr": "avg(analysis_accuracy{namespace=\"platform-v3-legacy\"})",
+            "legendFormat": "V3 Legacy Accuracy"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        }
+      },
+      {
+        "title": "Accuracy Delta (V1 vs Baseline)",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 15},
+        "targets": [
+          {
+            "expr": "avg(analysis_accuracy{namespace=\"platform-v1-exp\"}) - avg(analysis_accuracy{namespace=\"platform-v2-stable\"})",
+            "legendFormat": "Delta"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": -0.1,
+            "max": 0.1,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 0},
+                {"color": "green", "value": 0.02}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Error Rates",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 23}
+      },
+      {
+        "title": "Error Rate Comparison",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 16, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{namespace=\"platform-v1-exp\",status=~\"5..\"}[$timeRange])) / sum(rate(http_requests_total{namespace=\"platform-v1-exp\"}[$timeRange]))",
+            "legendFormat": "V1 Error Rate"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{namespace=\"platform-v2-stable\",status=~\"5..\"}[$timeRange])) / sum(rate(http_requests_total{namespace=\"platform-v2-stable\"}[$timeRange]))",
+            "legendFormat": "V2 Error Rate"
+          },
+          {
+            "expr": "0.02",
+            "legendFormat": "SLO Threshold (2%)"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "max": 0.1,
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 0.01},
+                {"color": "red", "value": 0.02}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Security Pass Rate",
+        "type": "gauge",
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 24},
+        "targets": [
+          {
+            "expr": "sum(rate(security_checks_passed{namespace=\"platform-v1-exp\"}[$timeRange])) / sum(rate(security_checks_total{namespace=\"platform-v1-exp\"}[$timeRange]))",
+            "legendFormat": "V1 Security Pass Rate"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percentunit",
+            "min": 0.9,
+            "max": 1,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": null},
+                {"color": "yellow", "value": 0.95},
+                {"color": "green", "value": 0.99}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Gray-Scale Progress",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 30}
+      },
+      {
+        "title": "Current Gray-Scale Phase",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 0, "y": 31},
+        "targets": [
+          {
+            "expr": "argo_rollout_info{namespace=\"platform-v2-stable\",rollout=\"vcai-rollout\"}",
+            "legendFormat": "{{phase}}"
+          }
+        ]
+      },
+      {
+        "title": "Traffic Split",
+        "type": "piechart",
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 31},
+        "targets": [
+          {
+            "expr": "argo_rollout_canary_weight{namespace=\"platform-v2-stable\"}",
+            "legendFormat": "Canary %"
+          },
+          {
+            "expr": "100 - argo_rollout_canary_weight{namespace=\"platform-v2-stable\"}",
+            "legendFormat": "Stable %"
+          }
+        ]
+      },
+      {
+        "title": "Rollback Count (24h)",
+        "type": "stat",
+        "gridPos": {"h": 4, "w": 8, "x": 16, "y": 31},
+        "targets": [
+          {
+            "expr": "sum(increase(argo_rollout_aborted_total{namespace=\"platform-v2-stable\"}[24h]))",
+            "legendFormat": "Rollbacks"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {"mode": "thresholds"},
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 3}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Cost Metrics",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 37}
+      },
+      {
+        "title": "Cost per Request Comparison",
+        "type": "timeseries",
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 38},
+        "targets": [
+          {
+            "expr": "avg(request_cost{namespace=\"platform-v1-exp\"})",
+            "legendFormat": "V1 Cost/Request"
+          },
+          {
+            "expr": "avg(request_cost{namespace=\"platform-v2-stable\"})",
+            "legendFormat": "V2 Cost/Request"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "decimals": 4
+          }
+        }
+      },
+      {
+        "title": "Daily Cost Budget",
+        "type": "gauge",
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 38},
+        "targets": [
+          {
+            "expr": "sum(increase(request_cost{namespace=\"platform-v1-exp\"}[24h])) / 1000",
+            "legendFormat": "V1 Daily Spend"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "currencyUSD",
+            "min": 0,
+            "max": 500,
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 400},
+                {"color": "red", "value": 450}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "title": "Top Rollback Reasons",
+        "type": "row",
+        "gridPos": {"h": 1, "w": 24, "x": 0, "y": 44}
+      },
+      {
+        "title": "Top 10 Rollback Reasons (7d)",
+        "type": "table",
+        "gridPos": {"h": 6, "w": 24, "x": 0, "y": 45},
+        "targets": [
+          {
+            "expr": "topk(10, sum by (reason) (increase(argo_rollout_aborted_total{namespace=\"platform-v2-stable\"}[7d])))",
+            "format": "table"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "renameByName": {
+                "reason": "Reason",
+                "Value": "Count"
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

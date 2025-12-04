@@ -1,0 +1,231 @@
+# Routing Policies - Model/Prompt Selection Logic
+# Versioned and signed policy definitions
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: routing-policies
+  namespace: platform-control-plane
+  labels:
+    component: ai-core
+    type: policy
+data:
+  policies.yaml: |
+    routing_policies:
+      # Default routing policy
+      - id: default-routing
+        version: "2.0.0"
+        signature: "sha256:rp2abc..."
+        priority: 0
+        status: active
+        
+        rules:
+          # Route based on task complexity
+          - name: complexity-based
+            condition:
+              type: complexity
+            actions:
+              - when: "complexity <= 0.3"
+                model_group: cost-optimized
+                prompt: code-review-v3
+                budget:
+                  max_cost_usd: 0.01
+                  max_latency_ms: 2000
+                  
+              - when: "complexity > 0.3 AND complexity <= 0.7"
+                model_group: primary-cascade
+                prompt: code-review-v3
+                budget:
+                  max_cost_usd: 0.05
+                  max_latency_ms: 3000
+                  
+              - when: "complexity > 0.7"
+                model_group: primary-cascade
+                prompt: code-review-v4-exp
+                budget:
+                  max_cost_usd: 0.10
+                  max_latency_ms: 5000
+      
+      # Security-focused routing
+      - id: security-routing
+        version: "1.5.0"
+        signature: "sha256:sr1def..."
+        priority: 100
+        status: active
+        
+        rules:
+          - name: security-scan
+            condition:
+              type: task
+              value: security-audit
+            actions:
+              - model_group: security-focused
+                prompt: security-audit-v2
+                budget:
+                  max_cost_usd: 0.15
+                  max_latency_ms: 10000
+                require_red_team_validated: true
+      
+      # Language-specific routing
+      - id: language-routing
+        version: "1.2.0"
+        signature: "sha256:lr1ghi..."
+        priority: 50
+        status: active
+        
+        rules:
+          - name: python-routing
+            condition:
+              type: language
+              value: python
+            actions:
+              - prefer_models:
+                  - claude-3-5-sonnet
+                  - gpt-4o
+                prompt_context:
+                  framework_hints: true
+                  
+          - name: javascript-routing
+            condition:
+              type: language
+              value: [javascript, typescript]
+            actions:
+              - prefer_models:
+                  - gpt-4o
+                  - claude-3-5-sonnet
+                prompt_context:
+                  include_npm_context: true
+                  
+          - name: rust-routing
+            condition:
+              type: language
+              value: rust
+            actions:
+              - prefer_models:
+                  - claude-3-opus
+                  - gpt-4-turbo
+                prompt_context:
+                  include_cargo_context: true
+      
+      # Compliance-based routing
+      - id: compliance-routing
+        version: "1.0.0"
+        signature: "sha256:cr1jkl..."
+        priority: 200
+        status: active
+        
+        rules:
+          - name: financial-compliance
+            condition:
+              type: compliance_label
+              value: financial
+            actions:
+              - block_models:
+                  - "*-local"  # No local models for financial
+                require_audit_log: true
+                data_residency: us-only
+                prompt_constraints:
+                  no_external_calls: true
+                  
+          - name: healthcare-compliance
+            condition:
+              type: compliance_label
+              value: hipaa
+            actions:
+              - block_models:
+                  - "*"
+                allow_models:
+                  - codellama-34b  # Local only
+                  - deepseek-coder-33b
+                require_audit_log: true
+                data_residency: on-premise
+      
+      # Budget-aware routing
+      - id: budget-routing
+        version: "1.1.0"
+        signature: "sha256:br1mno..."
+        priority: 75
+        status: active
+        
+        rules:
+          - name: budget-exceeded
+            condition:
+              type: budget_status
+              value: exceeded
+            actions:
+              - model_group: cost-optimized
+                alert: budget-exceeded
+                
+          - name: budget-warning
+            condition:
+              type: budget_status
+              value: warning  # >80% consumed
+            actions:
+              - prefer_models:
+                  - codellama-34b
+                  - deepseek-coder-33b
+                  - claude-3-5-sonnet
+
+    # Cascading and fallback configuration
+    cascade_config:
+      # Timeout cascade
+      timeout_behavior:
+        on_timeout: cascade_next
+        max_retries: 3
+        backoff_multiplier: 1.5
+        
+      # Health-based fallback
+      health_fallback:
+        on_unhealthy: cascade_next
+        unhealthy_threshold: 3
+        recovery_check_interval: 30s
+        
+      # Cost-based cascade
+      cost_cascade:
+        on_budget_risk: use_cheaper
+        budget_risk_threshold: 0.9
+
+    # Request-level budget enforcement
+    budget_enforcement:
+      default_max_cost_per_request: 0.10
+      default_max_latency_ms: 5000
+      
+      tiers:
+        enterprise:
+          max_cost_per_request: 0.50
+          max_latency_ms: 10000
+          priority: high
+          
+        professional:
+          max_cost_per_request: 0.20
+          max_latency_ms: 5000
+          priority: medium
+          
+        free:
+          max_cost_per_request: 0.02
+          max_latency_ms: 3000
+          priority: low
+          rate_limit_rpm: 10
+
+    # Feature extraction for routing decisions
+    feature_extraction:
+      - name: complexity
+        type: computed
+        factors:
+          - lines_of_code: weight=0.2
+          - cyclomatic_complexity: weight=0.3
+          - dependency_count: weight=0.2
+          - file_count: weight=0.15
+          - language_count: weight=0.15
+          
+      - name: language
+        type: detected
+        fallback: unknown
+        
+      - name: framework
+        type: detected
+        sources:
+          - package.json
+          - requirements.txt
+          - Cargo.toml
+          - go.mod

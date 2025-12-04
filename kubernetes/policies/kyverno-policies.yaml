@@ -1,0 +1,354 @@
+# Kyverno Policies - Cluster-side enforcement
+# Blocks non-compliant deployments
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-signed-images
+  annotations:
+    policies.kyverno.io/title: Require Signed Images
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      All container images in production namespaces must be signed with Cosign.
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: verify-signature
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v2-stable
+                - platform-v1-exp
+      verifyImages:
+        - imageReferences:
+            - "gcr.io/*/vcai*"
+            - "gcr.io/*/crai*"
+          attestors:
+            - entries:
+                - keyless:
+                    subject: "https://github.com/*"
+                    issuer: "https://token.actions.githubusercontent.com"
+                    rekor:
+                      url: https://rekor.sigstore.dev
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-resource-limits
+  annotations:
+    policies.kyverno.io/title: Enforce Resource Limits
+    policies.kyverno.io/category: Resource Management
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: validate-resources
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v2-stable
+                - platform-v1-exp
+                - platform-v3-legacy
+      validate:
+        message: "CPU and memory limits are required"
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    cpu: "?*"
+                    memory: "?*"
+                  requests:
+                    cpu: "?*"
+                    memory: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-security-context
+  annotations:
+    policies.kyverno.io/title: Enforce Security Context
+    policies.kyverno.io/category: Pod Security
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: run-as-non-root
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v2-stable
+      validate:
+        message: "Containers must run as non-root"
+        pattern:
+          spec:
+            securityContext:
+              runAsNonRoot: true
+            containers:
+              - securityContext:
+                  runAsNonRoot: true
+                  allowPrivilegeEscalation: false
+                  readOnlyRootFilesystem: true
+
+    - name: drop-capabilities
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v2-stable
+      validate:
+        message: "Containers must drop all capabilities"
+        pattern:
+          spec:
+            containers:
+              - securityContext:
+                  capabilities:
+                    drop:
+                      - ALL
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-priority-class
+  annotations:
+    policies.kyverno.io/title: Enforce Priority Classes
+    policies.kyverno.io/category: Scheduling
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: v2-must-have-production-priority
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v2-stable
+      validate:
+        message: "V2 pods must use production-critical priority class"
+        pattern:
+          spec:
+            priorityClassName: production-critical
+
+    - name: v1-must-have-experiment-priority
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v1-exp
+      validate:
+        message: "V1 pods must use experiment-priority priority class"
+        pattern:
+          spec:
+            priorityClassName: experiment-priority
+
+    - name: v3-must-have-legacy-priority
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v3-legacy
+      validate:
+        message: "V3 pods must use legacy-priority priority class"
+        pattern:
+          spec:
+            priorityClassName: legacy-priority
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: block-cross-version-access
+  annotations:
+    policies.kyverno.io/title: Block Cross-Version Network Access
+    policies.kyverno.io/category: Network Security
+    policies.kyverno.io/severity: critical
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: v1-cannot-access-v2
+      match:
+        any:
+          - resources:
+              kinds:
+                - NetworkPolicy
+              namespaces:
+                - platform-v1-exp
+      validate:
+        message: "V1 pods cannot have egress to V2 namespace"
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.egress[].to[].namespaceSelector.matchLabels.version || '' }}"
+                operator: Equals
+                value: "v2"
+
+    - name: v3-cannot-access-v2
+      match:
+        any:
+          - resources:
+              kinds:
+                - NetworkPolicy
+              namespaces:
+                - platform-v3-legacy
+      validate:
+        message: "V3 pods cannot have egress to V2 namespace"
+        deny:
+          conditions:
+            any:
+              - key: "{{ request.object.spec.egress[].to[].namespaceSelector.matchLabels.version || '' }}"
+                operator: Equals
+                value: "v2"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-labels
+  annotations:
+    policies.kyverno.io/title: Require Standard Labels
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: low
+spec:
+  validationFailureAction: Audit # Start with audit
+  background: true
+  rules:
+    - name: require-version-labels
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - StatefulSet
+                - DaemonSet
+              namespaces:
+                - platform-v1-exp
+                - platform-v2-stable
+                - platform-v3-legacy
+      validate:
+        message: "Resources must have version, environment, and app labels"
+        pattern:
+          metadata:
+            labels:
+              version: "?*"
+              environment: "?*"
+              app: "?*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: enforce-image-registry
+  annotations:
+    policies.kyverno.io/title: Enforce Image Registry
+    policies.kyverno.io/category: Supply Chain Security
+    policies.kyverno.io/severity: high
+spec:
+  validationFailureAction: Enforce
+  background: true
+  rules:
+    - name: only-gcr-images
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v2-stable
+      validate:
+        message: "Only images from gcr.io are allowed in production"
+        pattern:
+          spec:
+            containers:
+              - image: "gcr.io/*"
+            initContainers:
+              - image: "gcr.io/*"
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: generate-network-policy
+  annotations:
+    policies.kyverno.io/title: Auto-Generate Default Network Policy
+    policies.kyverno.io/category: Network Security
+    policies.kyverno.io/severity: medium
+spec:
+  rules:
+    - name: generate-default-deny
+      match:
+        any:
+          - resources:
+              kinds:
+                - Namespace
+              selector:
+                matchLabels:
+                  version: "*"
+      generate:
+        kind: NetworkPolicy
+        name: default-deny-all
+        namespace: "{{ request.object.metadata.name }}"
+        synchronize: true
+        data:
+          spec:
+            podSelector: {}
+            policyTypes:
+              - Ingress
+              - Egress
+---
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: mutate-add-sidecar
+  annotations:
+    policies.kyverno.io/title: Auto-inject OTel Sidecar
+    policies.kyverno.io/category: Observability
+    policies.kyverno.io/severity: low
+spec:
+  rules:
+    - name: inject-otel-sidecar
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+              namespaces:
+                - platform-v1-exp
+                - platform-v2-stable
+              selector:
+                matchLabels:
+                  otel-inject: "true"
+      mutate:
+        patchStrategicMerge:
+          spec:
+            containers:
+              - name: otel-collector
+                image: otel/opentelemetry-collector:0.88.0
+                ports:
+                  - containerPort: 4317
+                    protocol: TCP
+                resources:
+                  limits:
+                    cpu: "100m"
+                    memory: "128Mi"
+                  requests:
+                    cpu: "50m"
+                    memory: "64Mi"

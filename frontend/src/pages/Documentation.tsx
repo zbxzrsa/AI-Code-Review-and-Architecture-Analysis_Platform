@@ -42,9 +42,10 @@ import {
   HomeOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import './Documentation.css';
 
 const { Title, Text, Paragraph } = Typography;
-const { Panel } = Collapse;
+// const { Panel } = Collapse;
 
 interface DocSection {
   key: string;

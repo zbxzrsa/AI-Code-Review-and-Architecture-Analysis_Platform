@@ -1,0 +1,249 @@
+# HIPAA Compliant Values for CodeRev Platform
+# Use: helm install coderev . -f values-hipaa.yaml
+#
+# This configuration enforces:
+# - Local AI models only (no external API calls)
+# - Strict network isolation
+# - Extended audit log retention (6 years)
+# - Encryption at rest and in transit
+
+# Global settings
+global:
+  imageRegistry: internal-registry.healthcare.local
+  imagePullSecrets:
+    - name: internal-registry-secret
+
+# Version Configuration
+versions:
+  v1:
+    enabled: true
+    namespace: platform-v1-exp-hipaa
+    replicas: 1
+    autoscaling:
+      enabled: true
+      minReplicas: 0
+      maxReplicas: 5
+      targetCPUUtilization: 70
+    resources:
+      limits:
+        cpu: "4"
+        memory: "8Gi"
+        nvidia.com/gpu: "1"
+      requests:
+        cpu: "1"
+        memory: "2Gi"
+
+  v2:
+    enabled: true
+    namespace: platform-v2-stable-hipaa
+    replicas: 3
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilization: 60
+    resources:
+      limits:
+        cpu: "8"
+        memory: "16Gi"
+        nvidia.com/gpu: "1"
+      requests:
+        cpu: "2"
+        memory: "4Gi"
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 2
+
+  v3:
+    enabled: true
+    namespace: platform-v3-legacy-hipaa
+    replicas: 1
+
+# VCAI Service
+vcai:
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      # Internal only
+      nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12"
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    hosts:
+      - host: api.coderev.healthcare.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: api-hipaa-tls
+        hosts:
+          - api.coderev.healthcare.local
+
+  env:
+    LOG_LEVEL: INFO
+    ENVIRONMENT: production
+    COMPLIANCE_MODE: hipaa
+
+# Lifecycle Controller
+lifecycleController:
+  enabled: true
+  replicas: 2
+
+  config:
+    evaluationIntervalSeconds: 300
+    promotionThresholds:
+      # Stricter thresholds for healthcare
+      p95LatencyMs: 15000 # Higher for local models
+      errorRate: 0.01 # Stricter error rate
+      accuracyDelta: 0.03
+      securityPassRate: 0.999 # Very strict security
+      costIncreaseMax: 0.05
+
+# Gateway
+gateway:
+  shadowTraffic:
+    enabled: true
+    percentage: 100
+
+  grayScale:
+    enabled: true
+    phases: [1, 5, 10, 25, 50, 100] # More gradual rollout
+    pauseBetweenPhases: true
+
+# AI Models - LOCAL ONLY for HIPAA
+aiModels:
+  # DISABLED - No external API calls
+  openai:
+    enabled: false
+
+  anthropic:
+    enabled: false
+
+  # LOCAL MODELS ONLY
+  local:
+    enabled: true
+    codellama:
+      enabled: true
+      modelPath: /models/codellama-34b
+      gpuRequired: true
+    deepseek:
+      enabled: true
+      modelPath: /models/deepseek-coder-33b
+      gpuRequired: true
+
+# Semantic Cache - enabled for offline
+semanticCache:
+  enabled: true
+  replicas: 2
+
+  config:
+    similarityThreshold: 0.95 # Higher threshold for accuracy
+    maxCacheSizeMB: 100000
+    ttlHours: 720 # 30 days
+
+# Frontend
+frontend:
+  enabled: true
+  replicas: 2
+
+  ingress:
+    enabled: true
+    className: nginx
+    annotations:
+      nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12"
+    hosts:
+      - host: coderev.healthcare.local
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: frontend-hipaa-tls
+        hosts:
+          - coderev.healthcare.local
+
+# Monitoring
+monitoring:
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      interval: 30s
+
+  grafana:
+    enabled: true
+
+  alerts:
+    enabled: true
+
+# HIPAA Compliance Settings
+compliance:
+  mode: hipaa
+
+  audit:
+    enabled: true
+    retentionDays: 2190 # 6 years for HIPAA
+
+  encryption:
+    atRest: true
+    inTransit: true
+
+# Strict Network Policies
+networkPolicies:
+  enabled: true
+  strictIsolation: true
+
+  # Block all external egress
+  allowedNamespaces:
+    - platform-control-plane
+    - platform-monitoring
+
+# Resource Quotas
+resourceQuotas:
+  enabled: true
+
+  v1:
+    cpu: "20"
+    memory: "80Gi"
+    pods: "30"
+
+  v2:
+    cpu: "100"
+    memory: "400Gi"
+    pods: "100"
+
+  v3:
+    cpu: "10"
+    memory: "20Gi"
+    pods: "20"
+
+# PostgreSQL - internal with encryption
+postgresql:
+  enabled: true
+  auth:
+    username: coderev
+    database: coderev
+    existingSecret: postgresql-hipaa-secret
+  primary:
+    persistence:
+      size: 500Gi
+      storageClass: encrypted-ssd
+    # Enable TLS
+    extraEnvVars:
+      - name: POSTGRESQL_ENABLE_TLS
+        value: "yes"
+  readReplicas:
+    replicaCount: 2
+
+# Redis - internal with encryption
+redis:
+  enabled: true
+  auth:
+    existingSecret: redis-hipaa-secret
+  master:
+    persistence:
+      size: 50Gi
+      storageClass: encrypted-ssd
+  replica:
+    replicaCount: 2
+  # Enable TLS
+  tls:
+    enabled: true

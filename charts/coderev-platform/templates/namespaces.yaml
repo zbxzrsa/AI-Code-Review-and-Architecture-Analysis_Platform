@@ -1,0 +1,54 @@
+{{- if .Values.versions.v1.enabled }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.versions.v1.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    version: v1
+    environment: experiment
+    tier: platform
+{{- end }}
+---
+{{- if .Values.versions.v2.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    version: v2
+    environment: production
+    tier: platform
+{{- end }}
+---
+{{- if .Values.versions.v3.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.versions.v3.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    version: v3
+    environment: legacy
+    tier: platform
+{{- end }}
+---
+# Control Plane Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    tier: control-plane
+---
+# Monitoring Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-monitoring
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    tier: monitoring

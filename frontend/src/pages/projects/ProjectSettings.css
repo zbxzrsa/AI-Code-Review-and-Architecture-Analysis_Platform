@@ -2,25 +2,53 @@
  * Project Settings Page Styles
  */
 
+/* ================================================
+   Project Settings - Cool Light Theme
+   ================================================ */
+
 .project-settings-container {
     padding: 24px;
     max-width: 1200px;
     margin: 0 auto;
+    min-height: calc(100vh - 64px);
+    background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 50%, #eef2ff 100%);
 }
 
-.settings-header {
+.project-settings-container .settings-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #6366f1 0%, #14b8a6 100%);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(99, 102, 241, 0.25);
 }
 
-.settings-header h3 {
+.project-settings-container .settings-header h3 {
     margin-bottom: 4px;
+    color: white !important;
+}
+
+.project-settings-container .settings-header .ant-typography-secondary {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.project-settings-container .settings-header .ant-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.project-settings-container .settings-header .ant-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .settings-card {
     min-height: 500px;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
 }
 
 .settings-card .ant-card-body {

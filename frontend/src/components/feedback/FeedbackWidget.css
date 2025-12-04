@@ -1,0 +1,397 @@
+/* ================================================
+   Feedback Widget - Cool Light Theme
+   ================================================ */
+
+/* Trigger Button */
+.feedback-trigger-btn {
+    position: fixed;
+    z-index: 1000;
+    background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+    border: none;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.3);
+    border-radius: 24px;
+    padding: 8px 20px;
+    height: auto;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.feedback-trigger-btn:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 8px 30px rgba(6, 182, 212, 0.4);
+    background: linear-gradient(135deg, #0891b2 0%, #4f46e5 100%);
+}
+
+.feedback-trigger-btn.bottom-right {
+    bottom: 24px;
+    right: 24px;
+}
+
+.feedback-trigger-btn.bottom-left {
+    bottom: 24px;
+    left: 24px;
+}
+
+.feedback-trigger-btn.top-right {
+    top: 80px;
+    right: 24px;
+}
+
+.feedback-trigger-btn.top-left {
+    top: 80px;
+    left: 24px;
+}
+
+/* Modal */
+.feedback-modal .ant-modal-content {
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.feedback-modal .ant-modal-header {
+    display: none;
+}
+
+.feedback-modal .ant-modal-body {
+    padding: 0;
+}
+
+/* Type Selector */
+.feedback-type-selector {
+    padding: 20px 24px;
+    background: linear-gradient(135deg, #ecfeff 0%, #e0e7ff 100%);
+    border-bottom: 1px solid rgba(6, 182, 212, 0.1);
+}
+
+.feedback-type-selector .ant-segmented {
+    background: white;
+    padding: 4px;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.1);
+}
+
+.feedback-type-selector .ant-segmented-item {
+    border-radius: 8px;
+}
+
+.feedback-type-selector .ant-segmented-item-selected {
+    background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+    color: white;
+}
+
+/* Content Area */
+.feedback-content {
+    padding: 24px;
+    min-height: 300px;
+}
+
+/* Rating Form */
+.feedback-rating-form .rating-header,
+.feedback-nps-form .nps-header,
+.feedback-feature-form .form-header,
+.feedback-bug-form .form-header,
+.feedback-general-form .form-header {
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.feedback-rating-form .rating-header h4,
+.feedback-nps-form .nps-header h4,
+.feedback-feature-form .form-header h4,
+.feedback-bug-form .form-header h4,
+.feedback-general-form .form-header h4 {
+    margin-bottom: 4px;
+}
+
+.form-header .anticon {
+    display: block;
+    margin-bottom: 12px;
+}
+
+/* Emoji Rating */
+.emoji-rating {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.emoji-option {
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+}
+
+.emoji-option:hover {
+    border-color: var(--emoji-color, #06b6d4);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(6, 182, 212, 0.15);
+}
+
+.emoji-option.selected {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(6, 182, 212, 0.25);
+    background: linear-gradient(135deg, #ecfeff 0%, #f0fdfa 100%);
+}
+
+/* Star Rating */
+.star-rating {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    margin-bottom: 16px;
+}
+
+.star-rating .ant-rate-star {
+    transition: transform 0.2s;
+}
+
+.star-rating .ant-rate-star:hover {
+    transform: scale(1.2);
+}
+
+/* NPS Scale */
+.nps-scale {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.nps-option {
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.2s;
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+.nps-option:hover {
+    transform: translateY(-2px);
+}
+
+.nps-option.detractor:hover,
+.nps-option.detractor.selected {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    color: #ef4444;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.nps-option.passive:hover,
+.nps-option.passive.selected {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    color: #f59e0b;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.nps-option.promoter:hover,
+.nps-option.promoter.selected {
+    background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%);
+    color: #06b6d4;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2);
+}
+
+.nps-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    padding: 0 8px;
+}
+
+.nps-feedback {
+    text-align: center;
+    margin-top: 12px;
+}
+
+/* System Info */
+.system-info {
+    margin-top: 16px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* Actions */
+.feedback-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+.feedback-actions .ant-btn-primary {
+    background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+    border: none;
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+}
+
+.feedback-actions .ant-btn-primary:hover {
+    background: linear-gradient(135deg, #0891b2 0%, #4f46e5 100%);
+    box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+}
+
+/* Quick Feedback */
+.quick-feedback {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+}
+
+.quick-feedback.submitted {
+    background: linear-gradient(135deg, #ecfeff 0%, #f0fdfa 100%);
+    border-color: #06b6d4;
+}
+
+.quick-feedback-comment {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+}
+
+.quick-feedback-comment textarea {
+    border-radius: 8px;
+}
+
+/* Form Styling */
+.feedback-content .ant-form-item-label>label {
+    font-weight: 500;
+    color: #334155;
+}
+
+.feedback-content .ant-input,
+.feedback-content .ant-input-textarea textarea,
+.feedback-content .ant-select-selector {
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.feedback-content .ant-input:hover,
+.feedback-content .ant-input-textarea textarea:hover,
+.feedback-content .ant-select-selector:hover {
+    border-color: #06b6d4;
+}
+
+.feedback-content .ant-input:focus,
+.feedback-content .ant-input-textarea textarea:focus {
+    border-color: #06b6d4;
+    box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
+}
+
+/* Animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.feedback-content {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .feedback-modal .ant-modal-content {
+        background: #1e293b;
+    }
+
+    .feedback-type-selector {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    }
+
+    .feedback-type-selector .ant-segmented {
+        background: #0f172a;
+    }
+
+    .feedback-content {
+        background: #1e293b;
+    }
+
+    .emoji-option {
+        background: #334155;
+        border-color: #475569;
+    }
+
+    .star-rating {
+        background: #334155;
+    }
+
+    .nps-option {
+        background: #334155;
+        color: #94a3b8;
+    }
+
+    .feedback-actions {
+        background: #0f172a;
+        border-color: #334155;
+    }
+
+    .quick-feedback {
+        background: #334155;
+        border-color: #475569;
+    }
+
+    .system-info {
+        background: #334155;
+    }
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    .feedback-trigger-btn {
+        padding: 8px 16px;
+        font-size: 13px;
+    }
+
+    .emoji-rating {
+        gap: 8px;
+    }
+
+    .emoji-option {
+        width: 48px;
+        height: 48px;
+    }
+
+    .nps-scale {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+    .nps-option {
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
+    }
+}

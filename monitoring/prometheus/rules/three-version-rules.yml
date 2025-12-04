@@ -1,0 +1,246 @@
+# Prometheus Rules for Three-Version Architecture
+# Recording rules and SLO calculations
+
+groups:
+  # ============================================================
+  # SLO Recording Rules
+  # ============================================================
+  - name: slo-recording-rules
+    interval: 30s
+    rules:
+      # V2 Error Budget
+      - record: slo:v2:error_rate:ratio_rate5m
+        expr: |
+          sum(rate(http_requests_total{namespace="platform-v2-stable",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{namespace="platform-v2-stable"}[5m]))
+
+      - record: slo:v2:error_budget:remaining
+        expr: |
+          1 - (
+            sum(increase(http_requests_total{namespace="platform-v2-stable",status=~"5.."}[30d]))
+            /
+            sum(increase(http_requests_total{namespace="platform-v2-stable"}[30d]))
+          ) / 0.02
+
+      # V2 Latency SLO
+      - record: slo:v2:latency_p95:histogram_quantile_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{namespace="platform-v2-stable"}[5m])) by (le)
+          ) * 1000
+
+      - record: slo:v2:latency_p99:histogram_quantile_5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{namespace="platform-v2-stable"}[5m])) by (le)
+          ) * 1000
+
+      # V2 Availability
+      - record: slo:v2:availability:ratio_rate1h
+        expr: |
+          sum(rate(http_requests_total{namespace="platform-v2-stable",status=~"2..|3.."}[1h]))
+          /
+          sum(rate(http_requests_total{namespace="platform-v2-stable"}[1h]))
+
+  # ============================================================
+  # Cross-Version Comparison Rules
+  # ============================================================
+  - name: version-comparison-rules
+    interval: 1m
+    rules:
+      # Accuracy Delta (V1 vs V2)
+      - record: comparison:accuracy:v1_vs_v2_delta
+        expr: |
+          avg(analysis_accuracy{namespace="platform-v1-exp"})
+          -
+          avg(analysis_accuracy{namespace="platform-v2-stable"})
+
+      # Latency Delta
+      - record: comparison:latency_p95:v1_vs_v2_delta_ms
+        expr: |
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="platform-v1-exp"}[5m])) by (le)) * 1000
+          -
+          histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="platform-v2-stable"}[5m])) by (le)) * 1000
+
+      # Cost Ratio
+      - record: comparison:cost:v1_vs_v2_ratio
+        expr: |
+          avg(request_cost{namespace="platform-v1-exp"})
+          /
+          avg(request_cost{namespace="platform-v2-stable"})
+
+      # Error Rate Delta
+      - record: comparison:error_rate:v1_vs_v2_delta
+        expr: |
+          (
+            sum(rate(http_requests_total{namespace="platform-v1-exp",status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{namespace="platform-v1-exp"}[5m]))
+          )
+          -
+          (
+            sum(rate(http_requests_total{namespace="platform-v2-stable",status=~"5.."}[5m]))
+            /
+            sum(rate(http_requests_total{namespace="platform-v2-stable"}[5m]))
+          )
+
+      # Security Pass Rate Comparison
+      - record: comparison:security:v1_pass_rate
+        expr: |
+          sum(rate(security_checks_passed{namespace="platform-v1-exp"}[10m]))
+          /
+          sum(rate(security_checks_total{namespace="platform-v1-exp"}[10m]))
+
+      - record: comparison:security:v2_pass_rate
+        expr: |
+          sum(rate(security_checks_passed{namespace="platform-v2-stable"}[10m]))
+          /
+          sum(rate(security_checks_total{namespace="platform-v2-stable"}[10m]))
+
+  # ============================================================
+  # Gray-Scale Rollout Rules
+  # ============================================================
+  - name: grayscale-rules
+    interval: 30s
+    rules:
+      # Canary Traffic Percentage
+      - record: grayscale:canary:traffic_percentage
+        expr: |
+          argo_rollout_canary_weight{namespace="platform-v2-stable"}
+
+      # Canary Error Rate
+      - record: grayscale:canary:error_rate
+        expr: |
+          sum(rate(http_requests_total{namespace="platform-v2-stable",rollout_type="canary",status=~"5.."}[2m]))
+          /
+          sum(rate(http_requests_total{namespace="platform-v2-stable",rollout_type="canary"}[2m]))
+
+      # Canary Latency
+      - record: grayscale:canary:latency_p95_ms
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{namespace="platform-v2-stable",rollout_type="canary"}[2m])) by (le)
+          ) * 1000
+
+      # Stable Error Rate (for comparison)
+      - record: grayscale:stable:error_rate
+        expr: |
+          sum(rate(http_requests_total{namespace="platform-v2-stable",rollout_type="stable",status=~"5.."}[2m]))
+          /
+          sum(rate(http_requests_total{namespace="platform-v2-stable",rollout_type="stable"}[2m]))
+
+      # Canary vs Stable Error Rate Ratio
+      - record: grayscale:canary_vs_stable:error_rate_ratio
+        expr: |
+          grayscale:canary:error_rate / grayscale:stable:error_rate
+
+  # ============================================================
+  # Cost Tracking Rules
+  # ============================================================
+  - name: cost-rules
+    interval: 5m
+    rules:
+      # Daily Cost by Version
+      - record: cost:daily:v1_usd
+        expr: |
+          sum(increase(request_cost{namespace="platform-v1-exp"}[24h]))
+
+      - record: cost:daily:v2_usd
+        expr: |
+          sum(increase(request_cost{namespace="platform-v2-stable"}[24h]))
+
+      - record: cost:daily:total_usd
+        expr: |
+          cost:daily:v1_usd + cost:daily:v2_usd
+
+      # Cost Per Request
+      - record: cost:per_request:v1_usd
+        expr: |
+          avg(request_cost{namespace="platform-v1-exp"})
+
+      - record: cost:per_request:v2_usd
+        expr: |
+          avg(request_cost{namespace="platform-v2-stable"})
+
+      # Budget Utilization
+      - record: cost:budget:v1_utilization
+        expr: |
+          cost:daily:v1_usd / 500  # $500 daily budget for V1
+
+      - record: cost:budget:total_utilization
+        expr: |
+          cost:daily:total_usd / 1000  # $1000 total daily budget
+
+  # ============================================================
+  # Local Model Performance (Offline Mode)
+  # ============================================================
+  - name: local-model-rules
+    interval: 30s
+    rules:
+      # CodeLlama Performance
+      - record: local_model:codellama:latency_p95_ms
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(model_inference_duration_seconds_bucket{model="codellama-34b"}[5m])) by (le)
+          ) * 1000
+
+      - record: local_model:codellama:requests_per_second
+        expr: |
+          sum(rate(model_inference_total{model="codellama-34b"}[5m]))
+
+      - record: local_model:codellama:error_rate
+        expr: |
+          sum(rate(model_inference_errors_total{model="codellama-34b"}[5m]))
+          /
+          sum(rate(model_inference_total{model="codellama-34b"}[5m]))
+
+      # DeepSeek Performance
+      - record: local_model:deepseek:latency_p95_ms
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(model_inference_duration_seconds_bucket{model="deepseek-coder-33b"}[5m])) by (le)
+          ) * 1000
+
+      - record: local_model:deepseek:requests_per_second
+        expr: |
+          sum(rate(model_inference_total{model="deepseek-coder-33b"}[5m]))
+
+      # GPU Utilization
+      - record: local_model:gpu:utilization_avg
+        expr: |
+          avg(nvidia_gpu_duty_cycle)
+
+      - record: local_model:gpu:memory_used_gb
+        expr: |
+          sum(nvidia_gpu_memory_used_bytes) / 1024 / 1024 / 1024
+
+  # ============================================================
+  # Lifecycle Events
+  # ============================================================
+  - name: lifecycle-rules
+    interval: 1m
+    rules:
+      # Promotion Success Rate (7d)
+      - record: lifecycle:promotion:success_rate_7d
+        expr: |
+          sum(increase(promotion_success_total[7d]))
+          /
+          (sum(increase(promotion_success_total[7d])) + sum(increase(promotion_failed_total[7d])))
+
+      # Average Time in Shadow
+      - record: lifecycle:shadow:avg_duration_hours
+        expr: |
+          avg(shadow_duration_seconds) / 3600
+
+      # Quarantine Count
+      - record: lifecycle:quarantine:active_count
+        expr: |
+          count(quarantine_status{status="active"})
+
+      # Rollback Rate (7d)
+      - record: lifecycle:rollback:rate_7d
+        expr: |
+          sum(increase(rollback_total[7d]))
+          /
+          sum(increase(deployment_total[7d]))

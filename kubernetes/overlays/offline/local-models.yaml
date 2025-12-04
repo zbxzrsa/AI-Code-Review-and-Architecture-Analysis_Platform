@@ -1,0 +1,312 @@
+# Local Model Deployments for Offline Mode
+# GPU-enabled vLLM servers
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codellama-server
+  namespace: platform-offline
+  labels:
+    app: codellama-server
+    tier: ai
+    model: codellama-34b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codellama-server
+  template:
+    metadata:
+      labels:
+        app: codellama-server
+        tier: ai
+        model: codellama-34b
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      nodeSelector:
+        nvidia.com/gpu: "true"
+        gpu-type: "a100"
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest
+          args:
+            - --model
+            - /models/codellama-34b
+            - --tensor-parallel-size
+            - "1"
+            - --quantization
+            - awq
+            - --max-model-len
+            - "16384"
+            - --gpu-memory-utilization
+            - "0.9"
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            requests:
+              nvidia.com/gpu: 1
+              memory: "48Gi"
+              cpu: "8"
+            limits:
+              nvidia.com/gpu: 1
+              memory: "64Gi"
+              cpu: "16"
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+              readOnly: true
+            - name: cache
+              mountPath: /root/.cache
+          env:
+            - name: CUDA_VISIBLE_DEVICES
+              value: "0"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-storage-pvc
+        - name: cache
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deepseek-server
+  namespace: platform-offline
+  labels:
+    app: deepseek-server
+    tier: ai
+    model: deepseek-coder-33b
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deepseek-server
+  template:
+    metadata:
+      labels:
+        app: deepseek-server
+        tier: ai
+        model: deepseek-coder-33b
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      nodeSelector:
+        nvidia.com/gpu: "true"
+      tolerations:
+        - key: nvidia.com/gpu
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: vllm
+          image: vllm/vllm-openai:latest
+          args:
+            - --model
+            - /models/deepseek-coder-33b
+            - --tensor-parallel-size
+            - "1"
+            - --quantization
+            - awq
+            - --max-model-len
+            - "16384"
+            - --gpu-memory-utilization
+            - "0.9"
+          ports:
+            - containerPort: 8000
+              name: http
+          resources:
+            requests:
+              nvidia.com/gpu: 1
+              memory: "48Gi"
+              cpu: "8"
+            limits:
+              nvidia.com/gpu: 1
+              memory: "64Gi"
+              cpu: "16"
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+              readOnly: true
+            - name: cache
+              mountPath: /root/.cache
+          env:
+            - name: CUDA_VISIBLE_DEVICES
+              value: "1"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 120
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-storage-pvc
+        - name: cache
+          emptyDir: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: embedding-server
+  namespace: platform-offline
+  labels:
+    app: embedding-server
+    tier: ai
+    model: all-minilm-l6-v2
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: embedding-server
+  template:
+    metadata:
+      labels:
+        app: embedding-server
+        tier: ai
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "80"
+    spec:
+      containers:
+        - name: tei
+          image: ghcr.io/huggingface/text-embeddings-inference:latest
+          args:
+            - --model-id
+            - /models/embeddings
+            - --port
+            - "80"
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "2"
+            limits:
+              memory: "4Gi"
+              cpu: "4"
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 5
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-storage-pvc
+---
+# Services
+apiVersion: v1
+kind: Service
+metadata:
+  name: codellama-server
+  namespace: platform-offline
+spec:
+  selector:
+    app: codellama-server
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deepseek-server
+  namespace: platform-offline
+spec:
+  selector:
+    app: deepseek-server
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: embedding-server
+  namespace: platform-offline
+spec:
+  selector:
+    app: embedding-server
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  type: ClusterIP
+---
+# Model Storage PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-storage-pvc
+  namespace: platform-offline
+spec:
+  accessModes:
+    - ReadOnlyMany
+  storageClassName: local-storage
+  resources:
+    requests:
+      storage: 200Gi
+---
+# HPA for embedding server (can scale, LLM servers typically don't)
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: embedding-server-hpa
+  namespace: platform-offline
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: embedding-server
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

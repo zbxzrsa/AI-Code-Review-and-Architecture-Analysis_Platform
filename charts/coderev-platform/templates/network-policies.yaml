@@ -1,0 +1,212 @@
+{{- if .Values.networkPolicies.enabled }}
+{{- $versions := list "v1" "v2" "v3" }}
+{{- range $version := $versions }}
+{{- $versionConfig := index $.Values.versions $version }}
+{{- if $versionConfig.enabled }}
+---
+# Default deny all for {{ $version }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+# Allow internal traffic within {{ $version }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-internal-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+---
+# Allow from control plane
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-control-plane-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: control-plane
+---
+# Allow DNS
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-dns-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+---
+# Allow monitoring scrape
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: monitoring
+      ports:
+        - protocol: TCP
+          port: 8000
+{{- if eq $version "v2" }}
+---
+# V2: Allow ingress traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-v2
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app: vcai
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 8000
+---
+# V2: Allow database egress
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-database-v2
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              tier: infrastructure
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+{{- end }}
+{{- if $.Values.networkPolicies.strictIsolation }}
+---
+# Block cross-version traffic
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: block-cross-version-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              version: {{ $version }}
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              version: {{ $version }}
+{{- end }}
+{{- end }}
+{{- end }}
+---
+# Control Plane Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: control-plane-policy
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from all platform namespaces
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: platform
+  egress:
+    # Allow to all platform namespaces
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              tier: platform
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+{{- end }}

@@ -1,0 +1,642 @@
+# Three-Version CI/CD Pipeline
+# Hierarchical: Build → Test → V1 Deploy → Shadow Eval → OPA Gate → V2 Gray-scale → Monitor
+name: Three-Version Pipeline
+
+on:
+  push:
+    branches: [main, develop, "release/*", "experiment/*"]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      skip_shadow:
+        description: "Skip shadow evaluation (emergency only)"
+        type: boolean
+        default: false
+      force_promote:
+        description: "Force promotion to V2 (admin only)"
+        type: boolean
+        default: false
+
+env:
+  REGISTRY: gcr.io/${{ secrets.GCP_PROJECT_ID }}
+  CLUSTER_NAME: coderev-cluster
+  CLUSTER_ZONE: us-central1-a
+
+jobs:
+  # ============================================================
+  # Stage 1: Build - SBOM, Signing, Vulnerability Scan
+  # ============================================================
+  build:
+    name: Build & Sign
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+      image_digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GCR
+        uses: docker/login-action@v3
+        with:
+          registry: gcr.io
+          username: _json_key
+          password: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Docker Meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/vcai
+          tags: |
+            type=sha,prefix=
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+
+      - name: Build and Push
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp }}
+            VERSION=${{ steps.meta.outputs.version }}
+            VCS_REF=${{ github.sha }}
+
+      # Generate SBOM
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ env.REGISTRY }}/vcai:${{ steps.meta.outputs.version }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: sbom.spdx.json
+          retention-days: 90
+
+      # Sign image with Cosign (keyless)
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign Image
+        run: |
+          cosign sign --yes \
+            --oidc-issuer=https://token.actions.githubusercontent.com \
+            ${{ env.REGISTRY }}/vcai@${{ steps.build.outputs.digest }}
+
+      # Vulnerability scan
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/vcai:${{ steps.meta.outputs.version }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy Results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: Fail on Critical Vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/vcai:${{ steps.meta.outputs.version }}
+          exit-code: "1"
+          severity: "CRITICAL"
+
+  # ============================================================
+  # Stage 2: Test - Unit, Integration, Security, Property
+  # ============================================================
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: build
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      # Unit tests
+      - name: Unit Tests
+        run: |
+          pytest tests/unit/ \
+            --cov=src \
+            --cov-report=xml \
+            --cov-report=html \
+            -v --tb=short
+
+      # Integration tests
+      - name: Integration Tests
+        run: |
+          pytest tests/integration/ \
+            -v --tb=short \
+            --timeout=300
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test
+          REDIS_URL: redis://localhost:6379/0
+
+      # Security tests (prompt injection, privilege escalation, etc.)
+      - name: Security Tests
+        run: |
+          pytest tests/security/ \
+            -v --tb=short \
+            --junit-xml=security-results.xml
+        continue-on-error: false
+
+      # Property-based tests
+      - name: Property Tests
+        run: |
+          pytest tests/property/ \
+            -v --tb=short \
+            --hypothesis-seed=42
+
+      - name: Upload Coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: true
+
+      # Conftest - IaC validation
+      - name: Install Conftest
+        run: |
+          wget -O conftest.tar.gz https://github.com/open-policy-agent/conftest/releases/download/v0.46.0/conftest_0.46.0_Linux_x86_64.tar.gz
+          tar xzf conftest.tar.gz
+          sudo mv conftest /usr/local/bin/
+
+      - name: Validate K8s Manifests
+        run: |
+          conftest test kubernetes/ \
+            --policy policies/kubernetes/ \
+            --output json > conftest-results.json
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: |
+            security-results.xml
+            conftest-results.json
+            htmlcov/
+
+  # ============================================================
+  # Stage 3: Deploy to V1-Exp (Shadow Traffic)
+  # ============================================================
+  deploy-v1:
+    name: Deploy to V1-Exp
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: github.ref == 'refs/heads/develop' || startsWith(github.ref, 'refs/heads/experiment/')
+    environment: v1-experiment
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GCloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }} \
+            --zone ${{ env.CLUSTER_ZONE }}
+
+      - name: Deploy to V1
+        run: |
+          # Apply V1 overlay
+          kubectl apply -k kubernetes/overlays/v1-exp/
+
+          # Update image
+          kubectl set image deployment/vcai-service \
+            vcai=${{ env.REGISTRY }}/vcai:${{ needs.build.outputs.image_tag }} \
+            -n platform-v1-exp
+
+          # Wait for rollout
+          kubectl rollout status deployment/vcai-service \
+            -n platform-v1-exp \
+            --timeout=300s
+
+      - name: Enable Shadow Traffic
+        run: |
+          # Configure gateway to mirror traffic to V1
+          kubectl patch configmap traffic-routing-config \
+            -n platform-control-plane \
+            --type=merge \
+            -p '{"data":{"shadow_percentage":"100"}}'
+
+          # Restart gateway to pick up changes
+          kubectl rollout restart deployment/nginx-gateway \
+            -n platform-gateway
+
+      - name: Register Experiment
+        run: |
+          # Register this deployment with lifecycle controller
+          curl -X POST http://lifecycle-controller.platform-control-plane.svc:8080/versions/$(git rev-parse --short HEAD)/register \
+            -H "Content-Type: application/json" \
+            -d '{
+              "version_id": "${{ needs.build.outputs.image_tag }}",
+              "model_version": "gpt-4o",
+              "prompt_version": "code-review-v4-exp",
+              "routing_policy_version": "default-routing-v2",
+              "current_state": "shadow"
+            }'
+
+  # ============================================================
+  # Stage 4: Shadow Evaluation
+  # ============================================================
+  shadow-evaluation:
+    name: Shadow Evaluation
+    runs-on: ubuntu-latest
+    needs: deploy-v1
+    if: ${{ !inputs.skip_shadow }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wait for Shadow Data
+        run: |
+          echo "Waiting for shadow traffic data collection..."
+          sleep 300  # Wait 5 minutes for initial data
+
+      - name: Run Gold-Set Evaluation
+        id: gold-set
+        run: |
+          # Trigger gold-set evaluation
+          RESULT=$(curl -X POST http://evaluation-pipeline.platform-control-plane.svc:8080/evaluate/gold-set \
+            -H "Content-Type: application/json" \
+            -d '{
+              "version_id": "${{ needs.build.outputs.image_tag }}",
+              "test_sets": ["security", "injection", "long_context", "multilingual"],
+              "comparison_baseline": "v2-current"
+            }')
+
+          echo "result=$RESULT" >> $GITHUB_OUTPUT
+
+          # Check pass rate
+          PASS_RATE=$(echo $RESULT | jq -r '.overall_pass_rate')
+          if (( $(echo "$PASS_RATE < 0.95" | bc -l) )); then
+            echo "Gold-set pass rate $PASS_RATE below threshold 0.95"
+            exit 1
+          fi
+
+      - name: Collect Shadow Metrics
+        id: metrics
+        run: |
+          # Query Prometheus for shadow metrics
+          METRICS=$(curl -s "http://prometheus.platform-monitoring.svc:9090/api/v1/query" \
+            --data-urlencode 'query=
+              {
+                "accuracy_delta": avg(analysis_accuracy{version="${{ needs.build.outputs.image_tag }}"}) - avg(analysis_accuracy{version="baseline"}),
+                "p95_latency": histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{version="${{ needs.build.outputs.image_tag }}"}[1h])) by (le)) * 1000,
+                "error_rate": sum(rate(http_requests_total{version="${{ needs.build.outputs.image_tag }}",status=~"5.."}[1h])) / sum(rate(http_requests_total{version="${{ needs.build.outputs.image_tag }}"}[1h])),
+                "security_pass_rate": sum(rate(security_checks_passed{version="${{ needs.build.outputs.image_tag }}"}[1h])) / sum(rate(security_checks_total{version="${{ needs.build.outputs.image_tag }}"}[1h]))
+              }
+            ')
+
+          echo "metrics=$METRICS" >> $GITHUB_OUTPUT
+
+      - name: Run Statistical Tests
+        id: stats
+        run: |
+          # Run t-test for accuracy, Mann-Whitney for latency
+          python scripts/statistical_tests.py \
+            --version ${{ needs.build.outputs.image_tag }} \
+            --baseline v2-current \
+            --output stats-results.json
+
+          cat stats-results.json
+
+      - name: Generate Evaluation Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: evaluation-report
+          path: |
+            stats-results.json
+            gold-set-results.json
+
+  # ============================================================
+  # Stage 5: OPA Gate Check
+  # ============================================================
+  opa-gate:
+    name: OPA Policy Gate
+    runs-on: ubuntu-latest
+    needs: shadow-evaluation
+    outputs:
+      decision: ${{ steps.opa.outputs.decision }}
+      reason: ${{ steps.opa.outputs.reason }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Query OPA for Promotion Decision
+        id: opa
+        run: |
+          # Get metrics from previous step
+          METRICS='${{ needs.shadow-evaluation.outputs.metrics }}'
+          STATS='${{ needs.shadow-evaluation.outputs.stats }}'
+
+          # Query OPA
+          DECISION=$(curl -X POST http://opa.platform-control-plane.svc:8181/v1/data/lifecycle/promotion \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"input\": {
+                \"version\": {
+                  \"id\": \"${{ needs.build.outputs.image_tag }}\",
+                  \"state\": \"shadow\"
+                },
+                \"metrics\": $METRICS,
+                \"statistical_tests\": $STATS,
+                \"thresholds\": {
+                  \"p95_latency_ms\": 3000,
+                  \"error_rate\": 0.02,
+                  \"accuracy_delta\": 0.02,
+                  \"security_pass_rate\": 0.99,
+                  \"cost_increase_max\": 0.10,
+                  \"statistical_significance_p\": 0.05
+                }
+              }
+            }")
+
+          echo "Full decision: $DECISION"
+
+          ALLOW=$(echo $DECISION | jq -r '.result.allow')
+          REASON=$(echo $DECISION | jq -r '.result.reason')
+
+          echo "decision=$ALLOW" >> $GITHUB_OUTPUT
+          echo "reason=$REASON" >> $GITHUB_OUTPUT
+
+      - name: Fail if Not Approved
+        if: steps.opa.outputs.decision != 'true' && !inputs.force_promote
+        run: |
+          echo "OPA denied promotion: ${{ steps.opa.outputs.reason }}"
+          exit 1
+
+      - name: Record OPA Decision
+        run: |
+          # Log decision for audit
+          curl -X POST http://lifecycle-controller.platform-control-plane.svc:8080/audit/opa-decision \
+            -H "Content-Type: application/json" \
+            -d '{
+              "version_id": "${{ needs.build.outputs.image_tag }}",
+              "decision": "${{ steps.opa.outputs.decision }}",
+              "reason": "${{ steps.opa.outputs.reason }}",
+              "github_run_id": "${{ github.run_id }}",
+              "triggered_by": "${{ github.actor }}"
+            }'
+
+  # ============================================================
+  # Stage 6: Gray-Scale Promotion to V2
+  # ============================================================
+  gray-scale-v2:
+    name: Gray-Scale to V2
+    runs-on: ubuntu-latest
+    needs: [build, opa-gate]
+    if: needs.opa-gate.outputs.decision == 'true' || inputs.force_promote
+    environment: v2-production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup GCloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }} \
+            --zone ${{ env.CLUSTER_ZONE }}
+
+      - name: Install Argo Rollouts CLI
+        run: |
+          curl -LO https://github.com/argoproj/argo-rollouts/releases/download/v1.6.0/kubectl-argo-rollouts-linux-amd64
+          chmod +x kubectl-argo-rollouts-linux-amd64
+          sudo mv kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+
+      - name: Update V2 Rollout Image
+        run: |
+          kubectl argo rollouts set image vcai-rollout \
+            vcai=${{ env.REGISTRY }}/vcai:${{ needs.build.outputs.image_tag }} \
+            -n platform-v2-stable
+
+      - name: Promote Through Gray-Scale Phases
+        run: |
+          # Phase 1: 1% traffic
+          echo "Phase 1: 1% traffic"
+          kubectl argo rollouts promote vcai-rollout -n platform-v2-stable
+          sleep 300  # 5 minutes at 1%
+
+          # Check metrics
+          ./scripts/check_rollout_health.sh vcai-rollout platform-v2-stable || exit 1
+
+          # Phase 2: 5% traffic
+          echo "Phase 2: 5% traffic"
+          kubectl argo rollouts promote vcai-rollout -n platform-v2-stable
+          sleep 600  # 10 minutes at 5%
+
+          ./scripts/check_rollout_health.sh vcai-rollout platform-v2-stable || exit 1
+
+          # Phase 3: 25% traffic
+          echo "Phase 3: 25% traffic"
+          kubectl argo rollouts promote vcai-rollout -n platform-v2-stable
+          sleep 900  # 15 minutes at 25%
+
+          ./scripts/check_rollout_health.sh vcai-rollout platform-v2-stable || exit 1
+
+          # Phase 4: 50% traffic
+          echo "Phase 4: 50% traffic"
+          kubectl argo rollouts promote vcai-rollout -n platform-v2-stable
+          sleep 1200  # 20 minutes at 50%
+
+          ./scripts/check_rollout_health.sh vcai-rollout platform-v2-stable || exit 1
+
+          # Phase 5: 100% traffic
+          echo "Phase 5: Full rollout"
+          kubectl argo rollouts promote vcai-rollout -n platform-v2-stable
+
+      - name: Verify Full Rollout
+        run: |
+          kubectl argo rollouts status vcai-rollout \
+            -n platform-v2-stable \
+            --timeout=300s
+
+      - name: Update Baseline
+        run: |
+          # Mark new version as baseline
+          curl -X POST http://lifecycle-controller.platform-control-plane.svc:8080/baseline/update \
+            -H "Content-Type: application/json" \
+            -d '{
+              "version_id": "${{ needs.build.outputs.image_tag }}",
+              "promoted_by": "${{ github.actor }}",
+              "github_run_id": "${{ github.run_id }}"
+            }'
+
+  # ============================================================
+  # Stage 7: Post-Deployment Monitoring
+  # ============================================================
+  monitor:
+    name: Post-Deployment Monitor
+    runs-on: ubuntu-latest
+    needs: gray-scale-v2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Monitor SLOs (30 min window)
+        run: |
+          for i in {1..6}; do
+            echo "Monitoring window $i/6..."
+            
+            # Check SLOs
+            SLO_STATUS=$(curl -s "http://prometheus.platform-monitoring.svc:9090/api/v1/query" \
+              --data-urlencode 'query=
+                slo:http_requests:error_rate:ratio_rate5m{service="vcai-v2"} < 0.02
+                and
+                slo:http_requests:latency_p95:histogram_quantile_5m{service="vcai-v2"} < 3
+              ')
+            
+            if [ "$(echo $SLO_STATUS | jq -r '.data.result[0].value[1]')" != "1" ]; then
+              echo "SLO violation detected!"
+              # Trigger rollback
+              kubectl argo rollouts abort vcai-rollout -n platform-v2-stable
+              exit 1
+            fi
+            
+            sleep 300  # 5 minute intervals
+          done
+
+          echo "All SLO checks passed!"
+
+      - name: Notify Success
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ Version ${{ needs.build.outputs.image_tag }} successfully deployed to V2 production",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Complete*\n• Version: `${{ needs.build.outputs.image_tag }}`\n• Environment: V2 Production\n• Triggered by: ${{ github.actor }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # ============================================================
+  # Rollback Job (Manual or Automatic)
+  # ============================================================
+  rollback:
+    name: Rollback
+    runs-on: ubuntu-latest
+    needs: [build, gray-scale-v2]
+    if: failure() || cancelled()
+
+    steps:
+      - name: Setup GCloud
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Get GKE Credentials
+        run: |
+          gcloud container clusters get-credentials ${{ env.CLUSTER_NAME }} \
+            --zone ${{ env.CLUSTER_ZONE }}
+
+      - name: Abort Rollout
+        run: |
+          kubectl argo rollouts abort vcai-rollout -n platform-v2-stable || true
+          kubectl argo rollouts undo vcai-rollout -n platform-v2-stable || true
+
+      - name: Downgrade to V3
+        run: |
+          # Move failed version to quarantine
+          curl -X POST http://lifecycle-controller.platform-control-plane.svc:8080/versions/${{ needs.build.outputs.image_tag }}/downgrade \
+            -H "Content-Type: application/json" \
+            -d '{
+              "reason": "Pipeline failure or rollback triggered",
+              "github_run_id": "${{ github.run_id }}"
+            }'
+
+      - name: Notify Rollback
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "⚠️ Rollback triggered for version ${{ needs.build.outputs.image_tag }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Rollback Triggered*\n• Version: `${{ needs.build.outputs.image_tag }}`\n• Run: ${{ github.run_id }}\n• Status: Moved to V3 Quarantine"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Create V3 Repair Issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[V3 Repair] Version ${{ needs.build.outputs.image_tag }} quarantined`,
+              body: `## Quarantine Report\n\n- **Version**: ${{ needs.build.outputs.image_tag }}\n- **Run ID**: ${{ github.run_id }}\n- **Reason**: Pipeline failure or SLO violation\n\n### Next Steps\n1. Review evaluation report in artifacts\n2. Identify root cause\n3. Create fix and re-run pipeline\n\n/cc @platform-team`,
+              labels: ['v3-repair', 'quarantine', 'automated']
+            })

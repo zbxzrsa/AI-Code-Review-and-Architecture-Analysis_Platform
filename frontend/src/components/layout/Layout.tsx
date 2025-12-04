@@ -41,6 +41,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useUIStore } from '../../store/uiStore';
 import { LanguageSelector } from '../common/LanguageSelector';
 import { Sidebar } from './Sidebar';
+import { FeedbackWidget } from '../feedback/FeedbackWidget';
 import './Layout.css';
 
 const { Header, Content } = AntLayout;
@@ -253,6 +254,9 @@ export const Layout: React.FC = () => {
         <Content className="app-content">
           <Outlet />
         </Content>
+
+        {/* Feedback Widget */}
+        <FeedbackWidget position="bottom-right" />
       </AntLayout>
     </AntLayout>
   );

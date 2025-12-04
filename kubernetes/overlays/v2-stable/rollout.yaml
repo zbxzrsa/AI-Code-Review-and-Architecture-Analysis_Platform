@@ -1,0 +1,248 @@
+# Argo Rollouts for V2 Stable - Blue-Green with automated analysis
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: vcai-rollout
+  namespace: platform-v2-stable
+spec:
+  replicas: 3
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app: vcai-service
+  template:
+    metadata:
+      labels:
+        app: vcai-service
+        version: v2
+    spec:
+      priorityClassName: production-critical
+      containers:
+        - name: vcai
+          image: gcr.io/coderev-platform/vcai:latest
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090 # Metrics
+          resources:
+            requests:
+              cpu: "1000m"
+              memory: "2Gi"
+            limits:
+              cpu: "4000m"
+              memory: "8Gi"
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          envFrom:
+            - configMapRef:
+                name: v2-config
+            - secretRef:
+                name: v2-secrets
+  strategy:
+    blueGreen:
+      activeService: vcai-active
+      previewService: vcai-preview
+      autoPromotionEnabled: false
+      prePromotionAnalysis:
+        templates:
+          - templateName: vcai-analysis
+        args:
+          - name: service-name
+            value: vcai-preview
+      postPromotionAnalysis:
+        templates:
+          - templateName: vcai-post-analysis
+        args:
+          - name: service-name
+            value: vcai-active
+      scaleDownDelaySeconds: 300
+      previewReplicaCount: 2
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: crai-rollout
+  namespace: platform-v2-stable
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: crai-service
+  template:
+    metadata:
+      labels:
+        app: crai-service
+        version: v2
+    spec:
+      priorityClassName: production-critical
+      containers:
+        - name: crai
+          image: gcr.io/coderev-platform/crai:latest
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2000m"
+              memory: "4Gi"
+          envFrom:
+            - configMapRef:
+                name: v2-config
+            - secretRef:
+                name: v2-secrets
+  strategy:
+    canary:
+      stableService: crai-stable
+      canaryService: crai-canary
+      trafficRouting:
+        nginx:
+          stableIngress: crai-ingress
+      steps:
+        - setWeight: 1
+        - pause: { duration: 5m }
+        - analysis:
+            templates:
+              - templateName: crai-analysis
+        - setWeight: 5
+        - pause: { duration: 10m }
+        - analysis:
+            templates:
+              - templateName: crai-analysis
+        - setWeight: 25
+        - pause: { duration: 15m }
+        - analysis:
+            templates:
+              - templateName: crai-analysis
+        - setWeight: 50
+        - pause: { duration: 20m }
+        - analysis:
+            templates:
+              - templateName: crai-analysis
+        - setWeight: 100
+---
+# Analysis Templates
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: vcai-analysis
+  namespace: platform-v2-stable
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: p95-latency
+      interval: 1m
+      count: 5
+      successCondition: result < 3000
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            histogram_quantile(0.95, 
+              sum(rate(http_request_duration_seconds_bucket{
+                service="{{args.service-name}}"
+              }[5m])) by (le)
+            ) * 1000
+    - name: error-rate
+      interval: 1m
+      count: 5
+      successCondition: result < 0.02
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            sum(rate(http_requests_total{
+              service="{{args.service-name}}",
+              status=~"5.."
+            }[5m])) / 
+            sum(rate(http_requests_total{
+              service="{{args.service-name}}"
+            }[5m]))
+    - name: accuracy-delta
+      interval: 5m
+      count: 3
+      successCondition: result >= 0.02
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            (avg(analysis_accuracy{service="{{args.service-name}}"}) -
+             avg(analysis_accuracy{service="vcai-baseline"}))
+    - name: security-pass-rate
+      interval: 5m
+      count: 3
+      successCondition: result >= 0.99
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            sum(rate(security_checks_passed{
+              service="{{args.service-name}}"
+            }[10m])) /
+            sum(rate(security_checks_total{
+              service="{{args.service-name}}"
+            }[10m]))
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: crai-analysis
+  namespace: platform-v2-stable
+spec:
+  metrics:
+    - name: request-success-rate
+      interval: 1m
+      count: 5
+      successCondition: result >= 0.98
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            sum(rate(http_requests_total{
+              service="crai-canary",
+              status=~"2.."
+            }[5m])) /
+            sum(rate(http_requests_total{
+              service="crai-canary"
+            }[5m]))
+    - name: p95-latency
+      interval: 1m
+      count: 5
+      successCondition: result < 2000
+      failureLimit: 2
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{
+                service="crai-canary"
+              }[5m])) by (le)
+            ) * 1000
+    - name: cost-increase
+      interval: 5m
+      count: 3
+      successCondition: result <= 1.10
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            avg(request_cost{service="crai-canary"}) /
+            avg(request_cost{service="crai-stable"})

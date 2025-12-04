@@ -1,0 +1,173 @@
+{{- if .Values.lifecycleController.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lifecycle-controller
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: lifecycle-controller
+spec:
+  replicas: {{ .Values.lifecycleController.replicas }}
+  selector:
+    matchLabels:
+      app: lifecycle-controller
+  template:
+    metadata:
+      labels:
+        app: lifecycle-controller
+        {{- include "coderev.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: lifecycle-controller
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      priorityClassName: control-plane-priority
+      containers:
+        - name: lifecycle-controller
+          image: {{ include "coderev.image" (dict "root" . "image" .Values.lifecycleController.image) }}
+          imagePullPolicy: {{ .Values.lifecycleController.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - containerPort: 8080
+              name: http
+              protocol: TCP
+          env:
+            - name: OPA_URL
+              value: "http://opa.platform-control-plane.svc:8181"
+            - name: PROMETHEUS_URL
+              value: "http://prometheus.platform-monitoring.svc:9090"
+            - name: EVALUATION_URL
+              value: "http://evaluation-pipeline.platform-control-plane.svc:8080"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: url
+            - name: LOG_LEVEL
+              value: "INFO"
+            - name: EVALUATION_INTERVAL_SECONDS
+              value: "{{ .Values.lifecycleController.config.evaluationIntervalSeconds }}"
+          resources:
+            {{- toYaml .Values.lifecycleController.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: lifecycle-controller-config
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: lifecycle-controller
+                topologyKey: kubernetes.io/hostname
+{{- end }}
+---
+{{- if .Values.evaluationPipeline.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: evaluation-pipeline
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: evaluation-pipeline
+spec:
+  replicas: {{ .Values.evaluationPipeline.replicas }}
+  selector:
+    matchLabels:
+      app: evaluation-pipeline
+  template:
+    metadata:
+      labels:
+        app: evaluation-pipeline
+        {{- include "coderev.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+    spec:
+      serviceAccountName: evaluation-pipeline
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      priorityClassName: control-plane-priority
+      containers:
+        - name: evaluation-pipeline
+          image: {{ include "coderev.image" (dict "root" . "image" .Values.evaluationPipeline.image) }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: AI_SERVICE_URL
+              value: "http://crai-v2.{{ .Values.versions.v2.namespace }}.svc:8000"
+            - name: PROMETHEUS_URL
+              value: "http://prometheus.platform-monitoring.svc:9090"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: url
+          resources:
+            {{- toYaml .Values.evaluationPipeline.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+          volumeMounts:
+            - name: gold-sets
+              mountPath: /etc/evaluation
+              readOnly: true
+      volumes:
+        - name: gold-sets
+          configMap:
+            name: gold-sets-config
+{{- end }}

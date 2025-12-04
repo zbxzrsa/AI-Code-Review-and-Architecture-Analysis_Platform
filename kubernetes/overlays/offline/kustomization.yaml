@@ -1,0 +1,94 @@
+# Kustomization for Offline/Air-Gapped Deployment
+# Local models only, no external API calls
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: offline-deployment
+  annotations:
+    deployment-mode: offline
+    compliance: hipaa
+
+namespace: platform-offline
+
+resources:
+  - ../../base/namespace.yaml
+  - ../../base/network-policies.yaml
+  - namespace.yaml
+  - local-models.yaml
+  - configmaps.yaml
+  - secrets.yaml
+
+patches:
+  # Patch all deployments to use offline mode
+  - target:
+      kind: Deployment
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: OFFLINE_MODE
+          value: "true"
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: EXTERNAL_API_DISABLED
+          value: "true"
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value:
+          name: COMPLIANCE_MODE
+          value: "hipaa"
+
+  # Patch network policies to block all external egress
+  - target:
+      kind: NetworkPolicy
+      name: default-deny-egress
+    patch: |-
+      - op: replace
+        path: /spec/egress
+        value:
+          - to:
+              - ipBlock:
+                  cidr: 10.0.0.0/8
+              - ipBlock:
+                  cidr: 172.16.0.0/12
+
+configMapGenerator:
+  - name: offline-config
+    literals:
+      - OFFLINE_MODE=true
+      - LOCAL_MODEL_PRIMARY=http://codellama-server.platform-offline.svc:8000/v1
+      - LOCAL_MODEL_SECONDARY=http://deepseek-server.platform-offline.svc:8000/v1
+      - EMBEDDING_SERVER=http://embedding-server.platform-offline.svc:80
+      - CACHE_TTL_HOURS=168
+      - SEMANTIC_CACHE_ENABLED=true
+
+  - name: compliance-config
+    literals:
+      - COMPLIANCE_MODE=hipaa
+      - AUDIT_ALL_REQUESTS=true
+      - ENCRYPTION_REQUIRED=true
+      - DATA_RESIDENCY=on-premise
+      - PHI_DETECTION_ENABLED=true
+
+images:
+  - name: vcai-service
+    newTag: offline-latest
+  - name: crai-service
+    newTag: offline-latest
+  - name: lifecycle-controller
+    newTag: offline-latest
+  - name: evaluation-pipeline
+    newTag: offline-latest
+
+replicas:
+  # Reduce replicas for offline deployment
+  - name: vcai-service
+    count: 2
+  - name: crai-service
+    count: 2
+  - name: lifecycle-controller
+    count: 1
+  - name: evaluation-pipeline
+    count: 1

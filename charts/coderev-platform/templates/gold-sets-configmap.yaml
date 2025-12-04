@@ -1,0 +1,187 @@
+{{- if .Values.evaluationPipeline.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gold-sets-config
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: evaluation-pipeline
+data:
+  gold-sets.yaml: |
+    # Gold-Set Test Suites for Evaluation Pipeline
+    # These test cases are used to evaluate new AI model versions
+    
+    metadata:
+      version: "1.0.0"
+      last_updated: "2024-01-01"
+      description: "Gold-set test suites for AI code review evaluation"
+    
+    categories:
+      security:
+        name: "Security Vulnerabilities"
+        description: "Detection of common security vulnerabilities"
+        required_pass_rate: 0.95
+        tests:
+          - id: "sec-001"
+            name: "SQL Injection Detection"
+            language: "python"
+            code: |
+              def get_user(username):
+                  query = f"SELECT * FROM users WHERE name = '{username}'"
+                  cursor.execute(query)
+                  return cursor.fetchone()
+            expected_issues:
+              - type: "security"
+                severity: "critical"
+                pattern: "sql_injection"
+            timeout_ms: 30000
+          
+          - id: "sec-002"
+            name: "XSS Detection"
+            language: "javascript"
+            code: |
+              function displayInput(userInput) {
+                  document.getElementById('output').innerHTML = userInput;
+              }
+            expected_issues:
+              - type: "security"
+                severity: "high"
+                pattern: "xss"
+            timeout_ms: 30000
+          
+          - id: "sec-003"
+            name: "Command Injection"
+            language: "python"
+            code: |
+              import os
+              def run_command(user_cmd):
+                  os.system(f"echo {user_cmd}")
+            expected_issues:
+              - type: "security"
+                severity: "critical"
+                pattern: "command_injection"
+            timeout_ms: 30000
+          
+          - id: "sec-004"
+            name: "Hardcoded Secrets"
+            language: "python"
+            code: |
+              API_KEY = "sk-1234567890abcdef"
+              DATABASE_PASSWORD = "super_secret_123"
+            expected_issues:
+              - type: "security"
+                severity: "high"
+                pattern: "hardcoded_secret"
+            timeout_ms: 30000
+      
+      quality:
+        name: "Code Quality"
+        description: "Code quality and best practices"
+        required_pass_rate: 0.90
+        tests:
+          - id: "qual-001"
+            name: "Unused Variables"
+            language: "python"
+            code: |
+              def process_data(x, y, z):
+                  result = x + y
+                  return result
+            expected_issues:
+              - type: "quality"
+                severity: "low"
+                pattern: "unused_variable"
+            timeout_ms: 30000
+          
+          - id: "qual-002"
+            name: "Empty Exception Handler"
+            language: "python"
+            code: |
+              try:
+                  risky_operation()
+              except:
+                  pass
+            expected_issues:
+              - type: "quality"
+                severity: "medium"
+                pattern: "empty_except"
+            timeout_ms: 30000
+      
+      performance:
+        name: "Performance Issues"
+        description: "Detection of performance anti-patterns"
+        required_pass_rate: 0.85
+        tests:
+          - id: "perf-001"
+            name: "N+1 Query Pattern"
+            language: "python"
+            code: |
+              for user in get_all_users():
+                  orders = get_orders_for_user(user.id)
+                  process(orders)
+            expected_issues:
+              - type: "performance"
+                severity: "medium"
+                pattern: "n_plus_one"
+            timeout_ms: 30000
+          
+          - id: "perf-002"
+            name: "Inefficient Loop"
+            language: "python"
+            code: |
+              result = []
+              for item in large_list:
+                  result = result + [transform(item)]
+            expected_issues:
+              - type: "performance"
+                severity: "low"
+                pattern: "inefficient_list_append"
+            timeout_ms: 30000
+      
+      false_positive:
+        name: "False Positive Tests"
+        description: "Ensure no false positives on clean code"
+        required_pass_rate: 0.98
+        tests:
+          - id: "fp-001"
+            name: "Clean Parameterized Query"
+            language: "python"
+            code: |
+              def get_user(user_id: int):
+                  cursor.execute(
+                      "SELECT * FROM users WHERE id = %s",
+                      (user_id,)
+                  )
+                  return cursor.fetchone()
+            expected_issues: []
+            timeout_ms: 30000
+          
+          - id: "fp-002"
+            name: "Safe DOM Manipulation"
+            language: "javascript"
+            code: |
+              function displayText(text) {
+                  document.getElementById('output').textContent = text;
+              }
+            expected_issues: []
+            timeout_ms: 30000
+          
+          - id: "fp-003"
+            name: "Environment Variable Usage"
+            language: "python"
+            code: |
+              import os
+              API_KEY = os.environ.get('API_KEY')
+              DATABASE_URL = os.environ['DATABASE_URL']
+            expected_issues: []
+            timeout_ms: 30000
+    
+    # Aggregate metrics requirements
+    aggregate_requirements:
+      overall_pass_rate: 0.90
+      security_pass_rate: 0.95
+      false_positive_rate: 0.02
+      avg_latency_ms: 3000
+      p95_latency_ms: 5000
+{{- end }}

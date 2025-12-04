@@ -1,0 +1,189 @@
+{{- $versions := list "v1" "v2" "v3" }}
+{{- range $version := $versions }}
+{{- $versionConfig := index $.Values.versions $version }}
+{{- if $versionConfig.enabled }}
+---
+# ServiceAccount for VCAI {{ $version }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vcai-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: vcai
+    version: {{ $version }}
+---
+# ServiceAccount for CRAI {{ $version }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: crai-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: crai
+    version: {{ $version }}
+---
+# Role for {{ $version }} services
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $version }}-service-role
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+---
+# RoleBinding for VCAI {{ $version }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vcai-{{ $version }}-binding
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $version }}-service-role
+subjects:
+  - kind: ServiceAccount
+    name: vcai-{{ $version }}
+    namespace: {{ $versionConfig.namespace }}
+---
+# RoleBinding for CRAI {{ $version }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crai-{{ $version }}-binding
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $version }}-service-role
+subjects:
+  - kind: ServiceAccount
+    name: crai-{{ $version }}
+    namespace: {{ $versionConfig.namespace }}
+{{- end }}
+{{- end }}
+---
+# ServiceAccount for Lifecycle Controller
+{{- if .Values.lifecycleController.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lifecycle-controller
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: lifecycle-controller
+---
+# ClusterRole for Lifecycle Controller
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: lifecycle-controller-role
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+rules:
+  # Read deployments and rollouts across namespaces
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+  # Argo Rollouts
+  - apiGroups: ["argoproj.io"]
+    resources: ["rollouts", "analysisruns", "analysistemplates"]
+    verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]
+  # Read pods and services
+  - apiGroups: [""]
+    resources: ["pods", "services", "configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+  # Events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # HPA management
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch", "patch", "update"]
+---
+# ClusterRoleBinding for Lifecycle Controller
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: lifecycle-controller-binding
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: lifecycle-controller-role
+subjects:
+  - kind: ServiceAccount
+    name: lifecycle-controller
+    namespace: platform-control-plane
+{{- end }}
+---
+# ServiceAccount for OPA
+{{- if .Values.opa.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: opa
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: opa
+---
+# Role for OPA (read configmaps for policies)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: opa-role
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+---
+# RoleBinding for OPA
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: opa-binding
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: opa-role
+subjects:
+  - kind: ServiceAccount
+    name: opa
+    namespace: platform-control-plane
+{{- end }}
+---
+# ServiceAccount for Evaluation Pipeline
+{{- if .Values.evaluationPipeline.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: evaluation-pipeline
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: evaluation-pipeline
+{{- end }}

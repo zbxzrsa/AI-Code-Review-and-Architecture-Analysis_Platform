@@ -1,11 +1,53 @@
+/* ================================================
+   Settings Page - Cool Light Theme
+   ================================================ */
+
 .settings-container {
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 50%, #eef2ff 100%);
 }
 
-.settings-container .ant-tabs-left > .ant-tabs-content-holder {
+/* Settings Header */
+.settings-header {
+  padding: 24px 28px;
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 10px 40px rgba(99, 102, 241, 0.25);
+}
+
+.settings-header h2 {
+  color: white !important;
+  margin: 0;
+}
+
+.settings-container .ant-tabs-left>.ant-tabs-content-holder {
   padding-left: 24px;
+}
+
+/* Tabs Navigation */
+.settings-container .ant-tabs-nav {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+  padding: 8px;
+}
+
+.settings-container .ant-tabs-tab {
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.settings-container .ant-tabs-tab:hover {
+  background: #ecfeff;
+}
+
+.settings-container .ant-tabs-tab-active {
+  background: linear-gradient(135deg, #ecfeff 0%, #e0e7ff 100%);
 }
 
 .settings-section {
@@ -14,10 +56,11 @@
 
 .settings-section-title {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 16px;
   padding-bottom: 8px;
-  border-bottom: 1px solid var(--border-color, #f0f0f0);
+  border-bottom: 2px solid #06b6d4;
+  color: #0f172a;
 }
 
 .settings-form {
@@ -26,22 +69,38 @@
 
 .settings-card {
   margin-bottom: 16px;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+  background: white;
+}
+
+.settings-card .ant-card-head {
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .api-key-list {
-  background: var(--bg-color, #fafafa);
-  border-radius: 8px;
+  background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+  border-radius: 12px;
   padding: 16px;
+  border: 1px solid rgba(6, 182, 212, 0.2);
 }
 
 .api-key-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  background: #fff;
-  border-radius: 6px;
+  padding: 14px 16px;
+  background: white;
+  border-radius: 8px;
   margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.06);
+  transition: all 0.2s;
+}
+
+.api-key-item:hover {
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.12);
+  transform: translateY(-2px);
 }
 
 .api-key-item:last-child {
@@ -55,9 +114,11 @@
 
 .theme-option {
   padding: 16px 24px;
-  border: 2px solid var(--border-color, #d9d9d9);
-  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   cursor: pointer;
+  transition: all 0.2s;
+  background: white;
   transition: all 0.3s;
 }
 

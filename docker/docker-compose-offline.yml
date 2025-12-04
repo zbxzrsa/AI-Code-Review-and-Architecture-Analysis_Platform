@@ -1,0 +1,356 @@
+# Docker Compose - Offline/Air-Gapped Deployment
+# Uses local models only, no external API calls
+version: "3.8"
+
+services:
+  # ============================================================
+  # Local Model Servers (GPU Required)
+  # ============================================================
+
+  codellama-server:
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    container_name: codellama-server
+    ports:
+      - "8100:8000"
+    volumes:
+      - ${MODEL_DIR}/codellama-34b:/models/codellama-34b:ro
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    command: >
+      --model /models/codellama-34b
+      --tensor-parallel-size 1
+      --quantization awq
+      --max-model-len 16384
+      --gpu-memory-utilization 0.9
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  deepseek-server:
+    image: vllm/vllm-openai:latest
+    runtime: nvidia
+    container_name: deepseek-server
+    ports:
+      - "8101:8000"
+    volumes:
+      - ${MODEL_DIR}/deepseek-coder-33b:/models/deepseek-coder-33b:ro
+    environment:
+      - CUDA_VISIBLE_DEVICES=1
+    command: >
+      --model /models/deepseek-coder-33b
+      --tensor-parallel-size 1
+      --quantization awq
+      --max-model-len 16384
+      --gpu-memory-utilization 0.9
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  embedding-server:
+    image: ghcr.io/huggingface/text-embeddings-inference:latest
+    container_name: embedding-server
+    ports:
+      - "8102:80"
+    volumes:
+      - ${MODEL_DIR}/embeddings:/models/embeddings:ro
+    command: >
+      --model-id /models/embeddings
+      --port 80
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  # ============================================================
+  # Databases
+  # ============================================================
+
+  postgres:
+    image: postgres:16
+    container_name: platform-postgres
+    environment:
+      POSTGRES_DB: platform
+      POSTGRES_USER: platform
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  redis:
+    image: redis:7
+    container_name: platform-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-changeme}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  # ============================================================
+  # Application Services
+  # ============================================================
+
+  vcai-service:
+    image: coderev/vcai:${VERSION:-latest}
+    container_name: vcai-service
+    environment:
+      - DATABASE_URL=postgresql://platform:${POSTGRES_PASSWORD:-changeme}@postgres:5432/platform
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
+      - OFFLINE_MODE=true
+      - LOCAL_MODEL_CODELLAMA=http://codellama-server:8000/v1
+      - LOCAL_MODEL_DEEPSEEK=http://deepseek-server:8000/v1
+      - EMBEDDING_SERVER=http://embedding-server:80
+      - LOG_LEVEL=INFO
+      - COMPLIANCE_MODE=hipaa
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./ai_core:/app/ai_core:ro
+      - ./configs:/app/configs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      codellama-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  crai-service:
+    image: coderev/crai:${VERSION:-latest}
+    container_name: crai-service
+    environment:
+      - DATABASE_URL=postgresql://platform:${POSTGRES_PASSWORD:-changeme}@postgres:5432/platform
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
+      - OFFLINE_MODE=true
+      - LOCAL_MODEL_CODELLAMA=http://codellama-server:8000/v1
+      - LOCAL_MODEL_DEEPSEEK=http://deepseek-server:8000/v1
+      - LOG_LEVEL=INFO
+    ports:
+      - "8002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  lifecycle-controller:
+    image: coderev/lifecycle-controller:${VERSION:-latest}
+    container_name: lifecycle-controller
+    environment:
+      - DATABASE_URL=postgresql://platform:${POSTGRES_PASSWORD:-changeme}@postgres:5432/platform
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-changeme}@redis:6379/0
+      - PROMETHEUS_URL=http://prometheus:9090
+      - OPA_URL=http://opa:8181
+      - OFFLINE_MODE=true
+    ports:
+      - "8003:8080"
+    depends_on:
+      - postgres
+      - redis
+      - prometheus
+      - opa
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  evaluation-pipeline:
+    image: coderev/evaluation-pipeline:${VERSION:-latest}
+    container_name: evaluation-pipeline
+    environment:
+      - DATABASE_URL=postgresql://platform:${POSTGRES_PASSWORD:-changeme}@postgres:5432/platform
+      - AI_SERVICE_URL=http://crai-service:8000
+      - PROMETHEUS_URL=http://prometheus:9090
+      - OFFLINE_MODE=true
+    ports:
+      - "8004:8080"
+    volumes:
+      - ./services/evaluation-pipeline/gold_sets.yaml:/etc/evaluation/gold_sets.yaml:ro
+    depends_on:
+      - postgres
+      - crai-service
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  # ============================================================
+  # Policy Engine
+  # ============================================================
+
+  opa:
+    image: openpolicyagent/opa:latest
+    container_name: platform-opa
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./services/lifecycle-controller/policies:/policies:ro
+    command:
+      - run
+      - --server
+      - --addr=0.0.0.0:8181
+      - /policies
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8181/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  # ============================================================
+  # Observability (Local Only)
+  # ============================================================
+
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: platform-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: platform-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/observability/grafana-dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  # ============================================================
+  # API Gateway
+  # ============================================================
+
+  nginx:
+    image: nginx:alpine
+    container_name: platform-gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./gateway/nginx-offline.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - vcai-service
+      - crai-service
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+  # ============================================================
+  # Frontend
+  # ============================================================
+
+  frontend:
+    image: coderev/frontend:${VERSION:-latest}
+    container_name: platform-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://localhost:80/api
+      - REACT_APP_OFFLINE_MODE=true
+    depends_on:
+      - nginx
+    restart: unless-stopped
+    networks:
+      - platform-network
+
+networks:
+  platform-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  postgres-data:
+  redis-data:
+  prometheus-data:
+  grafana-data:

@@ -43,7 +43,6 @@ import {
   SendOutlined,
   ClearOutlined,
   FileTextOutlined,
-  CheckCircleOutlined,
   WarningOutlined,
   CloseCircleOutlined,
   InfoCircleOutlined,
@@ -55,10 +54,10 @@ import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
 import './CodeReview.css';
 
-const { Content, Sider } = Layout;
+const { Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
-const { Panel } = Collapse;
+// const { Panel } = Collapse;
 
 // Types
 interface Issue {
@@ -138,8 +137,8 @@ export default AuthService;
 
 export const CodeReview: React.FC = () => {
   const { t } = useTranslation();
-  const { projectId } = useParams<{ projectId: string }>();
-  const navigate = useNavigate();
+  const { projectId: _projectId } = useParams<{ projectId: string }>();
+  const _navigate = useNavigate();
 
   // State
   const [code, setCode] = useState(SAMPLE_CODE);

@@ -1,0 +1,156 @@
+{{- $versions := list "v1" "v2" "v3" }}
+{{- range $version := $versions }}
+{{- $versionConfig := index $.Values.versions $version }}
+{{- if $versionConfig.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crai-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: crai
+    version: {{ $version }}
+spec:
+  replicas: {{ $versionConfig.replicas }}
+  selector:
+    matchLabels:
+      app: crai
+      version: {{ $version }}
+  template:
+    metadata:
+      labels:
+        app: crai
+        version: {{ $version }}
+        {{- include "coderev.selectorLabels" $ | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: crai-{{ $version }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      {{- if eq $version "v2" }}
+      priorityClassName: production-critical
+      {{- else if eq $version "v1" }}
+      priorityClassName: experiment-priority
+      {{- else }}
+      priorityClassName: legacy-low
+      {{- end }}
+      containers:
+        - name: crai
+          image: {{ include "coderev.image" (dict "root" $ "image" $.Values.crai.image) }}
+          imagePullPolicy: {{ $.Values.crai.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          env:
+            - name: VERSION
+              value: {{ $version }}
+            - name: ENVIRONMENT
+              value: {{ if eq $version "v2" }}production{{ else if eq $version "v1" }}experiment{{ else }}legacy{{ end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: url
+            {{- if $.Values.aiModels.openai.enabled }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.aiModels.openai.apiKeySecret }}
+                  key: api-key
+            {{- end }}
+            {{- if $.Values.aiModels.anthropic.enabled }}
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.aiModels.anthropic.apiKeySecret }}
+                  key: api-key
+            {{- end }}
+            {{- if $.Values.aiModels.local.enabled }}
+            - name: LOCAL_MODEL_URL
+              value: "http://codellama.{{ $versionConfig.namespace }}.svc:8080"
+            {{- end }}
+            - name: LOG_LEVEL
+              value: {{ $.Values.crai.env.LOG_LEVEL | default "INFO" }}
+            - name: MAX_TOKENS
+              value: "4096"
+            - name: ANALYSIS_TIMEOUT_SECONDS
+              value: {{ if eq $version "v2" }}"30"{{ else }}"60"{{ end }}
+          resources:
+            {{- toYaml $versionConfig.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ $.Values.crai.probes.liveness.initialDelaySeconds | default 30 }}
+            periodSeconds: {{ $.Values.crai.probes.liveness.periodSeconds | default 10 }}
+            timeoutSeconds: {{ $.Values.crai.probes.liveness.timeoutSeconds | default 5 }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ $.Values.crai.probes.readiness.initialDelaySeconds | default 15 }}
+            periodSeconds: {{ $.Values.crai.probes.readiness.periodSeconds | default 5 }}
+            timeoutSeconds: {{ $.Values.crai.probes.readiness.timeoutSeconds | default 3 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+            - name: cache
+              mountPath: /app/cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: crai-config-{{ $version }}
+        - name: cache
+          emptyDir:
+            sizeLimit: 1Gi
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if eq $version "v2" }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: crai
+                    version: v2
+                topologyKey: kubernetes.io/hostname
+      {{- end }}
+      {{- if and (eq $version "v1") $.Values.aiModels.local.enabled }}
+      # GPU node selector for V1 with local models
+      nodeSelector:
+        nvidia.com/gpu: "true"
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+      {{- end }}
+{{- end }}
+{{- end }}

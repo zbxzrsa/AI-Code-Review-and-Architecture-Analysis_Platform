@@ -1,0 +1,361 @@
+# Prometheus Alert Rules for Three-Version SLO Monitoring
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alerts
+  namespace: platform-monitoring
+data:
+  slo-alerts.yaml: |
+    groups:
+      # ============================================================
+      # V2 Production SLO Alerts (Critical)
+      # ============================================================
+      - name: v2-production-slos
+        interval: 30s
+        rules:
+          # P95 Latency SLO
+          - alert: V2LatencySLOBreach
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket{
+                  namespace="platform-v2-stable"
+                }[5m])) by (le)
+              ) * 1000 > 3000
+            for: 2m
+            labels:
+              severity: critical
+              version: v2
+              slo: latency
+            annotations:
+              summary: "V2 Production P95 latency exceeds SLO (3s)"
+              description: "P95 latency is {{ $value | printf \"%.0f\" }}ms, threshold is 3000ms"
+              runbook_url: "https://docs.example.com/runbooks/v2-latency-slo"
+              dashboard_url: "https://grafana.example.com/d/three-version-comparison"
+
+          # Error Rate SLO
+          - alert: V2ErrorRateSLOBreach
+            expr: |
+              sum(rate(http_requests_total{
+                namespace="platform-v2-stable",
+                status=~"5.."
+              }[5m])) /
+              sum(rate(http_requests_total{
+                namespace="platform-v2-stable"
+              }[5m])) > 0.02
+            for: 2m
+            labels:
+              severity: critical
+              version: v2
+              slo: error_rate
+            annotations:
+              summary: "V2 Production error rate exceeds SLO (2%)"
+              description: "Error rate is {{ $value | humanizePercentage }}, threshold is 2%"
+              runbook_url: "https://docs.example.com/runbooks/v2-error-rate"
+
+          # Availability SLO
+          - alert: V2AvailabilitySLOBreach
+            expr: |
+              (
+                sum(rate(http_requests_total{
+                  namespace="platform-v2-stable",
+                  status=~"2..|3.."
+                }[1h])) /
+                sum(rate(http_requests_total{
+                  namespace="platform-v2-stable"
+                }[1h]))
+              ) < 0.999
+            for: 5m
+            labels:
+              severity: critical
+              version: v2
+              slo: availability
+            annotations:
+              summary: "V2 Production availability below SLO (99.9%)"
+              description: "Availability is {{ $value | humanizePercentage }}"
+
+          # Security Pass Rate
+          - alert: V2SecurityPassRateLow
+            expr: |
+              sum(rate(security_checks_passed{
+                namespace="platform-v2-stable"
+              }[10m])) /
+              sum(rate(security_checks_total{
+                namespace="platform-v2-stable"
+              }[10m])) < 0.99
+            for: 5m
+            labels:
+              severity: critical
+              version: v2
+              slo: security
+            annotations:
+              summary: "V2 Security pass rate below threshold (99%)"
+              description: "Security pass rate is {{ $value | humanizePercentage }}"
+
+      # ============================================================
+      # V1 Experiment Alerts (Warning)
+      # ============================================================
+      - name: v1-experiment-alerts
+        interval: 1m
+        rules:
+          # Shadow traffic not flowing
+          - alert: V1ShadowTrafficMissing
+            expr: |
+              sum(rate(http_requests_total{
+                namespace="platform-v1-exp"
+              }[5m])) == 0
+              and
+              sum(rate(http_requests_total{
+                namespace="platform-v2-stable"
+              }[5m])) > 10
+            for: 10m
+            labels:
+              severity: warning
+              version: v1
+            annotations:
+              summary: "V1 not receiving shadow traffic"
+              description: "V2 has traffic but V1 shadow is not receiving mirrored requests"
+
+          # Accuracy regression vs baseline
+          - alert: V1AccuracyRegression
+            expr: |
+              (
+                avg(analysis_accuracy{namespace="platform-v1-exp"}) -
+                avg(analysis_accuracy{namespace="platform-v2-stable"})
+              ) < -0.05
+            for: 15m
+            labels:
+              severity: warning
+              version: v1
+            annotations:
+              summary: "V1 accuracy significantly worse than baseline"
+              description: "V1 accuracy is {{ $value | humanizePercentage }} below V2 baseline"
+
+          # Cost budget warning
+          - alert: V1CostBudgetWarning
+            expr: |
+              sum(increase(request_cost{
+                namespace="platform-v1-exp"
+              }[24h])) > 400
+            labels:
+              severity: warning
+              version: v1
+            annotations:
+              summary: "V1 experiment approaching daily cost limit"
+              description: "V1 daily cost is ${{ $value | printf \"%.2f\" }}, limit is $500"
+
+          # V1 severe latency (for quarantine consideration)
+          - alert: V1SevereLatency
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket{
+                  namespace="platform-v1-exp"
+                }[5m])) by (le)
+              ) * 1000 > 10000
+            for: 5m
+            labels:
+              severity: warning
+              version: v1
+            annotations:
+              summary: "V1 experiment has severe latency issues"
+              description: "P95 latency is {{ $value | printf \"%.0f\" }}ms"
+
+      # ============================================================
+      # Gray-Scale Rollout Alerts
+      # ============================================================
+      - name: grayscale-alerts
+        interval: 30s
+        rules:
+          # Canary error rate spike
+          - alert: GrayscaleCanaryErrors
+            expr: |
+              (
+                sum(rate(http_requests_total{
+                  namespace="platform-v2-stable",
+                  rollout_type="canary",
+                  status=~"5.."
+                }[2m])) /
+                sum(rate(http_requests_total{
+                  namespace="platform-v2-stable",
+                  rollout_type="canary"
+                }[2m]))
+              ) > 0.05
+            for: 1m
+            labels:
+              severity: critical
+              version: v2
+              phase: grayscale
+            annotations:
+              summary: "Gray-scale canary error rate spike"
+              description: "Canary error rate is {{ $value | humanizePercentage }}, triggering rollback"
+              action: "Auto-rollback will be triggered"
+
+          # Canary latency spike
+          - alert: GrayscaleCanaryLatency
+            expr: |
+              histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket{
+                  namespace="platform-v2-stable",
+                  rollout_type="canary"
+                }[2m])) by (le)
+              ) * 1000 > 5000
+            for: 1m
+            labels:
+              severity: critical
+              version: v2
+              phase: grayscale
+            annotations:
+              summary: "Gray-scale canary latency spike"
+              description: "Canary P95 latency is {{ $value | printf \"%.0f\" }}ms"
+
+          # Rollout stuck
+          - alert: GrayscaleRolloutStuck
+            expr: |
+              argo_rollout_info{
+                namespace="platform-v2-stable",
+                phase=~"Progressing|Paused"
+              } == 1
+            for: 30m
+            labels:
+              severity: warning
+              version: v2
+              phase: grayscale
+            annotations:
+              summary: "Gray-scale rollout stuck in {{ $labels.phase }}"
+              description: "Rollout has been in {{ $labels.phase }} phase for over 30 minutes"
+
+      # ============================================================
+      # V3 Recovery Alerts
+      # ============================================================
+      - name: v3-recovery-alerts
+        interval: 5m
+        rules:
+          # Long quarantine duration
+          - alert: V3LongQuarantine
+            expr: |
+              (time() - quarantine_entry_timestamp{
+                namespace="platform-v3-legacy"
+              }) / 86400 > 7
+            labels:
+              severity: info
+              version: v3
+            annotations:
+              summary: "Version quarantined for over 7 days"
+              description: "Version {{ $labels.version_id }} has been in quarantine for {{ $value | printf \"%.0f\" }} days"
+
+          # Re-evaluation failure
+          - alert: V3ReEvaluationFailed
+            expr: |
+              increase(reevaluation_failed_total{
+                namespace="platform-v3-legacy"
+              }[1h]) > 3
+            labels:
+              severity: warning
+              version: v3
+            annotations:
+              summary: "Multiple re-evaluation failures in V3"
+              description: "{{ $value }} re-evaluation failures in the last hour"
+
+      # ============================================================
+      # Lifecycle Controller Alerts
+      # ============================================================
+      - name: lifecycle-controller-alerts
+        interval: 1m
+        rules:
+          # Controller health
+          - alert: LifecycleControllerDown
+            expr: |
+              up{job="lifecycle-controller"} == 0
+            for: 2m
+            labels:
+              severity: critical
+            annotations:
+              summary: "Lifecycle Controller is down"
+              description: "The lifecycle controller is not responding"
+
+          # OPA decision failures
+          - alert: OPADecisionFailures
+            expr: |
+              increase(opa_decision_errors_total[5m]) > 5
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "OPA policy decision failures"
+              description: "{{ $value }} OPA decision errors in the last 5 minutes"
+
+          # Promotion failures
+          - alert: PromotionFailureRate
+            expr: |
+              increase(promotion_failed_total[24h]) /
+              (increase(promotion_success_total[24h]) + increase(promotion_failed_total[24h])) > 0.5
+            labels:
+              severity: warning
+            annotations:
+              summary: "High promotion failure rate"
+              description: "{{ $value | humanizePercentage }} of promotions failed in the last 24h"
+
+      # ============================================================
+      # Cost & Budget Alerts
+      # ============================================================
+      - name: cost-alerts
+        interval: 5m
+        rules:
+          # Daily budget exceeded
+          - alert: DailyCostBudgetExceeded
+            expr: |
+              sum(increase(request_cost[24h])) > 1000
+            labels:
+              severity: critical
+            annotations:
+              summary: "Daily cost budget exceeded"
+              description: "Total daily cost is ${{ $value | printf \"%.2f\" }}, budget is $1000"
+              action: "Shadow evaluation will be paused"
+
+          # Per-request cost anomaly
+          - alert: PerRequestCostAnomaly
+            expr: |
+              avg(request_cost) > 
+              avg_over_time(request_cost[7d]) * 2
+            for: 15m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Per-request cost anomaly detected"
+              description: "Average cost is 2x higher than 7-day average"
+
+  recording-rules.yaml: |
+    groups:
+      - name: slo-recording-rules
+        interval: 30s
+        rules:
+          # V2 SLO burn rate (for multi-window alerting)
+          - record: slo:v2:error_budget_remaining
+            expr: |
+              1 - (
+                sum(increase(http_requests_total{
+                  namespace="platform-v2-stable",
+                  status=~"5.."
+                }[30d])) /
+                sum(increase(http_requests_total{
+                  namespace="platform-v2-stable"
+                }[30d]))
+              ) / 0.02
+
+          # Cross-version accuracy comparison
+          - record: metric:accuracy:v1_vs_v2_delta
+            expr: |
+              avg(analysis_accuracy{namespace="platform-v1-exp"}) -
+              avg(analysis_accuracy{namespace="platform-v2-stable"})
+
+          # Cross-version latency comparison
+          - record: metric:latency_p95:v1_vs_v2_delta
+            expr: |
+              histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="platform-v1-exp"}[5m])) by (le)) -
+              histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace="platform-v2-stable"}[5m])) by (le))
+
+          # Cost efficiency ratio
+          - record: metric:cost_efficiency:v1_vs_v2
+            expr: |
+              (avg(request_cost{namespace="platform-v1-exp"}) / avg(analysis_accuracy{namespace="platform-v1-exp"})) /
+              (avg(request_cost{namespace="platform-v2-stable"}) / avg(analysis_accuracy{namespace="platform-v2-stable"}))

@@ -1,15 +1,36 @@
-/**
- * Project List Page Styles
- */
+/* ================================================
+   Project List - Cool Light Theme
+   ================================================ */
 
 .project-list-container {
   padding: 24px;
   max-width: 1600px;
   margin: 0 auto;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 50%, #eef2ff 100%);
 }
 
 .project-list-header {
   margin-bottom: 24px;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(6, 182, 212, 0.25);
+}
+
+.project-list-header h2 {
+  color: white !important;
+  margin: 0;
+}
+
+.project-list-header .ant-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.project-list-header .ant-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .project-stats {
@@ -18,10 +39,23 @@
 
 .project-stats .ant-card {
   height: 100%;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+  transition: all 0.3s;
+}
+
+.project-stats .ant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(6, 182, 212, 0.15);
 }
 
 .project-filters {
   margin-bottom: 16px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(6, 182, 212, 0.06);
 }
 
 .project-content {
@@ -33,12 +67,16 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+  overflow: hidden;
 }
 
 .project-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  transform: translateY(-6px);
+  box-shadow: 0 16px 48px rgba(6, 182, 212, 0.15);
 }
 
 .project-card .ant-card-body {
@@ -151,9 +189,12 @@
 
 /* Animation for loading states */
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 1;
   }
+
   50% {
     opacity: 0.5;
   }

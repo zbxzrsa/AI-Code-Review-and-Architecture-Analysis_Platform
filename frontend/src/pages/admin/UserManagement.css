@@ -2,24 +2,45 @@
  * User Management Page Styles
  */
 
+/* ================================================
+   User Management - Cool Light Admin Theme
+   ================================================ */
+
 .user-management {
     padding: 24px;
     max-width: 1600px;
     margin: 0 auto;
+    min-height: calc(100vh - 64px);
+    background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 50%, #eef2ff 100%);
 }
 
-.page-header {
+.user-management .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #6366f1 0%, #06b6d4 100%);
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(99, 102, 241, 0.25);
 }
 
-.page-header h2 {
+.user-management .page-header h2 {
     margin: 0;
     display: flex;
     align-items: center;
     gap: 12px;
+    color: white !important;
+}
+
+.user-management .page-header .ant-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.user-management .page-header .ant-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 /* Stats Section */
@@ -29,6 +50,15 @@
 
 .user-stats .ant-card {
     text-align: center;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+    transition: all 0.3s;
+}
+
+.user-stats .ant-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(6, 182, 212, 0.15);
 }
 
 .user-stats .ant-statistic-title {

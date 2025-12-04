@@ -1,0 +1,256 @@
+# Network Policies - Strict isolation between versions
+# Only control plane channels allowed (metrics, logs, model registries)
+---
+# V1 Experiment Network Policy - Isolated, only receives from control plane
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v1-isolation
+  namespace: platform-v1-exp
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from control plane (lifecycle controller, evaluation pipeline)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: control-plane
+    # Allow from gateway for shadow traffic
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: gateway
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow internal communication within V1
+    - from:
+        - podSelector: {}
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: observability
+      ports:
+        - protocol: TCP
+          port: 9090
+        - protocol: TCP
+          port: 4317 # OTLP
+  egress:
+    # Allow to model registry and external AI providers
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              tier: control-plane
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow to vector DB, cache, queue within V1
+    - to:
+        - podSelector: {}
+    # Allow external AI API calls (OpenAI, Anthropic, etc.)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# V2 Stable Network Policy - Strict, user-facing
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v2-isolation
+  namespace: platform-v2-stable
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from gateway (user traffic)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: gateway
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow from control plane (for rollouts)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: control-plane
+    # Allow internal communication within V2
+    - from:
+        - podSelector: {}
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: observability
+      ports:
+        - protocol: TCP
+          port: 9090
+        - protocol: TCP
+          port: 4317
+  egress:
+    # Allow to control plane
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              tier: control-plane
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow internal V2 services
+    - to:
+        - podSelector: {}
+    # Allow external AI API calls
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+---
+# V3 Legacy Network Policy - Minimal, read-heavy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: v3-isolation
+  namespace: platform-v3-legacy
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from control plane only (for re-evaluation)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: control-plane
+    # Allow from gateway (optional comparison traffic)
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: gateway
+      ports:
+        - protocol: TCP
+          port: 8080
+    # Allow internal V3 communication
+    - from:
+        - podSelector: {}
+    # Allow Prometheus scraping
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: observability
+      ports:
+        - protocol: TCP
+          port: 9090
+  egress:
+    # Minimal egress - only to control plane and DNS
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              tier: control-plane
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow internal V3 services
+    - to:
+        - podSelector: {}
+---
+# Control Plane Network Policy
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: control-plane-policy
+  namespace: platform-control-plane
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow from all version namespaces
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              version: v1
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              version: v2
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              version: v3
+    # Allow from observability
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              tier: observability
+    # Allow internal
+    - from:
+        - podSelector: {}
+  egress:
+    # Allow to all version namespaces
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              version: v1
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              version: v2
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              version: v3
+    # Allow DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow external (for model downloads, etc.)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      ports:
+        - protocol: TCP
+          port: 443

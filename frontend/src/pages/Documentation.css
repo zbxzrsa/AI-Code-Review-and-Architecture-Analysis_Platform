@@ -1,0 +1,210 @@
+/* ================================================
+   Documentation Page - Cool Light Theme
+   ================================================ */
+
+.documentation-page {
+    padding: 24px;
+    min-height: calc(100vh - 64px);
+    background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 50%, #eef2ff 100%);
+}
+
+/* Header */
+.documentation-page .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+    border-radius: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 40px rgba(6, 182, 212, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Book pixel decoration */
+.documentation-page .page-header::after {
+    content: '';
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 32px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px 6px 6px 2px;
+    box-shadow:
+        -4px 0 0 rgba(255, 255, 255, 0.15),
+        -8px 0 0 rgba(255, 255, 255, 0.1);
+}
+
+.documentation-page .page-header h3 {
+    color: white !important;
+    margin: 0;
+}
+
+.documentation-page .page-header .ant-typography-secondary {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.documentation-page .page-header .ant-input-search {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 10px;
+}
+
+.documentation-page .page-header .ant-input {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+}
+
+.documentation-page .page-header .ant-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.documentation-page .page-header .ant-input-search-button {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+}
+
+/* Quick Links Cards */
+.documentation-page .ant-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+    transition: all 0.3s;
+}
+
+.documentation-page .ant-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(6, 182, 212, 0.15);
+}
+
+/* Sidebar Menu */
+.documentation-page .ant-menu {
+    background: transparent;
+    border-radius: 12px;
+}
+
+.documentation-page .ant-menu-item {
+    margin: 4px 8px;
+    border-radius: 8px;
+}
+
+.documentation-page .ant-menu-item:hover {
+    background: linear-gradient(135deg, #ecfeff 0%, #e0e7ff 100%);
+}
+
+.documentation-page .ant-menu-item-selected {
+    background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%) !important;
+    color: white !important;
+}
+
+.documentation-page .ant-menu-item-selected .anticon {
+    color: white;
+}
+
+/* Article List */
+.doc-article {
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.doc-article:hover {
+    background: linear-gradient(135deg, #ecfeff 0%, #e0e7ff 100%) !important;
+    border-color: rgba(6, 182, 212, 0.2);
+}
+
+.doc-article .ant-avatar {
+    background: linear-gradient(135deg, #ecfeff 0%, #e0e7ff 100%);
+}
+
+/* Tags */
+.documentation-page .ant-tag {
+    border-radius: 4px;
+    border: none;
+    background: linear-gradient(135deg, #ecfeff 0%, #e0e7ff 100%);
+    color: #06b6d4;
+}
+
+/* FAQ Collapse */
+.documentation-page .ant-collapse {
+    background: transparent;
+}
+
+.documentation-page .ant-collapse-item {
+    margin-bottom: 8px;
+    border: 1px solid rgba(6, 182, 212, 0.15);
+    border-radius: 10px !important;
+    overflow: hidden;
+    background: white;
+}
+
+.documentation-page .ant-collapse-item:hover {
+    border-color: #06b6d4;
+}
+
+.documentation-page .ant-collapse-header {
+    padding: 14px 16px !important;
+}
+
+/* Help Banner */
+.documentation-page .ant-alert {
+    border: none;
+    background: linear-gradient(135deg, #ecfeff 0%, #e0e7ff 100%);
+}
+
+.documentation-page .ant-alert-info {
+    border-left: 4px solid #06b6d4;
+}
+
+.documentation-page .ant-alert .ant-btn-primary {
+    background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+    border: none;
+}
+
+/* Breadcrumb */
+.documentation-page .ant-breadcrumb {
+    padding: 8px 0;
+}
+
+.documentation-page .ant-breadcrumb a {
+    color: #06b6d4;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .documentation-page .page-header {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+
+    .documentation-page .page-header .ant-input-search {
+        width: 100% !important;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .documentation-page {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    }
+
+    .documentation-page .ant-card {
+        background: #1e293b;
+    }
+
+    .documentation-page .ant-menu-item:hover {
+        background: #334155;
+    }
+
+    .doc-article:hover {
+        background: #334155 !important;
+    }
+
+    .documentation-page .ant-collapse-item {
+        background: #1e293b;
+        border-color: #334155;
+    }
+}

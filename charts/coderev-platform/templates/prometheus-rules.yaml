@@ -1,0 +1,231 @@
+{{- if .Values.monitoring.alerts.enabled }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: coderev-slo-alerts
+  namespace: platform-monitoring
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    prometheus: main
+    role: alert-rules
+spec:
+  groups:
+    # V2 Production SLO Alerts
+    - name: v2-slo-alerts
+      rules:
+        - alert: V2ErrorRateSLOBreach
+          expr: |
+            (
+              sum(rate(http_requests_total{namespace="{{ .Values.versions.v2.namespace }}",status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{namespace="{{ .Values.versions.v2.namespace }}"}[5m]))
+            ) > 0.02
+          for: 5m
+          labels:
+            severity: critical
+            version: v2
+            slo: error_rate
+          annotations:
+            summary: "V2 Error Rate SLO Breach"
+            description: "V2 error rate {{ "{{" }} $value | humanizePercentage {{ "}}" }} exceeds 2% threshold"
+            runbook_url: "https://docs.coderev.io/runbooks/error-rate"
+
+        - alert: V2LatencySLOBreach
+          expr: |
+            histogram_quantile(0.95,
+              sum(rate(http_request_duration_seconds_bucket{namespace="{{ .Values.versions.v2.namespace }}"}[5m])) by (le)
+            ) * 1000 > 3000
+          for: 5m
+          labels:
+            severity: critical
+            version: v2
+            slo: latency
+          annotations:
+            summary: "V2 P95 Latency SLO Breach"
+            description: "V2 P95 latency {{ "{{" }} $value | humanizeDuration {{ "}}" }} exceeds 3s threshold"
+            runbook_url: "https://docs.coderev.io/runbooks/latency"
+
+        - alert: V2AvailabilitySLOBreach
+          expr: |
+            (
+              sum(up{namespace="{{ .Values.versions.v2.namespace }}", app="vcai"})
+              /
+              count(up{namespace="{{ .Values.versions.v2.namespace }}", app="vcai"})
+            ) < 0.99
+          for: 5m
+          labels:
+            severity: critical
+            version: v2
+            slo: availability
+          annotations:
+            summary: "V2 Availability SLO Breach"
+            description: "V2 availability {{ "{{" }} $value | humanizePercentage {{ "}}" }} below 99%"
+
+        - alert: V2SecurityPassRateLow
+          expr: |
+            (
+              sum(rate(security_checks_passed_total{namespace="{{ .Values.versions.v2.namespace }}"}[1h]))
+              /
+              sum(rate(security_checks_total{namespace="{{ .Values.versions.v2.namespace }}"}[1h]))
+            ) < 0.99
+          for: 15m
+          labels:
+            severity: warning
+            version: v2
+          annotations:
+            summary: "V2 Security Pass Rate Low"
+            description: "Security pass rate {{ "{{" }} $value | humanizePercentage {{ "}}" }} below 99%"
+
+    # V1 Experiment Alerts
+    - name: v1-experiment-alerts
+      rules:
+        - alert: V1ShadowTrafficStopped
+          expr: |
+            sum(rate(http_requests_total{namespace="{{ .Values.versions.v1.namespace }}"}[15m])) == 0
+          for: 30m
+          labels:
+            severity: warning
+            version: v1
+          annotations:
+            summary: "V1 Shadow Traffic Stopped"
+            description: "No shadow traffic to V1 for 30 minutes"
+
+        - alert: V1HighErrorRate
+          expr: |
+            (
+              sum(rate(http_requests_total{namespace="{{ .Values.versions.v1.namespace }}",status=~"5.."}[5m]))
+              /
+              sum(rate(http_requests_total{namespace="{{ .Values.versions.v1.namespace }}"}[5m]))
+            ) > 0.10
+          for: 10m
+          labels:
+            severity: warning
+            version: v1
+          annotations:
+            summary: "V1 High Error Rate"
+            description: "V1 experiment error rate {{ "{{" }} $value | humanizePercentage {{ "}}" }} exceeds 10%"
+
+        - alert: V1PerformingBetterThanV2
+          expr: |
+            (
+              histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket{namespace="{{ .Values.versions.v1.namespace }}"}[1h])) by (le)
+              )
+              <
+              histogram_quantile(0.95,
+                sum(rate(http_request_duration_seconds_bucket{namespace="{{ .Values.versions.v2.namespace }}"}[1h])) by (le)
+              ) * 0.9
+            )
+          for: 1h
+          labels:
+            severity: info
+            version: v1
+          annotations:
+            summary: "V1 Performing Better Than V2"
+            description: "V1 P95 latency is 10%+ better than V2 - consider promotion"
+
+    # Lifecycle Controller Alerts
+    - name: lifecycle-controller-alerts
+      rules:
+        - alert: LifecycleControllerDown
+          expr: up{app="lifecycle-controller"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Lifecycle Controller Down"
+            description: "Lifecycle controller has been down for 5 minutes"
+
+        - alert: EvaluationPipelineDown
+          expr: up{app="evaluation-pipeline"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Evaluation Pipeline Down"
+            description: "Evaluation pipeline has been down for 5 minutes"
+
+        - alert: OPADown
+          expr: up{app="opa"} == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "OPA Policy Engine Down"
+            description: "OPA has been down for 5 minutes"
+
+        - alert: PromotionPending
+          expr: |
+            promotion_pending_count > 0
+          for: 24h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Promotion Pending for 24h"
+            description: "A version has been pending promotion for 24 hours"
+
+    # Rollout Alerts
+    - name: rollout-alerts
+      rules:
+        - alert: RolloutStalled
+          expr: |
+            kube_rollout_status_phase{phase="Paused"} == 1
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Rollout Stalled"
+            description: "Rollout {{ "{{" }} $labels.rollout {{ "}}" }} has been paused for 30 minutes"
+
+        - alert: RolloutFailed
+          expr: |
+            kube_rollout_status_phase{phase="Degraded"} == 1
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Rollout Failed"
+            description: "Rollout {{ "{{" }} $labels.rollout {{ "}}" }} has failed"
+
+    # Resource Alerts
+    - name: resource-alerts
+      rules:
+        - alert: HighMemoryUsage
+          expr: |
+            (
+              container_memory_usage_bytes{namespace=~"platform-.*"}
+              /
+              container_spec_memory_limit_bytes{namespace=~"platform-.*"}
+            ) > 0.9
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High Memory Usage"
+            description: "Pod {{ "{{" }} $labels.pod {{ "}}" }} memory usage above 90%"
+
+        - alert: HighCPUUsage
+          expr: |
+            (
+              rate(container_cpu_usage_seconds_total{namespace=~"platform-.*"}[5m])
+              /
+              container_spec_cpu_quota{namespace=~"platform-.*"} * 100000
+            ) > 0.9
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "High CPU Usage"
+            description: "Pod {{ "{{" }} $labels.pod {{ "}}" }} CPU usage above 90%"
+
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total{namespace=~"platform-.*"}[15m]) > 0
+          for: 15m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod Crash Looping"
+            description: "Pod {{ "{{" }} $labels.pod {{ "}}" }} is crash looping"
+{{- end }}

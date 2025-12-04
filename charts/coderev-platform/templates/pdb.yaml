@@ -1,0 +1,72 @@
+{{- if .Values.versions.v2.enabled }}
+{{- if .Values.versions.v2.podDisruptionBudget.enabled }}
+---
+# PodDisruptionBudget for V2 VCAI
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vcai-v2-pdb
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: vcai
+    version: v2
+spec:
+  minAvailable: {{ .Values.versions.v2.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: vcai
+      version: v2
+---
+# PodDisruptionBudget for V2 CRAI
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: crai-v2-pdb
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: crai
+    version: v2
+spec:
+  minAvailable: {{ .Values.versions.v2.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: crai
+      version: v2
+{{- end }}
+{{- end }}
+---
+# PodDisruptionBudget for Lifecycle Controller
+{{- if .Values.lifecycleController.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: lifecycle-controller-pdb
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: lifecycle-controller
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: lifecycle-controller
+{{- end }}
+---
+# PodDisruptionBudget for OPA
+{{- if .Values.opa.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: opa-pdb
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: opa
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: opa
+{{- end }}

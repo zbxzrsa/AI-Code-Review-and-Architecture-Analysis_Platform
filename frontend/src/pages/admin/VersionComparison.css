@@ -1,0 +1,242 @@
+/* Version Comparison Admin Page Styles */
+
+.version-comparison-container {
+    padding: 24px;
+    background: var(--bg-primary);
+    min-height: 100vh;
+}
+
+/* Version Cards */
+.version-card {
+    height: 100%;
+    border-radius: 8px;
+    transition: box-shadow 0.3s ease;
+}
+
+.version-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.version-card.v1 {
+    border-top: 3px solid #1890ff;
+}
+
+.version-card.v2 {
+    border-top: 3px solid #52c41a;
+}
+
+.version-card.v3 {
+    border-top: 3px solid #faad14;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.metric-item {
+    text-align: center;
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+}
+
+.metric-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.metric-value.good {
+    color: #52c41a;
+}
+
+.metric-value.warning {
+    color: #faad14;
+}
+
+.metric-value.bad {
+    color: #ff4d4f;
+}
+
+.metric-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+/* Issues List */
+.issues-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.issue-item {
+    margin-bottom: 8px;
+    border-radius: 6px;
+}
+
+.issue-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Diff View */
+.diff-container {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.diff-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.diff-title {
+    font-weight: 500;
+}
+
+/* Evidence Chain */
+.evidence-chain {
+    padding: 16px;
+}
+
+.evidence-section {
+    margin-bottom: 24px;
+}
+
+.evidence-section:last-child {
+    margin-bottom: 0;
+}
+
+.evidence-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+}
+
+.evidence-content {
+    padding: 12px;
+    background: var(--bg-secondary);
+    border-radius: 6px;
+}
+
+.evidence-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+/* Executability Tests Table */
+.executability-table {
+    width: 100%;
+}
+
+.executability-table th {
+    text-align: center;
+    padding: 8px;
+}
+
+.executability-table td {
+    text-align: center;
+    padding: 8px;
+}
+
+.test-pass {
+    color: #52c41a;
+    font-size: 18px;
+}
+
+.test-fail {
+    color: #ff4d4f;
+    font-size: 18px;
+}
+
+/* History Table */
+.history-table {
+    background: var(--bg-primary);
+}
+
+/* Rollback Modal */
+.rollback-modal .ant-modal-content {
+    border-radius: 8px;
+}
+
+.rollback-warning {
+    margin-bottom: 16px;
+}
+
+.rollback-reason {
+    margin-bottom: 16px;
+}
+
+.rollback-notes {
+    margin-bottom: 16px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+    .metrics-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .metrics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .diff-header {
+        flex-direction: column;
+        gap: 8px;
+    }
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.version-card {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.version-card:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.version-card:nth-child(3) {
+    animation-delay: 0.2s;
+}
+
+/* Dark theme adjustments */
+[data-theme='dark'] .version-card {
+    background: #1f1f1f;
+}
+
+[data-theme='dark'] .metric-item {
+    background: #2a2a2a;
+}
+
+[data-theme='dark'] .evidence-content {
+    background: #2a2a2a;
+}
+
+[data-theme='dark'] .diff-header {
+    background: #2a2a2a;
+}

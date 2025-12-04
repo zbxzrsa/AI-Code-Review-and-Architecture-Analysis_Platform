@@ -1,0 +1,309 @@
+/* ================================================
+   ML Auto-Promotion Dashboard - Cool Light Theme
+   ================================================ */
+
+.ml-auto-promotion-page {
+    padding: 24px;
+    min-height: calc(100vh - 64px);
+    background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 50%, #eef2ff 100%);
+}
+
+/* Header */
+.ml-auto-promotion-page .page-header {
+    padding: 24px 28px;
+    background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+    border-radius: 16px;
+    margin-bottom: 24px;
+    box-shadow: 0 10px 40px rgba(139, 92, 246, 0.25);
+    position: relative;
+    overflow: hidden;
+}
+
+/* AI Brain pixel decoration */
+.ml-auto-promotion-page .page-header::after {
+    content: '';
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    box-shadow:
+        -8px -8px 0 4px rgba(255, 255, 255, 0.1),
+        8px -8px 0 4px rgba(255, 255, 255, 0.1),
+        -8px 8px 0 4px rgba(255, 255, 255, 0.05),
+        8px 8px 0 4px rgba(255, 255, 255, 0.05);
+}
+
+.ml-auto-promotion-page .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ml-auto-promotion-page .auto-promotion-toggle {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+}
+
+/* Metric Cards */
+.metric-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+    transition: all 0.3s;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(6, 182, 212, 0.15);
+}
+
+.metric-card .ant-statistic-title {
+    color: #64748b;
+}
+
+/* Versions Card */
+.versions-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+}
+
+.versions-card .ant-table-thead>tr>th {
+    background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+}
+
+.versions-card .ant-table-tbody>tr:hover>td {
+    background: linear-gradient(135deg, #ecfeff 0%, #e0e7ff 100%);
+}
+
+/* Rules Card */
+.rules-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+}
+
+.rule-item {
+    padding: 16px;
+    border-radius: 10px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s;
+}
+
+.rule-item.enabled {
+    border-color: rgba(6, 182, 212, 0.3);
+    background: linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%);
+}
+
+.rule-item.disabled {
+    opacity: 0.6;
+    background: #f8fafc;
+}
+
+.rule-item:hover {
+    border-color: #06b6d4;
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.1);
+}
+
+.rule-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.rule-details {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.rule-item .ant-slider {
+    margin: 8px 0 0 0;
+}
+
+.rule-item .ant-slider-track {
+    background: linear-gradient(90deg, #06b6d4, #6366f1);
+}
+
+.rule-item .ant-slider-handle::after {
+    box-shadow: 0 0 0 2px #06b6d4;
+}
+
+/* Production Card */
+.production-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+    background: linear-gradient(135deg, #ffffff 0%, #ecfeff 100%);
+}
+
+.production-card .ant-card-head {
+    border-bottom-color: rgba(6, 182, 212, 0.1);
+}
+
+.production-details {
+    text-align: center;
+}
+
+.production-details .ant-row {
+    justify-content: center;
+    gap: 24px;
+}
+
+.metric-gauge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.metric-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.metric-row:last-child {
+    border-bottom: none;
+}
+
+/* History Card */
+.history-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
+}
+
+.history-card .ant-timeline {
+    margin-top: 8px;
+}
+
+.timeline-item {
+    padding-bottom: 8px;
+}
+
+.timeline-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+/* Alert Styling */
+.ml-auto-promotion-page .ant-alert {
+    border: none;
+}
+
+.ml-auto-promotion-page .ant-alert-success {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-left: 4px solid #22c55e;
+}
+
+/* Promote Modal */
+.promote-modal-content {
+    padding: 8px 0;
+}
+
+.version-metrics {
+    padding: 16px;
+    background: linear-gradient(135deg, #f0fdfa 0%, #ecfeff 100%);
+    border-radius: 10px;
+    margin-top: 16px;
+}
+
+/* Tags */
+.ml-auto-promotion-page .ant-tag {
+    border-radius: 6px;
+}
+
+/* Progress Bars */
+.ml-auto-promotion-page .ant-progress-line {
+    margin-bottom: 0;
+}
+
+/* Buttons */
+.ml-auto-promotion-page .ant-btn-primary {
+    background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+    border: none;
+    box-shadow: 0 4px 15px rgba(6, 182, 212, 0.3);
+}
+
+.ml-auto-promotion-page .ant-btn-primary:hover {
+    background: linear-gradient(135deg, #0891b2 0%, #4f46e5 100%);
+}
+
+/* Switch */
+.ml-auto-promotion-page .ant-switch-checked {
+    background: linear-gradient(135deg, #22c55e 0%, #06b6d4 100%);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ml-auto-promotion-page .header-content {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+
+    .production-details .ant-row {
+        flex-direction: column;
+    }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+    .ml-auto-promotion-page {
+        background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+    }
+
+    .metric-card,
+    .versions-card,
+    .rules-card,
+    .production-card,
+    .history-card {
+        background: #1e293b;
+    }
+
+    .rule-item {
+        background: #334155;
+        border-color: #475569;
+    }
+
+    .rule-item.enabled {
+        background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    }
+
+    .versions-card .ant-table-thead>tr>th {
+        background: #334155;
+    }
+
+    .metric-row {
+        border-color: #475569;
+    }
+}
+
+/* Animations */
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.7;
+    }
+}
+
+.ml-auto-promotion-page .ant-alert-success .anticon-sync {
+    animation: pulse 2s ease-in-out infinite;
+}

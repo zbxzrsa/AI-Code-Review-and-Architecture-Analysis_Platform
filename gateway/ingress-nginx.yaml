@@ -1,0 +1,124 @@
+# Gateway Configuration - Traffic Mirroring to V1
+# Single user entry to V2, shadow traffic to V1/V3
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api-gateway
+  namespace: platform-v2-stable
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Rate limiting
+    nginx.ingress.kubernetes.io/limit-rps: "100"
+    nginx.ingress.kubernetes.io/limit-connections: "50"
+    # Timeouts
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "10"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # Traffic mirroring to V1 (shadow)
+    nginx.ingress.kubernetes.io/mirror-target: "http://crai-service.platform-v1-exp.svc.cluster.local:8080"
+    nginx.ingress.kubernetes.io/mirror-request-body: "on"
+    # Custom headers for tracing
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Request-ID $request_id;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Version "v2";
+
+      # Mirror to V1 for shadow evaluation
+      mirror /mirror-v1;
+      mirror_request_body on;
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location = /mirror-v1 {
+        internal;
+        proxy_pass http://crai-service.platform-v1-exp.svc.cluster.local:8080$request_uri;
+        proxy_set_header X-Shadow-Request "true";
+        proxy_set_header X-Original-Version "v2";
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 30s;
+      }
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - api.coderev.example.com
+      secretName: api-tls-secret
+  rules:
+    - host: api.coderev.example.com
+      http:
+        paths:
+          - path: /api/v1/analyze
+            pathType: Prefix
+            backend:
+              service:
+                name: crai-stable
+                port:
+                  number: 8080
+          - path: /api/v1/review
+            pathType: Prefix
+            backend:
+              service:
+                name: vcai-active
+                port:
+                  number: 8080
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: crai-stable
+                port:
+                  number: 8080
+---
+# Internal ingress for admin/experiment access
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: internal-gateway
+  namespace: platform-v1-exp
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      # Only allow with x-exp header
+      if ($http_x_exp != "v1") {
+        return 403;
+      }
+      proxy_set_header X-Shadow-Request "true";
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: internal.coderev.example.com
+      http:
+        paths:
+          - path: /v1-exp
+            pathType: Prefix
+            backend:
+              service:
+                name: crai-service
+                port:
+                  number: 8080
+---
+# V3 comparison ingress (optional, for admins)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: v3-comparison
+  namespace: platform-v3-legacy
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: internal.coderev.example.com
+      http:
+        paths:
+          - path: /v3-legacy
+            pathType: Prefix
+            backend:
+              service:
+                name: crai-service
+                port:
+                  number: 8080

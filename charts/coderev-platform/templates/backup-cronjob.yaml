@@ -1,0 +1,149 @@
+{{- if .Values.backup.enabled | default false }}
+---
+# Daily Database Backup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: database-backup
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: backup
+spec:
+  schedule: {{ .Values.backup.schedule | default "0 2 * * *" | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: database-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="/backup/coderev_${TIMESTAMP}.sql.gz"
+                  
+                  echo "Starting backup at $(date)"
+                  
+                  # Create backup
+                  pg_dump $DATABASE_URL | gzip > $BACKUP_FILE
+                  
+                  echo "Backup created: $BACKUP_FILE"
+                  echo "Size: $(du -h $BACKUP_FILE | cut -f1)"
+                  
+                  # Cleanup old backups (keep last 7 days)
+                  find /backup -name "coderev_*.sql.gz" -mtime +7 -delete
+                  
+                  echo "Backup completed at $(date)"
+              env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: database-credentials
+                      key: url
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+              resources:
+                limits:
+                  cpu: "500m"
+                  memory: "512Mi"
+                requests:
+                  cpu: "100m"
+                  memory: "128Mi"
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: backup-pvc
+---
+# Backup PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backup-pvc
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.backup.storageClass | default "standard" }}
+  resources:
+    requests:
+      storage: {{ .Values.backup.storageSize | default "50Gi" }}
+---
+# Redis Backup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: backup
+spec:
+  schedule: {{ .Values.backup.redisSchedule | default "0 3 * * *" | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app: redis-backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: redis:7-alpine
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  
+                  echo "Starting Redis backup at $(date)"
+                  
+                  # Trigger BGSAVE and wait
+                  redis-cli -u $REDIS_URL BGSAVE
+                  sleep 5
+                  
+                  # Copy RDB file
+                  redis-cli -u $REDIS_URL --rdb /backup/redis_${TIMESTAMP}.rdb
+                  
+                  echo "Redis backup completed"
+                  
+                  # Cleanup old backups
+                  find /backup -name "redis_*.rdb" -mtime +7 -delete
+              env:
+                - name: REDIS_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: redis-credentials
+                      key: url
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+              resources:
+                limits:
+                  cpu: "200m"
+                  memory: "256Mi"
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: backup-pvc
+{{- end }}

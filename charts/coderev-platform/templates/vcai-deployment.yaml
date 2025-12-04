@@ -1,0 +1,134 @@
+{{- $versions := list "v1" "v2" "v3" }}
+{{- range $version := $versions }}
+{{- $versionConfig := index $.Values.versions $version }}
+{{- if $versionConfig.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vcai-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: vcai
+    version: {{ $version }}
+spec:
+  replicas: {{ $versionConfig.replicas }}
+  selector:
+    matchLabels:
+      app: vcai
+      version: {{ $version }}
+  template:
+    metadata:
+      labels:
+        app: vcai
+        version: {{ $version }}
+        {{- include "coderev.selectorLabels" $ | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: vcai-{{ $version }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      {{- if eq $version "v2" }}
+      priorityClassName: production-critical
+      {{- else if eq $version "v1" }}
+      priorityClassName: experiment-priority
+      {{- else }}
+      priorityClassName: legacy-low
+      {{- end }}
+      containers:
+        - name: vcai
+          image: {{ include "coderev.image" (dict "root" $ "image" $.Values.vcai.image) }}
+          imagePullPolicy: {{ $.Values.vcai.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+              name: http
+              protocol: TCP
+          env:
+            - name: VERSION
+              value: {{ $version }}
+            - name: ENVIRONMENT
+              value: {{ if eq $version "v2" }}production{{ else if eq $version "v1" }}experiment{{ else }}legacy{{ end }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: url
+            {{- if $.Values.aiModels.openai.enabled }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.aiModels.openai.apiKeySecret }}
+                  key: api-key
+            {{- end }}
+            {{- if $.Values.aiModels.anthropic.enabled }}
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ $.Values.aiModels.anthropic.apiKeySecret }}
+                  key: api-key
+            {{- end }}
+            - name: LOG_LEVEL
+              value: {{ $.Values.vcai.env.LOG_LEVEL | default "INFO" }}
+          resources:
+            {{- toYaml $versionConfig.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ $.Values.vcai.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ $.Values.vcai.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ $.Values.vcai.probes.liveness.timeoutSeconds }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ $.Values.vcai.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ $.Values.vcai.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ $.Values.vcai.probes.readiness.timeoutSeconds }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: config
+              mountPath: /app/config
+              readOnly: true
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: vcai-config-{{ $version }}
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- if eq $version "v2" }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: vcai
+                    version: v2
+                topologyKey: kubernetes.io/hostname
+      {{- end }}
+{{- end }}
+{{- end }}

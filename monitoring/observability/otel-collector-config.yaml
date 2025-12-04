@@ -1,0 +1,283 @@
+# OpenTelemetry Collector Configuration
+# Full-link tracing across V1/V2/V3 with request ID correlation
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: platform-monitoring
+data:
+  otel-collector-config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+      
+      # Scrape Prometheus metrics
+      prometheus:
+        config:
+          scrape_configs:
+            - job_name: 'v1-experiment'
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names: ['platform-v1-exp']
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                  action: keep
+                  regex: true
+                - source_labels: [__meta_kubernetes_namespace]
+                  target_label: namespace
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod
+                - action: labelmap
+                  regex: __meta_kubernetes_pod_label_(.+)
+            
+            - job_name: 'v2-stable'
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names: ['platform-v2-stable']
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                  action: keep
+                  regex: true
+                - source_labels: [__meta_kubernetes_namespace]
+                  target_label: namespace
+                - source_labels: [__meta_kubernetes_pod_name]
+                  target_label: pod
+            
+            - job_name: 'v3-legacy'
+              kubernetes_sd_configs:
+                - role: pod
+                  namespaces:
+                    names: ['platform-v3-legacy']
+              relabel_configs:
+                - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                  action: keep
+                  regex: true
+                - source_labels: [__meta_kubernetes_namespace]
+                  target_label: namespace
+      
+      # Kafka receiver for CDC events
+      kafka:
+        brokers:
+          - kafka.platform-infrastructure.svc:9092
+        topic: lifecycle-events
+        group_id: otel-collector
+        encoding: json
+
+    processors:
+      # Add version labels based on namespace
+      attributes:
+        actions:
+          - key: platform.version
+            from_attribute: namespace
+            action: insert
+          - key: service.environment
+            value: production
+            action: insert
+      
+      # Batch for efficiency
+      batch:
+        timeout: 10s
+        send_batch_size: 1000
+        send_batch_max_size: 2000
+      
+      # Memory limiter
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 2000
+        spike_limit_mib: 500
+      
+      # Filter out health checks from traces
+      filter:
+        traces:
+          span:
+            - 'attributes["http.target"] == "/health"'
+            - 'attributes["http.target"] == "/ready"'
+            - 'attributes["http.target"] == "/metrics"'
+      
+      # Tail sampling for shadow traffic
+      tail_sampling:
+        decision_wait: 10s
+        num_traces: 100000
+        expected_new_traces_per_sec: 1000
+        policies:
+          # Always sample errors
+          - name: errors
+            type: status_code
+            status_code: {status_codes: [ERROR]}
+          
+          # Always sample slow requests
+          - name: slow-requests
+            type: latency
+            latency: {threshold_ms: 3000}
+          
+          # Sample 100% of shadow traffic for comparison
+          - name: shadow-traffic
+            type: string_attribute
+            string_attribute: {key: x-shadow-request, values: ["true"]}
+          
+          # Sample 10% of normal traffic
+          - name: probabilistic-sampler
+            type: probabilistic
+            probabilistic: {sampling_percentage: 10}
+      
+      # Resource detection
+      resourcedetection:
+        detectors:
+          - env
+          - gcp
+          - k8s_node
+        timeout: 5s
+        override: false
+      
+      # Add span metadata for cross-version correlation
+      span:
+        name:
+          from_attributes: ["http.method", "http.route"]
+          separator: " "
+
+    exporters:
+      # Prometheus for metrics
+      prometheus:
+        endpoint: 0.0.0.0:8889
+        namespace: platform
+        send_timestamps: true
+        metric_expiration: 5m
+        resource_to_telemetry_conversion:
+          enabled: true
+      
+      # Tempo for traces
+      otlp/tempo:
+        endpoint: tempo.platform-monitoring.svc:4317
+        tls:
+          insecure: true
+      
+      # Loki for logs
+      loki:
+        endpoint: http://loki.platform-monitoring.svc:3100/loki/api/v1/push
+        labels:
+          resource:
+            service.name: "service_name"
+            service.namespace: "namespace"
+            platform.version: "version"
+      
+      # Debug logging (development only)
+      logging:
+        loglevel: info
+        sampling_initial: 5
+        sampling_thereafter: 200
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+      
+      pprof:
+        endpoint: 0.0.0.0:1777
+      
+      zpages:
+        endpoint: 0.0.0.0:55679
+
+    service:
+      extensions: [health_check, pprof, zpages]
+      
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, filter, tail_sampling, resourcedetection, attributes, batch]
+          exporters: [otlp/tempo]
+        
+        metrics:
+          receivers: [otlp, prometheus]
+          processors: [memory_limiter, resourcedetection, attributes, batch]
+          exporters: [prometheus]
+        
+        logs:
+          receivers: [otlp]
+          processors: [memory_limiter, resourcedetection, attributes, batch]
+          exporters: [loki]
+      
+      telemetry:
+        logs:
+          level: info
+        metrics:
+          address: 0.0.0.0:8888
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-collector
+  namespace: platform-monitoring
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      serviceAccountName: otel-collector
+      containers:
+        - name: otel-collector
+          image: otel/opentelemetry-collector-contrib:0.90.0
+          command:
+            - /otelcol-contrib
+            - --config=/etc/otel/otel-collector-config.yaml
+          ports:
+            - containerPort: 4317 # OTLP gRPC
+              protocol: TCP
+            - containerPort: 4318 # OTLP HTTP
+              protocol: TCP
+            - containerPort: 8889 # Prometheus export
+              protocol: TCP
+            - containerPort: 13133 # Health check
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 200m
+              memory: 400Mi
+            limits:
+              cpu: 1000m
+              memory: 2Gi
+          volumeMounts:
+            - name: config
+              mountPath: /etc/otel
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 13133
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 13133
+      volumes:
+        - name: config
+          configMap:
+            name: otel-collector-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: platform-monitoring
+spec:
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+    - name: prometheus
+      port: 8889
+      targetPort: 8889
+  selector:
+    app: otel-collector

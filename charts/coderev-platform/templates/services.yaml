@@ -1,0 +1,132 @@
+{{- $versions := list "v1" "v2" "v3" }}
+{{- range $version := $versions }}
+{{- $versionConfig := index $.Values.versions $version }}
+{{- if $versionConfig.enabled }}
+---
+# VCAI Service for {{ $version }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: vcai-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: vcai
+    version: {{ $version }}
+spec:
+  type: {{ $.Values.vcai.service.type }}
+  ports:
+    - port: {{ $.Values.vcai.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: vcai
+    version: {{ $version }}
+---
+# CRAI Service for {{ $version }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: crai-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: crai
+    version: {{ $version }}
+spec:
+  type: {{ $.Values.crai.service.type }}
+  ports:
+    - port: {{ $.Values.crai.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: crai
+    version: {{ $version }}
+{{- end }}
+{{- end }}
+---
+# Lifecycle Controller Service
+{{- if .Values.lifecycleController.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: lifecycle-controller
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: lifecycle-controller
+spec:
+  type: {{ .Values.lifecycleController.service.type }}
+  ports:
+    - port: {{ .Values.lifecycleController.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: lifecycle-controller
+{{- end }}
+---
+# Evaluation Pipeline Service
+{{- if .Values.evaluationPipeline.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: evaluation-pipeline
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: evaluation-pipeline
+spec:
+  type: {{ .Values.evaluationPipeline.service.type }}
+  ports:
+    - port: {{ .Values.evaluationPipeline.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: evaluation-pipeline
+{{- end }}
+---
+# OPA Service
+{{- if .Values.opa.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: opa
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: opa
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8181
+      targetPort: 8181
+      protocol: TCP
+      name: http
+  selector:
+    app: opa
+{{- end }}
+---
+# Frontend Service
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: frontend
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: 80
+      protocol: TCP
+      name: http
+  selector:
+    app: frontend
+{{- end }}

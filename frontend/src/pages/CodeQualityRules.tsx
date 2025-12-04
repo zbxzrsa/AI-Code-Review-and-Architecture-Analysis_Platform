@@ -25,7 +25,6 @@ import {
   Input,
   Select,
   Tooltip,
-  Collapse,
   Statistic,
   message,
 } from 'antd';

@@ -1,0 +1,198 @@
+# Prompt Registry - Versioned and Signed Prompts
+# All prompts must be registered and signed before use
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prompt-registry
+  namespace: platform-control-plane
+  labels:
+    component: ai-core
+    type: registry
+data:
+  prompts.yaml: |
+    prompts:
+      # Code Review Prompts
+      - id: code-review-v3
+        name: "Standard Code Review"
+        version: "3.2.1"
+        signature: "sha256:cr3abc..."
+        category: code-review
+        status: production
+        allowed_versions: [v2]
+        template: |
+          You are an expert code reviewer. Analyze the following code for:
+          1. Code quality and best practices
+          2. Potential bugs and edge cases
+          3. Performance optimizations
+          4. Security vulnerabilities
+          5. Maintainability and readability
+          
+          Code Language: {{language}}
+          File Path: {{file_path}}
+          
+          ```{{language}}
+          {{code}}
+          ```
+          
+          Provide structured feedback with severity levels (critical, high, medium, low).
+        parameters:
+          temperature: 0.1
+          max_tokens: 4096
+        metrics:
+          accuracy_baseline: 0.89
+          avg_latency_ms: 1500
+          
+      - id: code-review-v4-exp
+        name: "Enhanced Code Review (Experimental)"
+        version: "4.0.0-beta"
+        signature: "sha256:cr4def..."
+        category: code-review
+        status: experimental
+        allowed_versions: [v1]
+        template: |
+          <system>
+          You are an elite code reviewer with expertise in {{language}}.
+          Your analysis must be thorough, actionable, and educational.
+          </system>
+          
+          <context>
+          Repository: {{repo_name}}
+          File: {{file_path}}
+          Recent changes: {{diff_summary}}
+          </context>
+          
+          <code>
+          {{code}}
+          </code>
+          
+          <instructions>
+          Analyze the code comprehensively:
+          1. **Critical Issues**: Security vulnerabilities, data races, memory leaks
+          2. **Bugs**: Logic errors, edge cases, exception handling
+          3. **Performance**: Time/space complexity, optimization opportunities
+          4. **Quality**: SOLID principles, design patterns, code smells
+          5. **Style**: Naming, formatting, documentation
+          
+          For each issue:
+          - Provide exact line numbers
+          - Explain the problem clearly
+          - Suggest a specific fix with code example
+          - Rate severity: CRITICAL > HIGH > MEDIUM > LOW
+          </instructions>
+        parameters:
+          temperature: 0.05
+          max_tokens: 8192
+        metrics:
+          accuracy_target: 0.92
+          
+      # Security Analysis Prompts
+      - id: security-audit-v2
+        name: "Security Vulnerability Scan"
+        version: "2.1.0"
+        signature: "sha256:sa2ghi..."
+        category: security
+        status: production
+        allowed_versions: [v1, v2]
+        template: |
+          Perform a comprehensive security audit of the following code.
+          Focus on:
+          
+          1. **Injection Attacks**: SQL, NoSQL, Command, LDAP, XPath
+          2. **Authentication/Authorization**: Broken auth, missing access control
+          3. **Data Exposure**: Sensitive data leakage, improper encryption
+          4. **Security Misconfig**: Default credentials, verbose errors
+          5. **XSS/CSRF**: Cross-site scripting, request forgery
+          6. **Insecure Dependencies**: Known vulnerabilities in libraries
+          7. **Cryptographic Issues**: Weak algorithms, improper key management
+          
+          Language: {{language}}
+          Framework: {{framework}}
+          
+          ```{{language}}
+          {{code}}
+          ```
+          
+          Rate each finding: CRITICAL, HIGH, MEDIUM, LOW
+          Provide CWE/CVE references where applicable.
+        parameters:
+          temperature: 0.0
+          max_tokens: 4096
+        red_team_validated: true
+        
+      # Architecture Analysis Prompts
+      - id: architecture-analysis-v2
+        name: "Architecture Review"
+        version: "2.0.0"
+        signature: "sha256:aa2jkl..."
+        category: architecture
+        status: production
+        allowed_versions: [v1, v2]
+        template: |
+          Analyze the software architecture represented by:
+          
+          Components:
+          {{components}}
+          
+          Dependencies:
+          {{dependencies}}
+          
+          Evaluate:
+          1. **Modularity**: Separation of concerns, coupling/cohesion
+          2. **Scalability**: Horizontal scaling, bottlenecks
+          3. **Reliability**: Fault tolerance, redundancy
+          4. **Maintainability**: Technical debt, complexity
+          5. **Security**: Attack surface, trust boundaries
+          
+          Provide actionable recommendations with priority.
+        parameters:
+          temperature: 0.2
+          max_tokens: 4096
+          
+      # Documentation Generation
+      - id: doc-generation-v1
+        name: "Documentation Generator"
+        version: "1.2.0"
+        signature: "sha256:dg1mno..."
+        category: documentation
+        status: production
+        allowed_versions: [v1, v2, v3]
+        template: |
+          Generate comprehensive documentation for:
+          
+          ```{{language}}
+          {{code}}
+          ```
+          
+          Include:
+          - Purpose and functionality
+          - Parameters and return values
+          - Usage examples
+          - Edge cases and limitations
+          
+          Format: {{format}}
+        parameters:
+          temperature: 0.3
+          max_tokens: 2048
+
+    # Prompt versioning rules
+    versioning:
+      # Promotion requires shadow testing
+      promotion_path:
+        - experimental  # V1 only, shadow traffic
+        - staging       # V1 + limited V2 gray-scale
+        - production    # V2 full traffic
+        - deprecated    # V3 only
+      
+      # Minimum shadow evaluation before promotion
+      shadow_requirements:
+        min_requests: 1000
+        min_accuracy_delta: 0.02
+        max_latency_increase_percent: 10
+        security_pass_rate: 0.99
+      
+      # Signature verification
+      signing:
+        algorithm: ed25519
+        public_key_ref: prompt-signing-key
+        required: true

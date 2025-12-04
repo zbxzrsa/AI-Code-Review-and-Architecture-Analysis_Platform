@@ -92,6 +92,37 @@ export interface EventMap {
   "ws:disconnected": { reason?: string };
   "ws:message": { type: string; data: any };
   "ws:error": { error: any };
+
+  // Performance events
+  "performance:api:critical": {
+    endpoint: string;
+    duration: number;
+    threshold: number;
+  };
+  "performance:api:slow": {
+    endpoint: string;
+    duration: number;
+    threshold: number;
+  };
+  "performance:render:critical": {
+    componentName: string;
+    renderTime: number;
+    threshold: number;
+  };
+  "performance:render:slow": {
+    componentName: string;
+    renderTime: number;
+    threshold: number;
+  };
+  "performance:memory:critical": { usage: number; threshold: number };
+  "performance:memory:warning": { usage: number; threshold: number };
+  "performance:report": any;
+  "performance:longTask": { duration: number; name: string };
+  "performance:lcp": { value: number };
+  "performance:fid": { value: number };
+
+  // Security events
+  "security:event": any;
 }
 
 // ============================================

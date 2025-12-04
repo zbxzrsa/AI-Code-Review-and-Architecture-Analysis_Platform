@@ -1,0 +1,41 @@
+# Priority Classes for Three-Version Architecture
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: production-critical
+  labels: { { - include "coderev.labels" . | nindent 4 } }
+value: 1000000
+globalDefault: false
+description: "Production V2 workloads - highest priority"
+preemptionPolicy: PreemptLowerPriority
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: experiment-priority
+  labels: { { - include "coderev.labels" . | nindent 4 } }
+value: 100000
+globalDefault: false
+description: "V1 Experiment workloads - can be preempted by production"
+preemptionPolicy: PreemptLowerPriority
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: legacy-low
+  labels: { { - include "coderev.labels" . | nindent 4 } }
+value: 10000
+globalDefault: false
+description: "V3 Legacy/Quarantine workloads - lowest priority"
+preemptionPolicy: Never
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: control-plane-priority
+  labels: { { - include "coderev.labels" . | nindent 4 } }
+value: 900000
+globalDefault: false
+description: "Control plane services - high priority but below production"
+preemptionPolicy: PreemptLowerPriority

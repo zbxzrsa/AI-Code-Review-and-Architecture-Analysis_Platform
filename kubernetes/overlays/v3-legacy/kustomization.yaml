@@ -1,0 +1,79 @@
+# V3 Legacy/Quarantine Overlay - Recovery, re-evaluation, parameter repair
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: platform-v3-legacy
+
+resources:
+  - ../../base
+  - hpa.yaml
+  - priority-class.yaml
+  - resource-quota.yaml
+  - sealed-secrets.yaml
+
+commonLabels:
+  version: v3
+  environment: quarantine
+  tier: legacy
+
+patches:
+  # V3 gets minimal resources
+  - target:
+      kind: Deployment
+      name: vcai-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: add
+        path: /spec/template/spec/priorityClassName
+        value: legacy-priority
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          tier: legacy
+          cost: low
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+
+  - target:
+      kind: Deployment
+      name: crai-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 1
+      - op: add
+        path: /spec/template/spec/priorityClassName
+        value: legacy-priority
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "100m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+
+configMapGenerator:
+  - name: v3-config
+    literals:
+      - VERSION=v3
+      - ENVIRONMENT=quarantine
+      - ENABLE_SHADOW_MODE=true
+      - RETURN_RESPONSES=false
+      - ENABLE_METRICS=true
+      - ENABLE_DETAILED_LOGGING=true
+      - READ_ONLY_MODE=true
+      - ENABLE_RE_EVALUATION=true
+      - MODEL_REGISTRY_URL=http://model-registry.platform-control-plane.svc:8080
+      - PROMPT_REGISTRY_URL=http://prompt-registry.platform-control-plane.svc:8080
+      - RECOVERY_MODE=true

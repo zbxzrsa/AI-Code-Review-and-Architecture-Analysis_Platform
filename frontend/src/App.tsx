@@ -104,7 +104,9 @@ const ModelComparison = lazy(() => import('./pages/admin/ModelComparison'));
 const PerformanceMonitor = lazy(() => import('./pages/admin/PerformanceMonitor'));
 const SecurityScanner = lazy(() => import('./pages/admin/SecurityScanner'));
 const CodeQualityDashboard = lazy(() => import('./pages/admin/CodeQualityDashboard'));
+const VersionComparison = lazy(() => import('./pages/admin/VersionComparison'));
 const WelcomeDashboard = lazy(() => import('./pages/WelcomeDashboard'));
+const MLAutoPromotion = lazy(() => import('./pages/MLAutoPromotion'));
 
 // Query client for React Query
 const queryClient = new QueryClient({
@@ -278,6 +280,11 @@ export default function App() {
                       <AIModels />
                     </AdminRoute>
                   } />
+                  <Route path="/admin/version-comparison" element={
+                    <AdminRoute>
+                      <VersionComparison />
+                    </AdminRoute>
+                  } />
                   <Route path="/admin/vulnerabilities" element={
                     <AdminRoute>
                       <VulnerabilityDashboard />
@@ -321,6 +328,11 @@ export default function App() {
                   <Route path="/admin/quality" element={
                     <AdminRoute>
                       <CodeQualityDashboard />
+                    </AdminRoute>
+                  } />
+                  <Route path="/admin/ml-promotion" element={
+                    <AdminRoute>
+                      <MLAutoPromotion />
                     </AdminRoute>
                   } />
                 </Route>

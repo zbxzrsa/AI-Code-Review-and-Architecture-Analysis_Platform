@@ -1,0 +1,73 @@
+# V1 Experiment Overlay - Rapid trial, shadow traffic
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: platform-v1-exp
+
+resources:
+  - ../../base
+  - hpa.yaml
+  - priority-class.yaml
+  - resource-quota.yaml
+  - secrets.yaml
+
+commonLabels:
+  version: v1
+  environment: experiment
+  tier: shadow
+
+patches:
+  # Scale to zero when no shadow traffic
+  - target:
+      kind: Deployment
+      name: vcai-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 0
+      - op: add
+        path: /spec/template/spec/nodeSelector
+        value:
+          gpu: "true"
+          tier: experiment
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+            nvidia.com/gpu: "1"
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+            nvidia.com/gpu: "1"
+
+  - target:
+      kind: Deployment
+      name: crai-service
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 0
+      - op: replace
+        path: /spec/template/spec/containers/0/resources
+        value:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+
+configMapGenerator:
+  - name: v1-config
+    literals:
+      - VERSION=v1
+      - ENVIRONMENT=experiment
+      - ENABLE_SHADOW_MODE=true
+      - RETURN_RESPONSES=false
+      - ENABLE_METRICS=true
+      - ENABLE_DETAILED_LOGGING=true
+      - MODEL_REGISTRY_URL=http://model-registry.platform-control-plane.svc:8080
+      - PROMPT_REGISTRY_URL=http://prompt-registry.platform-control-plane.svc:8080
+      - EVALUATION_PIPELINE_URL=http://evaluation-pipeline.platform-control-plane.svc:8080

@@ -1,0 +1,57 @@
+# Base Kubernetes Namespaces for Three-Version Architecture
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v1-exp
+  labels:
+    version: v1
+    environment: experiment
+    tier: shadow
+    cost-center: research
+  annotations:
+    description: "V1 Experiment - Rapid trial, shadow traffic, new models/prompts"
+    scheduler.alpha.kubernetes.io/defaultTolerations: '[{"key":"experiment","operator":"Exists"}]'
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v2-stable
+  labels:
+    version: v2
+    environment: production
+    tier: stable
+    cost-center: production
+  annotations:
+    description: "V2 Stable - User-facing, strong SLOs, ground-truth baseline"
+    scheduler.alpha.kubernetes.io/defaultTolerations: '[{"key":"production","operator":"Exists"}]'
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-v3-legacy
+  labels:
+    version: v3
+    environment: quarantine
+    tier: legacy
+    cost-center: recovery
+  annotations:
+    description: "V3 Legacy/Isolated - Recovery, re-evaluation, parameter repair"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-control-plane
+  labels:
+    tier: control-plane
+  annotations:
+    description: "Control Plane - Lifecycle controller, policy engine, registries"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: platform-monitoring
+  labels:
+    tier: observability
+  annotations:
+    description: "Monitoring - Prometheus, Grafana, OpenTelemetry, alerting"

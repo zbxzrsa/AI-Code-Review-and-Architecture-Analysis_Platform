@@ -1,0 +1,22 @@
+# V2 Stable Pod Disruption Budgets - High availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: vcai-pdb
+  namespace: platform-v2-stable
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: vcai-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: crai-pdb
+  namespace: platform-v2-stable
+spec:
+  minAvailable: 80%
+  selector:
+    matchLabels:
+      app: crai-service

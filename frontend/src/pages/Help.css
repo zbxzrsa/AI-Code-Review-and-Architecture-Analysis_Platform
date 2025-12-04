@@ -1,28 +1,65 @@
+/* ================================================
+   Help Page - Cool Light Theme with Pixel Art
+   ================================================ */
+
 .help-container {
   padding: 24px;
   max-width: 1000px;
   margin: 0 auto;
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(180deg, #ecfeff 0%, #f0fdfa 50%, #eef2ff 100%);
 }
 
 .help-header {
   text-align: center;
   margin-bottom: 32px;
+  padding: 32px;
+  background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #6366f1 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 10px 40px rgba(20, 184, 166, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Pixel art decoration */
+.help-header::after {
+  content: '?';
+  position: absolute;
+  right: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 64px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.1);
+  font-family: monospace;
+}
+
+.help-header h2 {
+  color: white !important;
 }
 
 .guide-card {
   height: 100%;
   text-align: center;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: none;
+  border-radius: 16px;
+  background: white;
+  box-shadow: 0 4px 20px rgba(6, 182, 212, 0.08);
 }
 
 .guide-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-8px);
+  box-shadow: 0 16px 48px rgba(6, 182, 212, 0.15);
 }
 
 .guide-icon {
-  font-size: 32px;
-  color: var(--primary-color, #1890ff);
+  font-size: 40px;
+  background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .faq-collapse {
@@ -30,20 +67,31 @@
 }
 
 .faq-collapse .ant-collapse-item {
-  margin-bottom: 8px;
-  border: 1px solid var(--border-color, #f0f0f0);
-  border-radius: 8px !important;
+  margin-bottom: 12px;
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 12px !important;
   overflow: hidden;
+  background: white;
+  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.06);
+  transition: all 0.2s;
+}
+
+.faq-collapse .ant-collapse-item:hover {
+  border-color: #06b6d4;
+  box-shadow: 0 4px 16px rgba(6, 182, 212, 0.12);
 }
 
 .faq-collapse .ant-collapse-header {
-  padding: 16px !important;
+  padding: 16px 20px !important;
+  font-weight: 500;
 }
 
 .contact-card {
   text-align: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #06b6d4 0%, #6366f1 100%);
   color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(6, 182, 212, 0.25);
 }
 
 .contact-card .ant-typography {
@@ -54,9 +102,28 @@
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
+.contact-card .ant-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.contact-card .ant-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* Dark mode */
+:root[data-theme='dark'] .help-container {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+}
+
+:root[data-theme='dark'] .guide-card {
+  background: #1e293b;
+}
+
 :root[data-theme='dark'] .faq-collapse .ant-collapse-item {
-  border-color: #303030;
+  border-color: #334155;
+  background: #1e293b;
 }
 
 :root[data-theme='dark'] .guide-card {

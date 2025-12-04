@@ -1,0 +1,9 @@
+# V3 Legacy Priority Class - Lowest priority
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: legacy-priority
+value: 10
+globalDefault: false
+description: "Lowest priority for V3 legacy/quarantine workloads"
+preemptionPolicy: Never

@@ -1,0 +1,183 @@
+{{- if .Values.argoRollouts.enabled }}
+{{- if .Values.versions.v2.enabled }}
+---
+# Argo Rollout for V2 Production with Gray-Scale Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: vcai-rollout
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: vcai
+    version: v2
+spec:
+  replicas: {{ .Values.versions.v2.replicas }}
+  selector:
+    matchLabels:
+      app: vcai
+      version: v2
+  template:
+    metadata:
+      labels:
+        app: vcai
+        version: v2
+        {{- include "coderev.selectorLabels" . | nindent 8 }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      serviceAccountName: vcai-v2
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      priorityClassName: production-critical
+      containers:
+        - name: vcai
+          image: {{ include "coderev.image" (dict "root" . "image" .Values.vcai.image) }}
+          imagePullPolicy: {{ .Values.vcai.image.pullPolicy }}
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: VERSION
+              value: "v2"
+            - name: ENVIRONMENT
+              value: "production"
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: database-credentials
+                  key: url
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: url
+            {{- if .Values.aiModels.openai.enabled }}
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.aiModels.openai.apiKeySecret }}
+                  key: api-key
+            {{- end }}
+          resources:
+            {{- toYaml .Values.versions.v2.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 5
+  strategy:
+    canary:
+      # Gray-scale rollout phases
+      steps:
+        {{- range $index, $weight := .Values.gateway.grayScale.phases }}
+        - setWeight: {{ $weight }}
+        {{- if $.Values.gateway.grayScale.pauseBetweenPhases }}
+        - pause: {duration: 5m}
+        {{- end }}
+        {{- if $.Values.argoRollouts.analysis.enabled }}
+        - analysis:
+            templates:
+              - templateName: vcai-success-rate
+            args:
+              - name: service-name
+                value: vcai-v2
+        {{- end }}
+        {{- end }}
+      
+      # Traffic routing
+      canaryService: vcai-v2-canary
+      stableService: vcai-v2
+      
+      # Anti-affinity for canary pods
+      antiAffinity:
+        preferredDuringSchedulingIgnoredDuringExecution:
+          weight: 100
+      
+      # Traffic management via Nginx
+      trafficRouting:
+        nginx:
+          stableIngress: vcai-ingress
+          additionalIngressAnnotations:
+            canary-by-header: X-Canary
+            canary-by-header-value: "true"
+---
+# Analysis Template for Rollout
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: vcai-success-rate
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+spec:
+  args:
+    - name: service-name
+  metrics:
+    - name: success-rate
+      interval: 1m
+      count: 5
+      successCondition: result[0] >= {{ .Values.argoRollouts.analysis.successCondition | default "0.98" }}
+      failureLimit: {{ .Values.argoRollouts.analysis.failureLimit | default 3 }}
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            sum(rate(http_requests_total{service="{{`{{args.service-name}}`}}",status=~"2.."}[5m])) /
+            sum(rate(http_requests_total{service="{{`{{args.service-name}}`}}"}[5m]))
+    
+    - name: latency-p95
+      interval: 1m
+      count: 5
+      successCondition: result[0] <= 3000
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            histogram_quantile(0.95, 
+              sum(rate(http_request_duration_seconds_bucket{service="{{`{{args.service-name}}`}}"}[5m])) by (le)
+            ) * 1000
+    
+    - name: error-rate
+      interval: 1m
+      count: 5
+      successCondition: result[0] <= 0.02
+      failureLimit: 3
+      provider:
+        prometheus:
+          address: http://prometheus.platform-monitoring.svc:9090
+          query: |
+            sum(rate(http_requests_total{service="{{`{{args.service-name}}`}}",status=~"5.."}[5m])) /
+            sum(rate(http_requests_total{service="{{`{{args.service-name}}`}}"}[5m]))
+---
+# Canary Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: vcai-v2-canary
+  namespace: {{ .Values.versions.v2.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: vcai
+    version: v2
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.vcai.service.port }}
+      targetPort: http
+      name: http
+  selector:
+    app: vcai
+    version: v2
+{{- end }}
+{{- end }}

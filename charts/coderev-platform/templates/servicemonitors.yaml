@@ -1,0 +1,133 @@
+{{- if .Values.monitoring.prometheus.serviceMonitor.enabled }}
+{{- $versions := list "v1" "v2" "v3" }}
+{{- range $version := $versions }}
+{{- $versionConfig := index $.Values.versions $version }}
+{{- if $versionConfig.enabled }}
+---
+# ServiceMonitor for VCAI {{ $version }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: vcai-{{ $version }}-monitor
+  namespace: platform-monitoring
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: vcai
+    version: {{ $version }}
+spec:
+  selector:
+    matchLabels:
+      app: vcai
+      version: {{ $version }}
+  namespaceSelector:
+    matchNames:
+      - {{ $versionConfig.namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ $.Values.monitoring.prometheus.serviceMonitor.interval }}
+      scrapeTimeout: 10s
+      scheme: http
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_name]
+          targetLabel: pod
+        - sourceLabels: [__meta_kubernetes_namespace]
+          targetLabel: namespace
+        - targetLabel: version
+          replacement: {{ $version }}
+---
+# ServiceMonitor for CRAI {{ $version }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: crai-{{ $version }}-monitor
+  namespace: platform-monitoring
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: crai
+    version: {{ $version }}
+spec:
+  selector:
+    matchLabels:
+      app: crai
+      version: {{ $version }}
+  namespaceSelector:
+    matchNames:
+      - {{ $versionConfig.namespace }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ $.Values.monitoring.prometheus.serviceMonitor.interval }}
+      scrapeTimeout: 10s
+{{- end }}
+{{- end }}
+---
+# ServiceMonitor for Lifecycle Controller
+{{- if .Values.lifecycleController.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: lifecycle-controller-monitor
+  namespace: platform-monitoring
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: lifecycle-controller
+spec:
+  selector:
+    matchLabels:
+      app: lifecycle-controller
+  namespaceSelector:
+    matchNames:
+      - platform-control-plane
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.monitoring.prometheus.serviceMonitor.interval }}
+{{- end }}
+---
+# ServiceMonitor for Evaluation Pipeline
+{{- if .Values.evaluationPipeline.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: evaluation-pipeline-monitor
+  namespace: platform-monitoring
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: evaluation-pipeline
+spec:
+  selector:
+    matchLabels:
+      app: evaluation-pipeline
+  namespaceSelector:
+    matchNames:
+      - platform-control-plane
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.monitoring.prometheus.serviceMonitor.interval }}
+{{- end }}
+---
+# ServiceMonitor for OPA
+{{- if .Values.opa.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: opa-monitor
+  namespace: platform-monitoring
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: opa
+spec:
+  selector:
+    matchLabels:
+      app: opa
+  namespaceSelector:
+    matchNames:
+      - platform-control-plane
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: {{ .Values.monitoring.prometheus.serviceMonitor.interval }}
+{{- end }}
+{{- end }}

@@ -1,0 +1,49 @@
+# Helm Ignore File
+# Patterns to ignore when packaging this chart
+
+# Common VCS dirs
+.git/
+.gitignore
+.bzr/
+.bzrignore
+.hg/
+.hgignore
+.svn/
+
+# Common backup files
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+
+# Various IDEs
+.project
+.idea/
+*.tmproj
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+tests/
+*_test.yaml
+test-*.yaml
+
+# Documentation (not needed in package)
+*.md
+!Chart.yaml
+!README.md
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Development files
+Makefile
+Dockerfile*
+docker-compose*

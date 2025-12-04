@@ -1,0 +1,196 @@
+{{- $versions := list "v1" "v2" "v3" }}
+{{- range $version := $versions }}
+{{- $versionConfig := index $.Values.versions $version }}
+{{- if $versionConfig.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vcai-config-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: vcai
+    version: {{ $version }}
+data:
+  config.yaml: |
+    version: {{ $version }}
+    environment: {{ if eq $version "v2" }}production{{ else if eq $version "v1" }}experiment{{ else }}legacy{{ end }}
+    
+    server:
+      host: 0.0.0.0
+      port: 8000
+      workers: 4
+    
+    logging:
+      level: {{ $.Values.vcai.env.LOG_LEVEL | default "INFO" }}
+      format: json
+    
+    metrics:
+      enabled: true
+      path: /metrics
+      port: 8000
+    
+    health:
+      path: /health
+      readiness_path: /ready
+    
+    cache:
+      enabled: true
+      ttl_seconds: 3600
+    
+    rate_limiting:
+      enabled: {{ if eq $version "v2" }}true{{ else }}false{{ end }}
+      requests_per_minute: {{ if eq $version "v2" }}1000{{ else }}100{{ end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crai-config-{{ $version }}
+  namespace: {{ $versionConfig.namespace }}
+  labels:
+    {{- include "coderev.labels" $ | nindent 4 }}
+    app: crai
+    version: {{ $version }}
+data:
+  config.yaml: |
+    version: {{ $version }}
+    
+    analysis:
+      max_file_size_kb: 500
+      supported_languages:
+        - python
+        - javascript
+        - typescript
+        - go
+        - rust
+        - java
+      
+      timeout_seconds: {{ if eq $version "v2" }}30{{ else }}60{{ end }}
+    
+    ai:
+      {{- if eq $version "v1" }}
+      # V1: Experiment with new models
+      primary_model: gpt-4o-2024-08-06
+      fallback_model: claude-3-5-sonnet-20241022
+      temperature: 0.3
+      {{- else if eq $version "v2" }}
+      # V2: Stable production models
+      primary_model: gpt-4o-2024-05-13
+      fallback_model: claude-3-sonnet-20240229
+      temperature: 0.2
+      {{- else }}
+      # V3: Legacy models
+      primary_model: gpt-4-turbo-preview
+      fallback_model: claude-3-sonnet-20240229
+      temperature: 0.2
+      {{- end }}
+      
+      max_tokens: 4096
+      retry_count: 3
+      retry_delay_ms: 1000
+{{- end }}
+{{- end }}
+---
+# Lifecycle Controller ConfigMap
+{{- if .Values.lifecycleController.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lifecycle-controller-config
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: lifecycle-controller
+data:
+  config.yaml: |
+    evaluation:
+      interval_seconds: {{ .Values.lifecycleController.config.evaluationIntervalSeconds }}
+    
+    promotion_thresholds:
+      p95_latency_ms: {{ .Values.lifecycleController.config.promotionThresholds.p95LatencyMs }}
+      error_rate: {{ .Values.lifecycleController.config.promotionThresholds.errorRate }}
+      accuracy_delta: {{ .Values.lifecycleController.config.promotionThresholds.accuracyDelta }}
+      security_pass_rate: {{ .Values.lifecycleController.config.promotionThresholds.securityPassRate }}
+      cost_increase_max: {{ .Values.lifecycleController.config.promotionThresholds.costIncreaseMax }}
+      statistical_significance_p: {{ .Values.lifecycleController.config.promotionThresholds.statisticalSignificanceP }}
+    
+    grayscale:
+      phases: {{ .Values.gateway.grayScale.phases | toJson }}
+      pause_between_phases: {{ .Values.gateway.grayScale.pauseBetweenPhases }}
+    
+    rollback:
+      auto_rollback_enabled: true
+      cooldown_minutes: 30
+{{- end }}
+---
+# OPA Policies ConfigMap
+{{- if .Values.opa.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.opa.policies.configMapName }}
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: opa
+data:
+  lifecycle.rego: |
+    package lifecycle
+    
+    default allow_promotion = false
+    
+    # Promotion thresholds
+    thresholds := {
+        "p95_latency_ms": {{ .Values.lifecycleController.config.promotionThresholds.p95LatencyMs }},
+        "error_rate": {{ .Values.lifecycleController.config.promotionThresholds.errorRate }},
+        "accuracy_delta": {{ .Values.lifecycleController.config.promotionThresholds.accuracyDelta }},
+        "security_pass_rate": {{ .Values.lifecycleController.config.promotionThresholds.securityPassRate }},
+        "cost_increase_max": {{ .Values.lifecycleController.config.promotionThresholds.costIncreaseMax }}
+    }
+    
+    # Allow promotion if all metrics pass
+    allow_promotion {
+        input.metrics.p95_latency_ms <= thresholds.p95_latency_ms
+        input.metrics.error_rate <= thresholds.error_rate
+        input.metrics.accuracy_delta >= thresholds.accuracy_delta
+        input.metrics.security_pass_rate >= thresholds.security_pass_rate
+        input.metrics.cost_increase <= thresholds.cost_increase_max
+    }
+    
+    # Reasons for denial
+    denial_reasons[reason] {
+        input.metrics.p95_latency_ms > thresholds.p95_latency_ms
+        reason := sprintf("P95 latency %vms exceeds threshold %vms", [input.metrics.p95_latency_ms, thresholds.p95_latency_ms])
+    }
+    
+    denial_reasons[reason] {
+        input.metrics.error_rate > thresholds.error_rate
+        reason := sprintf("Error rate %v exceeds threshold %v", [input.metrics.error_rate, thresholds.error_rate])
+    }
+    
+    denial_reasons[reason] {
+        input.metrics.accuracy_delta < thresholds.accuracy_delta
+        reason := sprintf("Accuracy delta %v below threshold %v", [input.metrics.accuracy_delta, thresholds.accuracy_delta])
+    }
+{{- end }}
+---
+# Compliance ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: compliance-config
+  namespace: platform-control-plane
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+data:
+  compliance.yaml: |
+    mode: {{ .Values.compliance.mode }}
+    
+    audit:
+      enabled: {{ .Values.compliance.audit.enabled }}
+      retention_days: {{ .Values.compliance.audit.retentionDays }}
+    
+    encryption:
+      at_rest: {{ .Values.compliance.encryption.atRest }}
+      in_transit: {{ .Values.compliance.encryption.inTransit }}

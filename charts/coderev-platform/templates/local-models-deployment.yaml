@@ -1,0 +1,184 @@
+{{- if .Values.aiModels.local.enabled }}
+---
+# CodeLlama Model Server
+{{- if .Values.aiModels.local.codellama.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: codellama
+  namespace: {{ .Values.versions.v1.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: codellama
+    model: local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: codellama
+  template:
+    metadata:
+      labels:
+        app: codellama
+        model: local
+    spec:
+      containers:
+        - name: codellama
+          image: {{ .Values.aiModels.local.codellama.image | default "vllm/vllm-openai:latest" }}
+          args:
+            - "--model"
+            - {{ .Values.aiModels.local.codellama.modelPath | default "/models/codellama-34b-instruct" }}
+            - "--port"
+            - "8080"
+            - "--tensor-parallel-size"
+            - "1"
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: HF_HOME
+              value: /models
+          resources:
+            limits:
+              cpu: "8"
+              memory: "32Gi"
+              nvidia.com/gpu: {{ .Values.aiModels.local.codellama.gpuCount | default 1 }}
+            requests:
+              cpu: "4"
+              memory: "16Gi"
+              nvidia.com/gpu: {{ .Values.aiModels.local.codellama.gpuCount | default 1 }}
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 60
+            periodSeconds: 10
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-storage-pvc
+      nodeSelector:
+        nvidia.com/gpu: "true"
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: codellama
+  namespace: {{ .Values.versions.v1.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: codellama
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+  selector:
+    app: codellama
+{{- end }}
+---
+# DeepSeek Coder Model Server
+{{- if .Values.aiModels.local.deepseek.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deepseek-coder
+  namespace: {{ .Values.versions.v1.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: deepseek-coder
+    model: local
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: deepseek-coder
+  template:
+    metadata:
+      labels:
+        app: deepseek-coder
+        model: local
+    spec:
+      containers:
+        - name: deepseek
+          image: {{ .Values.aiModels.local.deepseek.image | default "vllm/vllm-openai:latest" }}
+          args:
+            - "--model"
+            - {{ .Values.aiModels.local.deepseek.modelPath | default "/models/deepseek-coder-33b-instruct" }}
+            - "--port"
+            - "8080"
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            limits:
+              cpu: "8"
+              memory: "32Gi"
+              nvidia.com/gpu: {{ .Values.aiModels.local.deepseek.gpuCount | default 1 }}
+            requests:
+              cpu: "4"
+              memory: "16Gi"
+              nvidia.com/gpu: {{ .Values.aiModels.local.deepseek.gpuCount | default 1 }}
+          volumeMounts:
+            - name: model-storage
+              mountPath: /models
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: model-storage-pvc
+      nodeSelector:
+        nvidia.com/gpu: "true"
+      tolerations:
+        - key: "nvidia.com/gpu"
+          operator: "Exists"
+          effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: deepseek-coder
+  namespace: {{ .Values.versions.v1.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+    app: deepseek-coder
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http
+  selector:
+    app: deepseek-coder
+{{- end }}
+---
+# Model Storage PVC (for air-gapped deployments)
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: model-storage-pvc
+  namespace: {{ .Values.versions.v1.namespace }}
+  labels:
+    {{- include "coderev.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadOnlyMany
+  storageClassName: {{ .Values.aiModels.local.storageClass | default "standard" }}
+  resources:
+    requests:
+      storage: {{ .Values.aiModels.local.storageSize | default "200Gi" }}
+{{- end }}
