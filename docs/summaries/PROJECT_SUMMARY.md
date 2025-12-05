@@ -283,7 +283,7 @@ curl http://localhost:8001/api/v1/health/status
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.10+
 - Docker and Docker Compose
 - Git
 

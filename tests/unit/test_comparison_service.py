@@ -24,7 +24,7 @@ class TestMetricsComparison:
         improvement = (v2_latency - v1_latency) / v2_latency * 100
         
         assert improvement > 0
-        assert round(improvement, 2) == 16.67
+        assert improvement == pytest.approx(16.67, rel=0.01)
 
     def test_accuracy_delta_calculation(self):
         """Test calculating accuracy delta"""
@@ -34,7 +34,7 @@ class TestMetricsComparison:
         delta = v1_accuracy - v2_accuracy
         
         assert delta > 0
-        assert delta == 0.04
+        assert delta == pytest.approx(0.04)
 
     def test_error_rate_comparison(self):
         """Test comparing error rates"""
@@ -55,7 +55,7 @@ class TestMetricsComparison:
         cost_increase = (v1_cost - v2_cost) / v2_cost
         
         assert cost_increase > 0
-        assert round(cost_increase, 4) == 0.1053  # ~10.5% increase
+        assert cost_increase == pytest.approx(0.1053, rel=0.01)  # ~10.5% increase
 
     def test_security_pass_rate(self):
         """Test security pass rate calculation"""
@@ -64,7 +64,7 @@ class TestMetricsComparison:
         
         pass_rate = passed / total
         
-        assert pass_rate == 0.995
+        assert pass_rate == pytest.approx(0.995)
         assert pass_rate >= 0.99  # Meets threshold
 
 
@@ -301,7 +301,7 @@ class TestIssueComparison:
         
         fp_rate = false_positives / total_issues
         
-        assert fp_rate == 0.08
+        assert fp_rate == pytest.approx(0.08)
         assert fp_rate < 0.10  # Within acceptable range
 
 

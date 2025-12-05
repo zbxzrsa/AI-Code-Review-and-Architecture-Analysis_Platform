@@ -93,6 +93,7 @@ class RecoveryManager:
         self.recovery_records: Dict[str, RecoveryRecord] = {}
         self._http_client: Optional[httpx.AsyncClient] = None
         self._running = False
+        self._recovery_task: Optional[asyncio.Task] = None
     
     async def start(self):
         """Start the recovery manager"""
@@ -101,12 +102,22 @@ class RecoveryManager:
         
         logger.info("Recovery Manager started - V3→V1 cycle active")
         
-        # Start recovery check loop
-        asyncio.create_task(self._recovery_loop())
+        # Start recovery check loop and store task reference to prevent GC
+        self._recovery_task = asyncio.create_task(self._recovery_loop())
     
     async def stop(self):
         """Stop the recovery manager"""
         self._running = False
+        
+        # Cancel recovery task
+        if self._recovery_task:
+            self._recovery_task.cancel()
+            try:
+                await self._recovery_task
+            except asyncio.CancelledError:
+                pass
+            self._recovery_task = None
+        
         if self._http_client:
             await self._http_client.aclose()
         logger.info("Recovery Manager stopped")

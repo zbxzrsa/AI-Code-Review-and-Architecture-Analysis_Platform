@@ -13,7 +13,7 @@ import argparse
 import json
 import logging
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 import sys
 
@@ -74,8 +74,8 @@ class StatisticalAnalyzer:
                 f"{self.prometheus_url}/api/v1/query_range",
                 params={
                     "query": query,
-                    "start": (datetime.utcnow() - timedelta(hours=1)).isoformat() + "Z",
-                    "end": datetime.utcnow().isoformat() + "Z",
+                    "start": (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
+                    "end": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                     "step": "60s"
                 }
             )
@@ -408,7 +408,7 @@ class StatisticalAnalyzer:
         return ComparisonReport(
             version_id=version_id,
             baseline_id=baseline_id,
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             overall_passed=overall_passed,
             tests=tests,
             summary=summary

@@ -123,6 +123,7 @@ class LifecycleController:
         
         self._http_client: Optional[httpx.AsyncClient] = None
         self._running = False
+        self._background_tasks: List[asyncio.Task] = []
     
     async def start(self):
         """Start the lifecycle controller"""
@@ -131,13 +132,25 @@ class LifecycleController:
         
         logger.info("Lifecycle Controller started")
         
-        # Start background tasks
-        asyncio.create_task(self._evaluation_loop())
-        asyncio.create_task(self._health_check_loop())
+        # Start background tasks and store references to prevent GC
+        self._background_tasks = [
+            asyncio.create_task(self._evaluation_loop()),
+            asyncio.create_task(self._health_check_loop()),
+        ]
     
     async def stop(self):
         """Stop the lifecycle controller"""
         self._running = False
+        
+        # Cancel background tasks
+        for task in self._background_tasks:
+            task.cancel()
+        
+        # Wait for tasks to finish
+        if self._background_tasks:
+            await asyncio.gather(*self._background_tasks, return_exceptions=True)
+        self._background_tasks.clear()
+        
         if self._http_client:
             await self._http_client.aclose()
         logger.info("Lifecycle Controller stopped")

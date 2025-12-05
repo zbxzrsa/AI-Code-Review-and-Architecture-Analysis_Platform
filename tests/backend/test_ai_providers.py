@@ -47,9 +47,9 @@ class TestOllamaProvider:
         
         assert config.base_url == "http://localhost:11434"
         assert config.model == "codellama:34b"
-        assert config.temperature == 0.7
+        assert config.temperature == pytest.approx(0.7)
         assert config.max_tokens == 2000
-        assert config.timeout == 120.0
+        assert config.timeout == pytest.approx(120.0)
 
     async def test_recommended_models_defined(self):
         """Test that recommended models are defined."""
@@ -264,9 +264,9 @@ class TestAIResponse:
         assert response.model == "codellama:7b"
         assert response.provider == "ollama"
         assert response.tokens_used == 500
-        assert response.latency_ms == 1500.0
-        assert response.cost == 0.0
-        assert response.confidence == 0.85
+        assert response.latency_ms == pytest.approx(1500.0)
+        assert response.cost == pytest.approx(0.0)
+        assert response.confidence == pytest.approx(0.85)
 
     async def test_response_default_values(self):
         """Test AI response default values."""
@@ -280,8 +280,8 @@ class TestAIResponse:
             latency_ms=100.0,
         )
         
-        assert response.cost == 0.0
-        assert response.confidence == 0.85
+        assert response.cost == pytest.approx(0.0)
+        assert response.confidence == pytest.approx(0.85)
         assert response.metadata == {}
 
 
@@ -352,7 +352,7 @@ class TestCostTracking:
             cost=0.0,  # Ollama is free
         )
         
-        assert response.cost == 0.0
+        assert response.cost == pytest.approx(0.0)
 
     async def test_openai_cost_calculation(self):
         """Test OpenAI cost calculation."""
@@ -362,7 +362,7 @@ class TestCostTracking:
         tokens = 5000
         expected_cost = (tokens / 1000) * 0.03
         
-        assert expected_cost == 0.15
+        assert expected_cost == pytest.approx(0.15)
 
     async def test_anthropic_cost_calculation(self):
         """Test Anthropic cost calculation."""
@@ -372,7 +372,7 @@ class TestCostTracking:
         tokens = 5000
         expected_cost = (tokens / 1000) * 0.015
         
-        assert expected_cost == 0.075
+        assert expected_cost == pytest.approx(0.075)
 
 
 class TestModelSelection:

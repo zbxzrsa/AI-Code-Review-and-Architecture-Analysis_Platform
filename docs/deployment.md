@@ -5,7 +5,7 @@
 ### Prerequisites
 
 - Docker and Docker Compose installed
-- Python 3.9+
+- Python 3.10+
 - Git
 
 ### Quick Start

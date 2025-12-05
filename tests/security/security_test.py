@@ -440,7 +440,8 @@ class SecurityTestSuite:
         print(f"Started: {datetime.now().isoformat()}")
         print(f"{'='*60}\n")
         
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+        # noqa: S501 - verify=False is intentional for security testing against local/test servers
+        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:  # nosec B501
             # A1: Injection
             await self.test_sql_injection(client)
             await self.test_command_injection(client)

@@ -1,10 +1,10 @@
 /**
  * Jest test setup file
  */
-import '@testing-library/jest-dom';
+import "@testing-library/jest-dom";
 
-// Mock window.matchMedia for theme tests
-Object.defineProperty(window, 'matchMedia', {
+// Mock matchMedia for theme tests
+Object.defineProperty(globalThis, "matchMedia", {
   writable: true,
   value: jest.fn().mockImplementation((query) => ({
     matches: false,
@@ -25,7 +25,7 @@ class MockIntersectionObserver {
   unobserve = jest.fn();
 }
 
-Object.defineProperty(window, 'IntersectionObserver', {
+Object.defineProperty(globalThis, "IntersectionObserver", {
   writable: true,
   configurable: true,
   value: MockIntersectionObserver,
@@ -38,14 +38,14 @@ class MockResizeObserver {
   unobserve = jest.fn();
 }
 
-Object.defineProperty(window, 'ResizeObserver', {
+Object.defineProperty(globalThis, "ResizeObserver", {
   writable: true,
   configurable: true,
   value: MockResizeObserver,
 });
 
 // Mock fetch
-global.fetch = jest.fn(() =>
+globalThis.fetch = jest.fn(() =>
   Promise.resolve({
     ok: true,
     json: () => Promise.resolve({}),
@@ -59,7 +59,7 @@ const localStorageMock = {
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(globalThis, "localStorage", {
   value: localStorageMock,
 });
 
@@ -70,17 +70,14 @@ const sessionStorageMock = {
   removeItem: jest.fn(),
   clear: jest.fn(),
 };
-Object.defineProperty(window, 'sessionStorage', {
+Object.defineProperty(globalThis, "sessionStorage", {
   value: sessionStorageMock,
 });
 
 // Suppress console warnings in tests
 const originalWarn = console.warn;
 console.warn = (...args) => {
-  if (
-    args[0]?.includes?.('React Router') ||
-    args[0]?.includes?.('act()')
-  ) {
+  if (args[0]?.includes?.("React Router") || args[0]?.includes?.("act()")) {
     return;
   }
   originalWarn.apply(console, args);

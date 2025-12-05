@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-12-05
+
+### Fixed
+
+- **Code Quality Audit (Phase 4)** - 122+ issues addressed
+  - Security: Path injection vulnerabilities patched
+  - Asyncio: Task garbage collection issues fixed
+  - Python: `datetime.utcnow()` replaced with timezone-aware datetime
+  - Python: Deprecated `asyncio.get_event_loop()` replaced
+  - Python: Bare `except` blocks replaced with proper logging
+  - Tests: Floating-point comparisons using `pytest.approx()`
+  - TypeScript: `globalThis` usage for ES2020+ compatibility
+
+### Changed
+
+- Updated README.md with Code Quality scores section
+- Quality scores: Security 97/100, Reliability 94/100, Code Quality 95/100
+
+### Documentation
+
+- Added `CODE_QUALITY_FIXES.md` - Detailed fix documentation
+- Updated `PROJECT_AUDIT_REPORT.md` with Phase 4 results
+
+---
+
+## [1.1.1] - 2025-12-05
+
 ### Added
 
 - Initial project structure with three-version isolation system

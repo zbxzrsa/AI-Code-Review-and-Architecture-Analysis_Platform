@@ -11,7 +11,7 @@ WARNING: This will clear existing data! Only use in development.
 import asyncio
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 import random
 import hashlib
@@ -227,7 +227,7 @@ async def seed_users(conn) -> list:
         await conn.execute("""
             INSERT INTO auth.users (id, email, password_hash, name, role, is_active, created_at)
             VALUES ($1, $2, $3, $4, $5, true, $6)
-        """, user_id, user["email"], password_hash, user["name"], user["role"], datetime.utcnow())
+        """, user_id, user["email"], password_hash, user["name"], user["role"], datetime.now(timezone.utc))
         
         user_ids.append(user_id)
         print(f"  Created: {user['email']} ({user['role']})")
@@ -254,7 +254,7 @@ async def seed_projects(conn, user_ids: list) -> list:
             f"Sample project for {name.lower()}",
             language,
             owner_id,
-            datetime.utcnow() - timedelta(days=random.randint(1, 30))
+            datetime.now(timezone.utc) - timedelta(days=random.randint(1, 30))
         )
         
         project_ids.append((project_id, language))
@@ -283,7 +283,7 @@ async def seed_project_files(conn, projects: list):
             f"src/main.{extension}",
             code,
             language,
-            datetime.utcnow()
+            datetime.now(timezone.utc)
         )
     
     print(f"  Created {len(projects)} files")
@@ -309,8 +309,8 @@ async def seed_analysis_sessions(conn, projects: list, user_ids: list):
                 user_id,
                 random.choice(["completed", "completed", "failed"]),
                 random.choice(["quick", "deep", "security"]),
-                datetime.utcnow() - timedelta(hours=random.randint(1, 72)),
-                datetime.utcnow() - timedelta(hours=random.randint(0, 1)),
+                datetime.now(timezone.utc) - timedelta(hours=random.randint(1, 72)),
+                datetime.now(timezone.utc) - timedelta(hours=random.randint(0, 1)),
             )
             session_count += 1
     
@@ -332,9 +332,9 @@ async def seed_invitations(conn, user_ids: list):
             code,
             random.choice(["user", "developer", "reviewer"]),
             random.randint(5, 20),
-            datetime.utcnow() + timedelta(days=30),
+            datetime.now(timezone.utc) + timedelta(days=30),
             user_ids[0],  # Admin user
-            datetime.utcnow(),
+            datetime.now(timezone.utc),
         )
         print(f"  Created: {code}")
 
@@ -356,7 +356,7 @@ async def seed_audit_logs(conn, user_ids: list):
             random.choice(["user", "project", "analysis"]),
             str(uuid4()),
             f"192.168.1.{random.randint(1, 254)}",
-            datetime.utcnow() - timedelta(hours=random.randint(0, 168)),
+            datetime.now(timezone.utc) - timedelta(hours=random.randint(0, 168)),
         )
     
     print("  Created 50 log entries")

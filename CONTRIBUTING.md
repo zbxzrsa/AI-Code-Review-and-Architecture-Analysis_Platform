@@ -8,7 +8,7 @@ Be respectful, inclusive, and professional in all interactions.
 
 ### Prerequisites
 
-- Python 3.9+
+- Python 3.10+
 - Docker and Docker Compose
 - Git
 - PostgreSQL 13+ (or use Docker)

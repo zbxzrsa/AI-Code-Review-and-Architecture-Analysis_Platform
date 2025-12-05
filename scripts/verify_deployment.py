@@ -14,7 +14,7 @@ import asyncio
 import logging
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
 import httpx
@@ -430,7 +430,7 @@ def print_report(results: List[CheckResult]):
     print("\n" + "=" * 60)
     print("DEPLOYMENT VERIFICATION REPORT")
     print("=" * 60)
-    print(f"Timestamp: {datetime.utcnow().isoformat()}Z")
+    print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
     print("-" * 60)
     
     passed = [r for r in results if r.passed]

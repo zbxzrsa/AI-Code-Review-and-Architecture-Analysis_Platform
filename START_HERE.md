@@ -23,7 +23,7 @@ A revolutionary intelligent code review platform with a **three-version self-evo
 ### 1. Prerequisites
 
 - Docker and Docker Compose
-- Python 3.9+ (optional, for local development)
+- Python 3.10+ (optional, for local development)
 
 ### 2. Start Services
 

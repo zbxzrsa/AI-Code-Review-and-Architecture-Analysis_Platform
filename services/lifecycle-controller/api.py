@@ -26,6 +26,9 @@ from .event_publisher import EventPublisher, EventType, InMemoryEventBackend
 
 logger = logging.getLogger(__name__)
 
+# ==================== Constants ====================
+ORCHESTRATOR_NOT_INITIALIZED = "Orchestrator not initialized"
+
 # ==================== Request/Response Models ====================
 
 class VersionRegistration(BaseModel):
@@ -156,7 +159,7 @@ async def readiness_check():
 async def get_cycle_status():
     """Get current status of the self-evolution cycle"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     status = orchestrator.get_cycle_status()
     return CycleStatusResponse(**status)
@@ -169,7 +172,7 @@ async def get_cycle_events(
 ):
     """Get recent cycle events"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     events = orchestrator.get_cycle_events(version_id=version_id, limit=limit)
     return {"events": [e.__dict__ for e in events]}
@@ -179,7 +182,7 @@ async def get_cycle_events(
 async def get_cycle_diagram():
     """Get ASCII diagram of the current cycle state"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     status = orchestrator.get_cycle_status()
     v = status["versions"]
@@ -224,7 +227,7 @@ async def get_cycle_diagram():
 async def list_versions():
     """List all versions in the cycle"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     versions = []
     for vid, config in orchestrator.lifecycle.active_versions.items():
@@ -246,7 +249,7 @@ async def list_versions():
 async def register_version(registration: VersionRegistration):
     """Register a new experiment (enters V1)"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     config = await orchestrator.register_new_experiment(
         version_id=registration.version_id,
@@ -269,7 +272,7 @@ async def register_version(registration: VersionRegistration):
 async def start_shadow_evaluation(version_id: str):
     """Start shadow traffic evaluation for a version"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     try:
         await orchestrator.start_shadow_evaluation(version_id)
@@ -285,7 +288,7 @@ async def start_shadow_evaluation(version_id: str):
 async def quarantine_version(version_id: str, request: QuarantineRequest):
     """Manually quarantine a version (sends to V3)"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     await orchestrator.trigger_quarantine(
         version_id=version_id,
@@ -305,7 +308,7 @@ async def quarantine_version(version_id: str, request: QuarantineRequest):
 async def get_recovery_status():
     """Get recovery manager status"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     stats = orchestrator.recovery.get_recovery_statistics()
     return {"recovery_statistics": stats}
@@ -315,7 +318,7 @@ async def get_recovery_status():
 async def get_version_recovery_status(version_id: str):
     """Get recovery status for a specific version"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     record = orchestrator.recovery.get_recovery_status(version_id)
     if not record:
@@ -337,7 +340,7 @@ async def get_version_recovery_status(version_id: str):
 async def force_recovery_evaluation(version_id: str, background_tasks: BackgroundTasks):
     """Force immediate recovery evaluation (bypass cooldown)"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     record = orchestrator.recovery.get_recovery_status(version_id)
     if not record:
@@ -359,7 +362,7 @@ async def force_recovery_evaluation(version_id: str, background_tasks: Backgroun
 async def get_thresholds():
     """Get current promotion thresholds"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     t = orchestrator.lifecycle.thresholds
     return {
@@ -381,7 +384,7 @@ async def get_thresholds():
 async def update_thresholds(update: ThresholdUpdate):
     """Update promotion thresholds"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     t = orchestrator.lifecycle.thresholds
     
@@ -465,7 +468,7 @@ async def get_event_types():
 async def get_debug_state():
     """Get detailed internal state (for debugging)"""
     if not orchestrator:
-        raise HTTPException(status_code=503, detail="Orchestrator not initialized")
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
     
     return {
         "lifecycle": {

@@ -13,7 +13,7 @@ import asyncio
 import json
 import sys
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, List, Optional
 
 import httpx
@@ -198,7 +198,7 @@ async def run_health_checks(verbose: bool = False) -> HealthReport:
         overall = "healthy"
     
     return HealthReport(
-        timestamp=datetime.utcnow().isoformat() + "Z",
+        timestamp=datetime.now(timezone.utc).isoformat(),
         overall_status=overall,
         services=results,
         summary=summary

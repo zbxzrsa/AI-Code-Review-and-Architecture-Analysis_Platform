@@ -280,16 +280,17 @@ class VersionManager:
         
         Models with consistently poor reviews are eliminated
         """
-        v3_vc = self.get_version_control_ai(VersionType.V3_QUARANTINE)
+        # Get V3 VC-AI for quarantine analysis (reserved for extended metrics check)
+        _ = self.get_version_control_ai(VersionType.V3_QUARANTINE)
         
         removed = []
         
         for model_id in self.cycle_status.quarantined_models.copy():
             # Check if model should be permanently removed
-            # In production, this would check extended metrics
-            should_remove = True  # Placeholder
+            # TODO: In production, implement extended metrics check with v3_vc
+            should_remove = True  # Placeholder - always remove in dev mode
             
-            if should_remove:
+            if should_remove:  # noqa: SIM108 - placeholder for extended metrics check
                 removed.append(model_id)
                 self.cycle_status.quarantined_models.remove(model_id)
                 logger.info(f"Removed deprecated model {model_id} from V3")

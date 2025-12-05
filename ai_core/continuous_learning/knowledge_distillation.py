@@ -338,13 +338,13 @@ class KnowledgeDistillation:
         # In practice, you would implement proper architecture compression
         compressed = copy.deepcopy(model)
         
-        # Simple width scaling
-        for name, module in compressed.named_modules():
+        # Simple width scaling (placeholder - real implementation would modify layers)
+        for _, module in compressed.named_modules():
             if isinstance(module, nn.Linear):
-                # Calculate compressed dimensions (placeholder for real implementation)
-                _ = int(module.in_features / compression_ratio)
-                _ = int(module.out_features / compression_ratio)
-                # Note: Real architecture compression would modify the module here
+                # Real architecture compression would resize layers here
+                # compressed_in = int(module.in_features / compression_ratio)
+                # compressed_out = int(module.out_features / compression_ratio)
+                pass
         
         return compressed
 

@@ -130,16 +130,25 @@ class ShadowComparator:
         self.version_evaluations: Dict[str, datetime] = {}
         
         self._running = False
+        self._cleanup_task: Optional[asyncio.Task] = None
     
     async def start(self):
         """Start the comparator"""
         self._running = True
-        asyncio.create_task(self._cleanup_loop())
+        # Store task reference to prevent garbage collection
+        self._cleanup_task = asyncio.create_task(self._cleanup_loop())
         logger.info("Shadow Comparator started")
     
     async def stop(self):
         """Stop the comparator"""
         self._running = False
+        if self._cleanup_task:
+            self._cleanup_task.cancel()
+            try:
+                await self._cleanup_task
+            except asyncio.CancelledError:
+                pass
+            self._cleanup_task = None
     
     # ==================== Output Collection ====================
     

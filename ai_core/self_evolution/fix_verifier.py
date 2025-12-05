@@ -14,10 +14,13 @@ import logging
 import subprocess
 import sys
 import tempfile
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import aiofiles
 
 logger = logging.getLogger(__name__)
 
@@ -194,19 +197,17 @@ class FixVerifier:
         issues = []
         
         try:
-            # Create temp file with fixed code
-            with tempfile.NamedTemporaryFile(
-                mode="w",
-                suffix=".py",
-                delete=False,
-            ) as f:
-                f.write(code)
-                temp_path = f.name
+            # Create temp file with fixed code using async file operations
+            temp_dir = Path(tempfile.gettempdir())
+            temp_path = temp_dir / f"fix_verify_{uuid.uuid4().hex}.py"
+            
+            async with aiofiles.open(temp_path, mode="w") as f:
+                await f.write(code)
             
             # Run ruff (fast Python linter)
             try:
                 result = await asyncio.create_subprocess_exec(
-                    self.python_path, "-m", "ruff", "check", temp_path,
+                    self.python_path, "-m", "ruff", "check", str(temp_path),
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
@@ -223,9 +224,9 @@ class FixVerifier:
                 pass
             except asyncio.TimeoutError:
                 logger.warning("Static analysis timed out")
-            
-            # Clean up temp file
-            Path(temp_path).unlink(missing_ok=True)
+            finally:
+                # Clean up temp file
+                temp_path.unlink(missing_ok=True)
             
         except Exception as e:
             logger.error(f"Static analysis failed: {e}")

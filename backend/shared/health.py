@@ -401,9 +401,19 @@ class GracefulShutdown:
         """Add a cleanup task to run during shutdown"""
         self._cleanup_tasks.append(task)
     
-    def setup_signal_handlers(self):
-        """Setup signal handlers for graceful shutdown"""
-        loop = asyncio.get_event_loop()
+    def setup_signal_handlers(self, loop: asyncio.AbstractEventLoop = None):
+        """Setup signal handlers for graceful shutdown
+        
+        Args:
+            loop: Event loop to use. If None, tries to get running loop.
+        """
+        if loop is None:
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                # No running loop, get or create one (for non-async setup)
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
         
         for sig in (signal.SIGTERM, signal.SIGINT):
             loop.add_signal_handler(

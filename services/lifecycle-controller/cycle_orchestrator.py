@@ -117,6 +117,7 @@ class CycleOrchestrator:
         
         self._running = False
         self._callbacks: Dict[str, List[Callable]] = {}
+        self._background_tasks: List[asyncio.Task] = []
     
     async def start(self):
         """Start the cycle orchestrator"""
@@ -126,15 +127,25 @@ class CycleOrchestrator:
         await self.lifecycle.start()
         await self.recovery.start()
         
-        # Start orchestration loop
-        asyncio.create_task(self._orchestration_loop())
-        asyncio.create_task(self._recovery_integration_loop())
+        # Start orchestration loop and store task references to prevent GC
+        self._background_tasks = [
+            asyncio.create_task(self._orchestration_loop()),
+            asyncio.create_task(self._recovery_integration_loop()),
+        ]
         
         logger.info("Cycle Orchestrator started - Self-evolution cycle active")
     
     async def stop(self):
         """Stop the cycle orchestrator"""
         self._running = False
+        
+        # Cancel background tasks
+        for task in self._background_tasks:
+            task.cancel()
+        if self._background_tasks:
+            await asyncio.gather(*self._background_tasks, return_exceptions=True)
+        self._background_tasks.clear()
+        
         await self.lifecycle.stop()
         await self.recovery.stop()
         logger.info("Cycle Orchestrator stopped")

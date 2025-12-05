@@ -16,9 +16,13 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+import aiofiles
 import numpy as np
 
 import httpx
@@ -152,9 +156,9 @@ class SemanticCacheService:
     def _hash_to_embedding(self, code: str, dim: int = 384) -> np.ndarray:
         """Generate pseudo-embedding from hash (fallback)"""
         code_hash = hashlib.sha256(code.encode()).digest()
-        # Expand hash to embedding dimension
-        np.random.seed(int.from_bytes(code_hash[:4], 'big'))
-        return np.random.randn(dim).astype(np.float32)
+        # Expand hash to embedding dimension using numpy.random.Generator
+        rng = np.random.default_rng(int.from_bytes(code_hash[:4], 'big'))
+        return rng.standard_normal(dim).astype(np.float32)
     
     def _compute_similarity(
         self,
@@ -293,20 +297,40 @@ class SemanticCacheService:
         Warm cache with common code patterns.
         
         Pre-analyzes common patterns to improve cache hit rate.
-        """
-        import os
         
-        if not os.path.exists(patterns_dir):
-            logger.warning(f"Patterns directory not found: {patterns_dir}")
+        Security: Validates paths to prevent path injection attacks.
+        """
+        # Validate and resolve the patterns directory path
+        base_path = Path(patterns_dir).resolve()
+        
+        if not base_path.exists():
+            logger.warning("Patterns directory not found")
+            return
+        
+        if not base_path.is_dir():
+            logger.warning("Patterns path is not a directory")
             return
         
         count = 0
-        for filename in os.listdir(patterns_dir):
-            filepath = os.path.join(patterns_dir, filename)
-            if os.path.isfile(filepath):
+        for filename in os.listdir(base_path):
+            # Security: Validate filename doesn't contain path traversal
+            if '..' in filename or filename.startswith('/'):
+                logger.warning("Skipping suspicious filename")
+                continue
+            
+            filepath = base_path / filename
+            
+            # Ensure file is within the base directory (prevent path traversal)
+            try:
+                filepath.resolve().relative_to(base_path)
+            except ValueError:
+                logger.warning("Skipping file outside base directory")
+                continue
+            
+            if filepath.is_file():
                 try:
-                    with open(filepath, 'r') as f:
-                        code = f.read()
+                    async with aiofiles.open(filepath, 'r') as f:
+                        code = await f.read()
                     
                     # Get embedding and store placeholder
                     embedding = await self.get_embedding(code)
@@ -325,7 +349,7 @@ class SemanticCacheService:
                     self.cache_keys.append(cache_key)
                     count += 1
                 except Exception as e:
-                    logger.error(f"Failed to warm cache for {filename}: {e}")
+                    logger.error(f"Failed to warm cache: {type(e).__name__}")
         
         logger.info(f"Warmed cache with {count} patterns")
     

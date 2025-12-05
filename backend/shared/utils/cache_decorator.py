@@ -8,11 +8,14 @@ Supports async functions with automatic serialization.
 import json
 import hashlib
 import functools
+import logging
 from typing import Callable, Optional, Any, Union
 from datetime import timedelta
 import redis.asyncio as redis
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # Global Redis connection
@@ -119,9 +122,9 @@ def cached(
                 
                 if cached_value is not None:
                     return json.loads(cached_value)
-            except Exception:
+            except Exception as e:
                 # If Redis fails, just execute the function
-                pass
+                logger.debug(f"Cache read failed: {type(e).__name__}")
             
             # Execute function
             result = await func(*args, **kwargs)
@@ -134,9 +137,9 @@ def cached(
                     ttl_seconds,
                     json.dumps(result, default=str)
                 )
-            except Exception:
+            except Exception as e:
                 # If Redis fails, just return the result
-                pass
+                logger.debug(f"Cache write failed: {type(e).__name__}")
             
             return result
         
@@ -147,8 +150,8 @@ def cached(
             try:
                 r = await get_redis()
                 await r.delete(cache_key)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Cache invalidation failed: {type(e).__name__}")
         
         wrapper.invalidate = invalidate
         return wrapper
@@ -179,16 +182,16 @@ def cached_property(ttl: int = 3600, prefix: str = "prop"):
                 
                 if cached_value is not None:
                     return json.loads(cached_value)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Property cache read failed: {type(e).__name__}")
             
             result = await func(self, *args, **kwargs)
             
             try:
                 r = await get_redis()
                 await r.setex(cache_key, ttl, json.dumps(result, default=str))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Property cache write failed: {type(e).__name__}")
             
             return result
         

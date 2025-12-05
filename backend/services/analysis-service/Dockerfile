@@ -28,18 +28,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy Python packages from builder
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
+# Create non-root user first
+RUN useradd --create-home --shell /bin/bash appuser
+
+# Copy Python packages from builder to appuser's home
+COPY --from=builder /root/.local /home/appuser/.local
+RUN chown -R appuser:appuser /home/appuser/.local
 
 # Copy application code
 COPY src/ ./src/
 COPY requirements.txt .
+RUN chown -R appuser:appuser /app
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash appuser && \
-    chown -R appuser:appuser /app
+# Switch to non-root user
 USER appuser
+ENV PATH=/home/appuser/.local/bin:$PATH
 
 # Environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \

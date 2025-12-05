@@ -295,7 +295,7 @@ class BidirectionalProtocol:
         message.checksum = message.compute_checksum()
         
         # Create future for response
-        future: asyncio.Future = asyncio.get_event_loop().create_future()
+        future: asyncio.Future = asyncio.get_running_loop().create_future()
         self.pending_requests[message.message_id] = future
         
         # Send message

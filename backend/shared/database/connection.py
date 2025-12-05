@@ -153,7 +153,8 @@ class DatabaseManager:
         """Test database connection."""
         async with self._engine.connect() as conn:
             result = await conn.execute(text("SELECT 1"))
-            assert result.scalar() == 1
+            if result.scalar() != 1:
+                raise ConnectionError("Database health check failed: unexpected result")
             self._stats.is_healthy = True
             self._stats.last_health_check = datetime.now(timezone.utc)
     
