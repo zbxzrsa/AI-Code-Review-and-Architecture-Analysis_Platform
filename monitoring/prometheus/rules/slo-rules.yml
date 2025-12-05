@@ -1,0 +1,141 @@
+groups:
+  - name: slo-metrics
+    interval: 30s
+    rules:
+      # =============================================================================
+      # SLO: Response Time (p95 < 3s)
+      # =============================================================================
+      - record: api:request_duration_seconds:p95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+
+      - record: slo:response_time:compliance
+        expr: (api:request_duration_seconds:p95 < 3) * 100
+
+      - alert: SLOResponseTimeViolation
+        expr: api:request_duration_seconds:p95 > 3
+        for: 5m
+        labels:
+          severity: critical
+          slo: response_time
+        annotations:
+          summary: "SLO Violation: Response time p95 > 3s"
+          description: "API response time p95 is {{ $value }}s, exceeding the 3s SLO target."
+          runbook_url: "https://docs.example.com/runbooks/slo-response-time"
+
+      # =============================================================================
+      # SLO: Error Rate (< 2%)
+      # =============================================================================
+      - record: api:error_rate:5m
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
+
+      - record: slo:error_rate:compliance
+        expr: (api:error_rate:5m < 2) * 100
+
+      - alert: SLOErrorRateViolation
+        expr: api:error_rate:5m > 2
+        for: 5m
+        labels:
+          severity: critical
+          slo: error_rate
+        annotations:
+          summary: "SLO Violation: Error rate > 2%"
+          description: 'API error rate is {{ $value | printf "%.2f" }}%, exceeding the 2% SLO target.'
+          runbook_url: "https://docs.example.com/runbooks/slo-error-rate"
+
+      # =============================================================================
+      # SLO: Availability (> 99.9%)
+      # =============================================================================
+      - record: api:availability:5m
+        expr: (1 - (sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])))) * 100
+
+      - record: slo:availability:compliance
+        expr: (api:availability:5m > 99.9) * 100
+
+      - alert: SLOAvailabilityViolation
+        expr: api:availability:5m < 99.9
+        for: 10m
+        labels:
+          severity: critical
+          slo: availability
+        annotations:
+          summary: "SLO Violation: Availability < 99.9%"
+          description: 'API availability is {{ $value | printf "%.2f" }}%, below the 99.9% SLO target.'
+
+      # =============================================================================
+      # V2 Production Specific SLOs
+      # =============================================================================
+      - record: v2:request_duration_seconds:p95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{version="v2"}[5m])) by (le))
+
+      - record: v2:error_rate:5m
+        expr: sum(rate(http_requests_total{version="v2",status=~"5.."}[5m])) / sum(rate(http_requests_total{version="v2"}[5m])) * 100
+
+      - alert: V2SLOViolation
+        expr: v2:request_duration_seconds:p95 > 3 or v2:error_rate:5m > 2
+        for: 2m
+        labels:
+          severity: critical
+          version: v2
+          pager: "true"
+        annotations:
+          summary: "V2 Production SLO Violation!"
+          description: 'V2 production is violating SLO targets. Response time p95: {{ with query "v2:request_duration_seconds:p95" }}{{ . | first | value | printf "%.2f" }}{{ end }}s, Error rate: {{ with query "v2:error_rate:5m" }}{{ . | first | value | printf "%.2f" }}{{ end }}%'
+
+      # =============================================================================
+      # AI Model Performance SLOs
+      # =============================================================================
+      - record: ai:model_accuracy:avg
+        expr: avg(ai_model_accuracy) by (model_id, version)
+
+      - record: ai:model_latency:p95
+        expr: histogram_quantile(0.95, sum(rate(ai_model_latency_seconds_bucket[5m])) by (le, model_id))
+
+      - alert: AIModelAccuracyLow
+        expr: ai:model_accuracy:avg < 0.85
+        for: 15m
+        labels:
+          severity: warning
+          component: ai
+        annotations:
+          summary: "AI model {{ $labels.model_id }} accuracy below threshold"
+          description: 'Model {{ $labels.model_id }} accuracy is {{ $value | printf "%.2f" }}, below the 0.85 threshold.'
+
+      - alert: AIModelLatencyHigh
+        expr: ai:model_latency:p95 > 5
+        for: 10m
+        labels:
+          severity: warning
+          component: ai
+        annotations:
+          summary: "AI model {{ $labels.model_id }} latency too high"
+          description: 'Model {{ $labels.model_id }} p95 latency is {{ $value | printf "%.2f" }}s, exceeding the 5s threshold.'
+
+  - name: slo-burn-rate
+    interval: 1m
+    rules:
+      # =============================================================================
+      # Error Budget Burn Rate
+      # =============================================================================
+      - record: slo:error_budget:remaining
+        expr: 1 - (sum(increase(http_requests_total{status=~"5.."}[30d])) / sum(increase(http_requests_total[30d]))) / 0.02
+
+      - alert: ErrorBudgetBurnRateHigh
+        expr: slo:error_budget:remaining < 0.5
+        for: 1h
+        labels:
+          severity: warning
+          slo: error_budget
+        annotations:
+          summary: "Error budget burn rate is high"
+          description: 'Only {{ $value | printf "%.1f" }}% of error budget remaining for the month.'
+
+      - alert: ErrorBudgetExhausted
+        expr: slo:error_budget:remaining < 0
+        for: 5m
+        labels:
+          severity: critical
+          slo: error_budget
+          pager: "true"
+        annotations:
+          summary: "Error budget exhausted!"
+          description: "Monthly error budget has been exhausted. Consider feature freeze."

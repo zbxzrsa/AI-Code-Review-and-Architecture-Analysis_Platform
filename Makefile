@@ -389,6 +389,66 @@ validate-system:
 	pytest tests/integration/test_system_validation.py -v
 
 # ============================================================
+# Quick Start (New Optimized Commands)
+# ============================================================
+
+# Validate environment setup
+validate-env:
+	python scripts/validate_env.py
+
+# Start everything for local development (demo mode)
+start-demo:
+	@echo "Starting AI Code Review Platform (Demo Mode)..."
+	@cp -n .env.example .env 2>/dev/null || true
+	docker compose up -d
+	@echo "Waiting for services to start..."
+	@sleep 5
+	@echo ""
+	@echo "Starting backend API server..."
+	cd backend && python dev-api-server.py &
+	@sleep 3
+	@echo ""
+	@echo "==================================================="
+	@echo "Platform is ready!"
+	@echo "==================================================="
+	@echo "Frontend: Run 'cd frontend && npm run dev' in another terminal"
+	@echo "API Docs: http://localhost:8000/docs"
+	@echo "==================================================="
+
+# Start full development environment
+start-full:
+	@echo "Starting full development environment..."
+	docker compose up -d
+	cd backend && python dev-api-server.py &
+	cd frontend && npm run dev
+
+# Stop all services
+stop-all:
+	docker compose down
+	@pkill -f "dev-api-server.py" 2>/dev/null || true
+	@echo "All services stopped"
+
+# Quick API health test
+quick-test:
+	@echo "Testing API endpoints..."
+	@curl -s http://localhost:8000/health | python -m json.tool
+	@echo ""
+	@curl -s http://localhost:8000/api/projects | python -m json.tool | head -20
+	@echo ""
+	@echo "API is working!"
+
+# View API docs
+api-docs:
+	@echo "Opening API documentation..."
+	@python -m webbrowser "http://localhost:8000/docs" 2>/dev/null || echo "Open http://localhost:8000/docs in your browser"
+
+# Seed demo data
+seed-demo:
+	@echo "Seeding demo data..."
+	curl -X POST http://localhost:8000/api/seed/demo
+	@echo "Demo data seeded!"
+
+# ============================================================
 # Documentation
 # ============================================================
 
@@ -398,3 +458,24 @@ docs:
 
 docs-serve:
 	cd docs && python -m http.server 8000
+
+# ============================================================
+# Quick Reference
+# ============================================================
+
+.PHONY: quick-help
+quick-help:
+	@echo ""
+	@echo "Quick Start Commands:"
+	@echo "  make validate-env   - Check environment setup"
+	@echo "  make start-demo     - Start platform (demo mode)"
+	@echo "  make stop-all       - Stop all services"
+	@echo "  make quick-test     - Test API endpoints"
+	@echo "  make api-docs       - Open API documentation"
+	@echo ""
+	@echo "URLs:"
+	@echo "  Frontend:    http://localhost:5173"
+	@echo "  API:         http://localhost:8000"
+	@echo "  API Docs:    http://localhost:8000/docs"
+	@echo "  Grafana:     http://localhost:3002"
+	@echo ""

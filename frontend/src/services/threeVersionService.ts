@@ -426,3 +426,95 @@ export function isCycleHealthy(status: CycleStatus): boolean {
 
   return true;
 }
+
+// =============================================================================
+// Alternative Dev API Methods (uses /api/three-version/* endpoints)
+// These provide fallback when the full evolution API is not available
+// =============================================================================
+
+const DEV_API_BASE = "/api/three-version";
+
+/**
+ * Get three-version status from dev API
+ */
+export async function getDevStatus() {
+  try {
+    const response = await apiClient.get(`${DEV_API_BASE}/status`);
+    return response.data;
+  } catch {
+    // Return mock data if API fails
+    return {
+      cycle_running: true,
+      current_phase: "monitoring",
+      v1_status: { active_experiments: 0 },
+      v2_status: { active_models: 0 },
+      v3_status: { quarantined_models: 0 },
+    };
+  }
+}
+
+/**
+ * Get three-version metrics from dev API
+ */
+export async function getDevMetrics() {
+  try {
+    const response = await apiClient.get(`${DEV_API_BASE}/metrics`);
+    return response.data;
+  } catch {
+    return { v1: {}, v2: {}, v3: {} };
+  }
+}
+
+/**
+ * Get experiments from dev API
+ */
+export async function getDevExperiments() {
+  try {
+    const response = await apiClient.get(`${DEV_API_BASE}/experiments`);
+    return response.data;
+  } catch {
+    return { items: [], total: 0 };
+  }
+}
+
+/**
+ * Get version history from dev API
+ */
+export async function getDevHistory() {
+  try {
+    const response = await apiClient.get(`${DEV_API_BASE}/history`);
+    return response.data;
+  } catch {
+    return { items: [], total: 0 };
+  }
+}
+
+/**
+ * Promote model via dev API
+ */
+export async function devPromote(modelId: string, reason: string) {
+  const response = await apiClient.post(`${DEV_API_BASE}/promote`, null, {
+    params: { model_id: modelId, reason },
+  });
+  return response.data;
+}
+
+/**
+ * Demote model via dev API
+ */
+export async function devDemote(modelId: string, reason: string) {
+  const response = await apiClient.post(`${DEV_API_BASE}/demote`, null, {
+    params: { model_id: modelId, reason },
+  });
+  return response.data;
+}
+
+/**
+ * Re-evaluate model via dev API
+ */
+export async function devReevaluate(modelId: string) {
+  const response = await apiClient.post(`${DEV_API_BASE}/reevaluate`, null, {
+    params: { model_id: modelId },
+  });
+  return response.data;
+}

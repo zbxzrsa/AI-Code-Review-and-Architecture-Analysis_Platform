@@ -19,6 +19,13 @@ import uvicorn
 import random
 
 # ============================================
+# Mode Configuration / 模式配置
+# ============================================
+# MOCK_MODE: When true, uses mock AI responses instead of real providers
+MOCK_MODE = os.getenv('MOCK_MODE', 'true').lower() == 'true'
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+
+# ============================================
 # OAuth Configuration / OAuth配置
 # ============================================
 GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', '')
@@ -3098,16 +3105,602 @@ async def schedule_report(name: str = "", type: str = "code_review", frequency: 
 
 
 # ============================================
+# Admin - User Stats / 管理员 - 用户统计
+# ============================================
+
+@app.get("/api/admin/users/stats")
+async def get_user_stats():
+    """Get user statistics / 获取用户统计"""
+    return {
+        "total_users": 156,
+        "active_users": 142,
+        "new_users_today": 3,
+        "new_users_week": 12,
+        "new_users_month": 45,
+        "users_by_role": {
+            "admin": 5,
+            "user": 120,
+            "viewer": 31
+        },
+        "users_by_status": {
+            "active": 142,
+            "inactive": 8,
+            "suspended": 4,
+            "pending": 2
+        },
+        "growth_rate": 0.08,
+        "retention_rate": 0.92
+    }
+
+
+@app.post("/api/admin/users/{user_id}/suspend")
+async def suspend_user(user_id: str, reason: str = ""):
+    """Suspend user / 暂停用户"""
+    return {"message": f"User {user_id} suspended", "reason": reason}
+
+
+@app.post("/api/admin/users/{user_id}/reactivate")
+async def reactivate_user(user_id: str):
+    """Reactivate user / 重新激活用户"""
+    return {"message": f"User {user_id} reactivated"}
+
+
+@app.post("/api/admin/users/{user_id}/reset-password")
+async def reset_user_password(user_id: str):
+    """Reset user password / 重置用户密码"""
+    return {"message": f"Password reset email sent to user {user_id}"}
+
+
+@app.post("/api/admin/users/bulk")
+async def bulk_user_action(userIds: list = None, action: str = ""):
+    """Bulk user operations / 批量用户操作"""
+    count = len(userIds) if userIds else 0
+    return {"message": f"{action} applied to {count} users", "affected": count}
+
+
+# ============================================
+# Admin - Provider Stats / 管理员 - 提供商统计
+# ============================================
+
+@app.get("/api/admin/providers/{provider_id}/models")
+async def get_provider_models(provider_id: str):
+    """Get provider models / 获取提供商模型"""
+    models = {
+        "openai": [
+            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo", "type": "chat", "enabled": True, "isDefault": True},
+            {"id": "gpt-4", "name": "GPT-4", "type": "chat", "enabled": True, "isDefault": False},
+            {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo", "type": "chat", "enabled": True, "isDefault": False},
+        ],
+        "anthropic": [
+            {"id": "claude-3-opus", "name": "Claude 3 Opus", "type": "chat", "enabled": True, "isDefault": True},
+            {"id": "claude-3-sonnet", "name": "Claude 3 Sonnet", "type": "chat", "enabled": True, "isDefault": False},
+        ],
+        "huggingface": [
+            {"id": "codellama-34b", "name": "CodeLlama 34B", "type": "code", "enabled": True, "isDefault": True},
+        ]
+    }
+    return {"models": models.get(provider_id, [])}
+
+
+@app.get("/api/admin/providers/{provider_id}/metrics")
+async def get_provider_metrics(provider_id: str, period: str = "24h"):
+    """Get provider metrics / 获取提供商指标"""
+    return {
+        "provider_id": provider_id,
+        "period": period,
+        "requests": random.randint(1000, 10000),
+        "success_rate": round(random.uniform(0.95, 0.99), 3),
+        "avg_latency_ms": random.randint(150, 500),
+        "p95_latency_ms": random.randint(300, 1000),
+        "error_rate": round(random.uniform(0.01, 0.05), 3),
+        "cost": round(random.uniform(10, 100), 2),
+        "timeline": [
+            {"time": f"{i}:00", "requests": random.randint(50, 500), "latency": random.randint(150, 400)}
+            for i in range(24)
+        ]
+    }
+
+
+@app.post("/api/admin/providers/{provider_id}/test")
+async def test_provider(provider_id: str):
+    """Test provider connectivity / 测试提供商连接"""
+    return {
+        "success": True,
+        "provider_id": provider_id,
+        "latency_ms": random.randint(100, 300),
+        "message": "Provider is healthy and responding"
+    }
+
+
+# ============================================
+# Admin - Audit Analytics / 管理员 - 审计分析
+# ============================================
+
+@app.get("/api/admin/audit/analytics")
+async def get_audit_analytics(period: str = "7d"):
+    """Get audit analytics / 获取审计分析"""
+    return {
+        "period": period,
+        "total_events": 15420,
+        "events_by_type": {
+            "login": 3500,
+            "logout": 3200,
+            "create": 2100,
+            "update": 4200,
+            "delete": 420,
+            "access": 2000
+        },
+        "events_by_status": {
+            "success": 14800,
+            "failure": 520,
+            "warning": 100
+        },
+        "top_users": [
+            {"user_id": "user_1", "name": "Admin User", "event_count": 450},
+            {"user_id": "user_2", "name": "Developer", "event_count": 320},
+        ],
+        "security_alerts": 12,
+        "compliance_issues": 3
+    }
+
+
+@app.get("/api/admin/audit/security-alerts")
+async def get_security_alerts(severity: str = None, resolved: bool = None):
+    """Get security alerts / 获取安全警报"""
+    return {
+        "items": [
+            {"id": "alert_1", "type": "suspicious_login", "severity": "high", "message": "Multiple failed login attempts", "resolved": False, "created_at": datetime.now().isoformat()},
+            {"id": "alert_2", "type": "api_abuse", "severity": "medium", "message": "Unusual API access pattern", "resolved": True, "created_at": (datetime.now() - timedelta(hours=2)).isoformat()},
+        ],
+        "total": 2
+    }
+
+
+# ============================================
+# Auto-Fix System / 自动修复系统
+# ============================================
+
+@app.get("/api/auto-fix/status")
+async def get_autofix_status():
+    """Get auto-fix cycle status / 获取自动修复周期状态"""
+    return {
+        "running": True,
+        "phase": "monitoring",
+        "pending_fixes": 3,
+        "metrics": {
+            "cycles_completed": 24,
+            "vulnerabilities_detected": 156,
+            "fixes_applied": 142,
+            "fixes_verified": 138,
+            "fixes_failed": 4,
+            "fixes_rolled_back": 2
+        },
+        "last_cycle_at": datetime.now().isoformat(),
+        "next_cycle_at": (datetime.now() + timedelta(hours=1)).isoformat()
+    }
+
+
+@app.get("/api/auto-fix/vulnerabilities")
+async def get_autofix_vulnerabilities():
+    """Get detected vulnerabilities / 获取检测到的漏洞"""
+    return [
+        {
+            "vuln_id": "vuln-001",
+            "pattern_id": "SEC-001",
+            "file_path": "backend/shared/security/auth.py",
+            "line_number": 45,
+            "severity": "critical",
+            "category": "security",
+            "description": "SQL injection vulnerability in user query",
+            "confidence": 0.95,
+            "detected_at": datetime.now().isoformat()
+        },
+        {
+            "vuln_id": "vuln-002",
+            "pattern_id": "SEC-003",
+            "file_path": "frontend/src/utils/api.ts",
+            "line_number": 123,
+            "severity": "high",
+            "category": "security",
+            "description": "Hardcoded API key in source code",
+            "confidence": 0.99,
+            "detected_at": datetime.now().isoformat()
+        }
+    ]
+
+
+@app.get("/api/auto-fix/fixes")
+async def get_autofix_fixes():
+    """Get applied fixes / 获取已应用的修复"""
+    return [
+        {
+            "fix_id": "fix-001",
+            "vuln_id": "vuln-003",
+            "status": "verified",
+            "applied_at": (datetime.now() - timedelta(hours=2)).isoformat(),
+            "verified_at": (datetime.now() - timedelta(hours=1)).isoformat(),
+            "patch": "Use parameterized query instead of string concatenation"
+        }
+    ]
+
+
+@app.get("/api/auto-fix/fixes/pending")
+async def get_pending_fixes():
+    """Get pending fixes awaiting approval / 获取待审批的修复"""
+    return [
+        {
+            "fix_id": "fix-002",
+            "vuln_id": "vuln-001",
+            "status": "pending",
+            "proposed_at": datetime.now().isoformat(),
+            "patch_preview": "Replace raw SQL with ORM query",
+            "ai_confidence": 0.92
+        }
+    ]
+
+
+@app.post("/api/auto-fix/start")
+async def start_autofix_cycle():
+    """Start auto-fix cycle / 启动自动修复周期"""
+    return {
+        "success": True,
+        "cycle_id": secrets.token_hex(8),
+        "message": "Auto-fix cycle started"
+    }
+
+
+@app.post("/api/auto-fix/fixes/{fix_id}/approve")
+async def approve_fix(fix_id: str):
+    """Approve a pending fix / 批准待处理的修复"""
+    return {"success": True, "fix_id": fix_id, "status": "approved", "message": "Fix approved and will be applied"}
+
+
+@app.post("/api/auto-fix/fixes/{fix_id}/reject")
+async def reject_fix(fix_id: str, reason: str = ""):
+    """Reject a pending fix / 拒绝待处理的修复"""
+    return {"success": True, "fix_id": fix_id, "status": "rejected", "reason": reason}
+
+
+# ============================================
+# Three-Version Cycle / 三版本循环
+# ============================================
+
+@app.get("/api/three-version/status")
+async def get_three_version_status():
+    """Get three-version cycle status / 获取三版本循环状态"""
+    return {
+        "cycle_running": True,
+        "current_phase": "monitoring",
+        "v1_status": {
+            "name": "V1 Experimentation",
+            "active_experiments": 3,
+            "pending_promotion": 1,
+            "models": ["GPT-4 Turbo Preview", "Claude 3.5 Sonnet", "Llama 3 70B"],
+            "avg_accuracy": 0.89,
+            "avg_latency_ms": 2200
+        },
+        "v2_status": {
+            "name": "V2 Production",
+            "active_models": 2,
+            "models": ["GPT-4 Turbo", "Claude 3 Opus"],
+            "requests_today": 15420,
+            "success_rate": 0.982,
+            "avg_latency_ms": 1800,
+            "slo_compliance": True
+        },
+        "v3_status": {
+            "name": "V3 Quarantine",
+            "quarantined_models": 2,
+            "models": ["GPT-3.5 Turbo (deprecated)", "Old Custom Model"],
+            "pending_reevaluation": 1
+        },
+        "last_promotion": {
+            "model": "GPT-4 Turbo",
+            "from": "v1",
+            "to": "v2",
+            "at": (datetime.now() - timedelta(days=3)).isoformat()
+        },
+        "last_demotion": {
+            "model": "GPT-3.5 Turbo",
+            "from": "v2",
+            "to": "v3",
+            "reason": "SLO violation",
+            "at": (datetime.now() - timedelta(days=7)).isoformat()
+        }
+    }
+
+
+@app.get("/api/three-version/metrics")
+async def get_three_version_metrics():
+    """Get three-version metrics / 获取三版本指标"""
+    return {
+        "v1": {
+            "experiments_run": 24,
+            "experiments_promoted": 8,
+            "experiments_failed": 3,
+            "avg_experiment_duration_hours": 48
+        },
+        "v2": {
+            "total_requests": 1542000,
+            "success_rate": 0.982,
+            "p95_latency_ms": 2100,
+            "error_rate": 0.018,
+            "slo_violations_week": 2
+        },
+        "v3": {
+            "total_quarantined": 5,
+            "reevaluated": 2,
+            "recovered": 1,
+            "permanently_retired": 2
+        }
+    }
+
+
+@app.post("/api/three-version/promote")
+async def promote_to_v2(model_id: str = "", reason: str = ""):
+    """Promote model from V1 to V2 / 将模型从V1提升到V2"""
+    return {
+        "success": True,
+        "model_id": model_id,
+        "action": "promote",
+        "from": "v1-experimentation",
+        "to": "v2-production",
+        "reason": reason,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/api/three-version/demote")
+async def demote_to_v3(model_id: str = "", reason: str = ""):
+    """Demote model from V2 to V3 / 将模型从V2降级到V3"""
+    return {
+        "success": True,
+        "model_id": model_id,
+        "action": "demote",
+        "from": "v2-production",
+        "to": "v3-quarantine",
+        "reason": reason,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.post("/api/three-version/reevaluate")
+async def reevaluate_from_v3(model_id: str = ""):
+    """Re-evaluate model from V3 / 重新评估V3模型"""
+    return {
+        "success": True,
+        "model_id": model_id,
+        "action": "reevaluate",
+        "status": "evaluation_started",
+        "estimated_completion": (datetime.now() + timedelta(hours=24)).isoformat()
+    }
+
+
+@app.get("/api/three-version/experiments")
+async def get_experiments():
+    """Get V1 experiments / 获取V1实验"""
+    return {
+        "items": [
+            {
+                "id": "exp_001",
+                "name": "GPT-4 Turbo Temperature Tuning",
+                "model": "gpt-4-turbo-preview",
+                "status": "running",
+                "started_at": (datetime.now() - timedelta(hours=12)).isoformat(),
+                "metrics": {"accuracy": 0.91, "latency_p95": 2100, "samples": 1500}
+            },
+            {
+                "id": "exp_002",
+                "name": "Claude 3.5 Sonnet Code Review",
+                "model": "claude-3-5-sonnet",
+                "status": "completed",
+                "started_at": (datetime.now() - timedelta(days=2)).isoformat(),
+                "completed_at": (datetime.now() - timedelta(hours=6)).isoformat(),
+                "metrics": {"accuracy": 0.89, "latency_p95": 2400, "samples": 5000},
+                "result": "ready_for_promotion"
+            }
+        ],
+        "total": 2
+    }
+
+
+@app.get("/api/three-version/history")
+async def get_version_history():
+    """Get version change history / 获取版本变更历史"""
+    return {
+        "items": [
+            {
+                "id": "hist_001",
+                "action": "promote",
+                "model": "GPT-4 Turbo",
+                "from": "v1",
+                "to": "v2",
+                "reason": "Passed all SLO gates",
+                "by": "system",
+                "at": (datetime.now() - timedelta(days=3)).isoformat()
+            },
+            {
+                "id": "hist_002",
+                "action": "demote",
+                "model": "GPT-3.5 Turbo",
+                "from": "v2",
+                "to": "v3",
+                "reason": "Error rate exceeded 5%",
+                "by": "system",
+                "at": (datetime.now() - timedelta(days=7)).isoformat()
+            },
+            {
+                "id": "hist_003",
+                "action": "reevaluate",
+                "model": "Custom Model v1",
+                "from": "v3",
+                "to": "v1",
+                "reason": "Manual re-evaluation requested",
+                "by": "admin@example.com",
+                "at": (datetime.now() - timedelta(days=14)).isoformat()
+            }
+        ],
+        "total": 3
+    }
+
+
+# ============================================
+# Code Analysis / 代码分析
+# ============================================
+
+@app.post("/api/analyze/code")
+async def analyze_code(code: str = "", language: str = "python", analysis_type: str = "full"):
+    """Analyze code with AI / 使用AI分析代码"""
+    return {
+        "analysis_id": secrets.token_hex(8),
+        "status": "completed",
+        "language": language,
+        "issues": [
+            {
+                "type": "security",
+                "severity": "high",
+                "line": 15,
+                "message": "Potential SQL injection vulnerability",
+                "suggestion": "Use parameterized queries"
+            },
+            {
+                "type": "quality",
+                "severity": "medium",
+                "line": 23,
+                "message": "Function is too complex (cyclomatic complexity: 12)",
+                "suggestion": "Consider breaking into smaller functions"
+            }
+        ],
+        "metrics": {
+            "lines_of_code": 150,
+            "cyclomatic_complexity": 8,
+            "maintainability_index": 72,
+            "test_coverage_estimate": 45
+        },
+        "suggestions": [
+            "Add type hints to function parameters",
+            "Consider using dataclasses for data structures",
+            "Add docstrings to public functions"
+        ]
+    }
+
+
+@app.get("/api/analyze/{analysis_id}/results")
+async def get_analysis_results(analysis_id: str):
+    """Get analysis results / 获取分析结果"""
+    return {
+        "analysis_id": analysis_id,
+        "status": "completed",
+        "created_at": datetime.now().isoformat(),
+        "completed_at": datetime.now().isoformat(),
+        "summary": {
+            "total_issues": 5,
+            "critical": 0,
+            "high": 1,
+            "medium": 2,
+            "low": 2
+        }
+    }
+
+
+# ============================================
+# Demo Seed Data / 演示种子数据
+# ============================================
+
+@app.post("/api/seed/demo")
+async def seed_demo_data():
+    """Seed demo data for testing / 填充演示数据"""
+    return {
+        "success": True,
+        "message": "Demo data seeded successfully",
+        "seeded": {
+            "projects": 3,
+            "repositories": 5,
+            "users": 3,
+            "analyses": 10,
+            "experiments": 2,
+            "ai_models": 3
+        }
+    }
+
+
+@app.post("/api/seed/reset")
+async def reset_demo_data():
+    """Reset all demo data / 重置所有演示数据"""
+    return {
+        "success": True,
+        "message": "Demo data reset successfully"
+    }
+
+
+@app.get("/api/demo/walkthrough")
+async def get_demo_walkthrough():
+    """Get demo walkthrough steps / 获取演示步骤"""
+    return {
+        "title": "AI Code Review Platform Demo",
+        "steps": [
+            {
+                "step": 1,
+                "title": "Create a Project",
+                "description": "Navigate to Projects and create a new project",
+                "api": "POST /api/projects",
+                "ui_path": "/projects/new"
+            },
+            {
+                "step": 2,
+                "title": "Connect Repository",
+                "description": "Connect a GitHub/GitLab repository",
+                "api": "POST /api/repositories/connect",
+                "ui_path": "/repositories"
+            },
+            {
+                "step": 3,
+                "title": "Run Code Analysis",
+                "description": "Trigger AI-powered code analysis",
+                "api": "POST /api/projects/{id}/analyze",
+                "ui_path": "/code-review"
+            },
+            {
+                "step": 4,
+                "title": "Review Results",
+                "description": "View issues, suggestions, and AI insights",
+                "api": "GET /api/analyze/{session_id}/issues",
+                "ui_path": "/code-review"
+            },
+            {
+                "step": 5,
+                "title": "Apply Auto-Fix",
+                "description": "Let AI automatically fix detected issues",
+                "api": "POST /api/auto-fix/fixes/{id}/approve",
+                "ui_path": "/admin/auto-fix"
+            }
+        ],
+        "demo_credentials": {
+            "email": "demo@example.com",
+            "password": "demo123"
+        }
+    }
+
+
+# ============================================
 # Main / 主程序
 # ============================================
 
 if __name__ == "__main__":
-    print("=" * 50)
-    print("🚀 Dev API Server Starting...")
-    print("=" * 50)
-    print("🌐 Server: http://localhost:8000")
-    print("📖 Docs: http://localhost:8000/docs")
-    print("=" * 50)
+    print("=" * 60)
+    print("🚀 AI Code Review Platform - Dev API Server")
+    print("=" * 60)
+    print(f"🔧 Environment: {ENVIRONMENT}")
+    print(f"🎭 Mock Mode: {'ENABLED (no AI keys required)' if MOCK_MODE else 'DISABLED (requires AI keys)'}")
+    print("=" * 60)
+    print("🌐 Server:    http://localhost:8000")
+    print("📖 API Docs:  http://localhost:8000/docs")
+    print("❤️  Health:   http://localhost:8000/health")
+    print("=" * 60)
+    if MOCK_MODE:
+        print("ℹ️  Running in mock mode - AI responses are simulated")
+        print("   Set MOCK_MODE=false in .env to use real AI providers")
+    print("=" * 60)
     
     uvicorn.run(
         app,

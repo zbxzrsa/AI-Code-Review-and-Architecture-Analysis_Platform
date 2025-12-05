@@ -6,43 +6,68 @@ A revolutionary intelligent code review platform with a **three-version self-evo
 
 ### Prerequisites
 
-- Docker & Docker Compose
-- Node.js 20+ (for local development)
-- Python 3.10+ (for backend development)
+| Requirement    | Version | Check Command            |
+| -------------- | ------- | ------------------------ |
+| Docker         | 20.10+  | `docker --version`       |
+| Docker Compose | 2.0+    | `docker compose version` |
+| Node.js        | 20+     | `node --version`         |
+| Python         | 3.10+   | `python --version`       |
 
-### Start All Services
+### Option 1: Quick Demo (No API Keys Required)
 
 ```bash
-# Clone and navigate to project
-cd AI-Code-Review-and-Architecture-Analysis_Platform
+# 1. Setup environment
+cp .env.example .env
+# MOCK_MODE=true is enabled by default
 
-# Start all infrastructure (databases, monitoring, AI services)
-docker-compose up -d
+# 2. Start infrastructure
+docker compose up -d
 
-# Check service status
-docker-compose ps
+# 3. Start backend API (Terminal 1)
+cd backend && python dev-api-server.py
+
+# 4. Start frontend (Terminal 2)
+cd frontend && npm install && npm run dev
+```
+
+### Option 2: Full Mode (With AI Providers)
+
+```bash
+# 1. Configure API keys in .env
+cp .env.example .env
+# Edit .env:
+#   MOCK_MODE=false
+#   OPENAI_API_KEY=sk-your-key
+#   ANTHROPIC_API_KEY=sk-ant-your-key
+
+# 2. Follow steps 2-4 from Option 1
 ```
 
 ### Access Points
 
 | Service        | URL                        | Description            |
 | -------------- | -------------------------- | ---------------------- |
-| **Frontend**   | http://localhost:3000      | Main web application   |
-| **Dev API**    | http://localhost:8000      | Development API server |
-| **API Docs**   | http://localhost:8000/docs | Swagger/OpenAPI docs   |
-| **Grafana**    | http://localhost:3001      | Monitoring dashboards  |
-| **Prometheus** | http://localhost:9090      | Metrics                |
+| **Frontend**   | http://localhost:5173      | Vite dev server        |
+| **API Server** | http://localhost:8000      | FastAPI backend        |
+| **API Docs**   | http://localhost:8000/docs | Swagger/OpenAPI        |
+| **Grafana**    | http://localhost:3002      | Monitoring dashboards  |
+| **Prometheus** | http://localhost:9090      | Metrics collection     |
 | **MinIO**      | http://localhost:9001      | Object storage console |
 
-### Local Development
+### Validate Environment
 
 ```bash
-# Start dev API server (with hot reload)
-cd backend && python dev-api-server.py
+# Run environment validation
+python scripts/validate_env.py
 
-# Start frontend (in another terminal)
-cd frontend && npm run dev
+# Run API health check
+python scripts/health_check.py
 ```
+
+### Demo Credentials
+
+- **Email**: demo@example.com
+- **Password**: demo123
 
 ## 🏗️ Architecture Overview
 

@@ -1,319 +1,210 @@
-# Quick Start Guide
+# 🚀 Quick Start Guide
 
 Get the AI Code Review Platform running in 5 minutes!
 
-## Prerequisites
+## ✅ Prerequisites
 
-- Docker and Docker Compose installed
-- Python 3.9+ (for local development)
-- 8GB RAM minimum
-- 10GB disk space
+| Requirement    | Version | Notes                               |
+| -------------- | ------- | ----------------------------------- |
+| Docker         | 20.10+  | `docker --version`                  |
+| Docker Compose | 2.0+    | `docker compose version`            |
+| Node.js        | 20+     | For frontend dev: `node --version`  |
+| Python         | 3.10+   | For backend dev: `python --version` |
+| RAM            | 8GB+    | Minimum for all services            |
+| Disk           | 10GB+   | For Docker images                   |
 
-## Option 1: Docker Compose (Recommended for Local Development)
+---
 
-### Step 1: Clone and Setup
+## 🎯 Option 1: Quick Demo (No API Keys Required)
+
+This runs the platform in **mock mode** - no real AI providers needed.
+
+### Step 1: Setup Environment
 
 ```bash
+# Clone and enter project
 cd AI-Code-Review-and-Architecture-Analysis_Platform
+
+# Copy environment file (mock mode enabled by default)
+cp .env.example .env
 ```
+
+### Step 2: Start Services
+
+```bash
+# Start all Docker services
+docker compose up -d
+
+# Wait for services to be healthy (~60 seconds)
+docker compose ps
+```
+
+### Step 3: Start Development Servers
+
+```bash
+# Terminal 1: Start backend API server
+cd backend
+python dev-api-server.py
+
+# Terminal 2: Start frontend
+cd frontend
+npm install
+npm run dev
+```
+
+### Step 4: Access the Platform
+
+| Service      | URL                        | Credentials                |
+| ------------ | -------------------------- | -------------------------- |
+| **Frontend** | http://localhost:5173      | demo@example.com / demo123 |
+| **API Docs** | http://localhost:8000/docs | -                          |
+| **Grafana**  | http://localhost:3002      | admin / admin              |
+
+---
+
+## 🔑 Option 2: Full Mode (With AI Providers)
+
+For real AI-powered code review functionality.
+
+### Step 1: Get API Keys
+
+- **OpenAI**: https://platform.openai.com/api-keys
+- **Anthropic**: https://console.anthropic.com/
+- **HuggingFace** (optional): https://huggingface.co/settings/tokens
 
 ### Step 2: Configure Environment
 
 ```bash
-cat > .env << EOF
-PRIMARY_AI_API_KEY=sk-your-openai-key
-SECONDARY_AI_API_KEY=sk-ant-your-anthropic-key
-EOF
+cp .env.example .env
+
+# Edit .env file:
+# MOCK_MODE=false
+# OPENAI_API_KEY=sk-your-real-key
+# ANTHROPIC_API_KEY=sk-ant-your-real-key
 ```
-
-**Note**: Get API keys from:
-
-- OpenAI: https://platform.openai.com/api-keys
-- Anthropic: https://console.anthropic.com/
 
 ### Step 3: Start Services
 
-```bash
-docker-compose up -d
-```
+Same as Option 1, Steps 2-4.
 
-### Step 4: Verify Services
+---
 
-```bash
-# Check all containers are running
-docker-compose ps
+## 🔧 Port Reference
 
-# Expected output:
-# NAME                    STATUS
-# platform-postgres       Up
-# platform-v2-api         Up
-# platform-v1-api         Up
-# platform-v3-api         Up
-# platform-prometheus     Up
-# platform-grafana        Up
-```
+| Service         | Port | Description              |
+| --------------- | ---- | ------------------------ |
+| Frontend (Vite) | 5173 | React development server |
+| Backend API     | 8000 | FastAPI with auto-reload |
+| PostgreSQL      | 5432 | Database                 |
+| Redis           | 6379 | Cache & sessions         |
+| Neo4j           | 7687 | Graph database           |
+| MinIO           | 9000 | Object storage           |
+| Grafana         | 3002 | Monitoring dashboards    |
+| Prometheus      | 9090 | Metrics collection       |
 
-### Step 5: Access Services
+---
 
-| Service                | URL                   | Credentials |
-| ---------------------- | --------------------- | ----------- |
-| V2 Production API      | http://localhost:8001 | None        |
-| V1 Experimentation API | http://localhost:8002 | None        |
-| V3 Quarantine API      | http://localhost:8003 | None        |
-| Prometheus             | http://localhost:9090 | None        |
-| Grafana                | http://localhost:3000 | admin/admin |
+## ✅ Verify Installation
 
-## Option 2: Kubernetes (Production)
-
-### Prerequisites
-
-- Kubernetes cluster (1.24+)
-- kubectl configured
-- Docker registry access
-
-### Step 1: Build Docker Images
+### Health Checks
 
 ```bash
-docker build -t your-registry/platform-v2:latest backend/v2-production/
-docker build -t your-registry/platform-v1:latest backend/v1-experimentation/
-docker build -t your-registry/platform-v3:latest backend/v3-quarantine/
+# Backend API
+curl http://localhost:8000/health
+# Expected: {"status": "healthy"}
 
-docker push your-registry/platform-v2:latest
-docker push your-registry/platform-v1:latest
-docker push your-registry/platform-v3:latest
+# Projects API
+curl http://localhost:8000/api/projects
+# Expected: {"items": [...], "total": 3, ...}
+
+# Docker services
+docker compose ps
+# All services should show "Up (healthy)"
 ```
 
-### Step 2: Create Namespaces
+### Run Tests
 
 ```bash
-kubectl apply -f kubernetes/namespaces/namespaces.yaml
+# Backend tests
+cd backend
+pytest
+
+# Frontend tests
+cd frontend
+npm test
 ```
 
-### Step 3: Configure Secrets
+---
+
+## 🔥 Quick Commands
 
 ```bash
-# Edit with your actual values
-kubectl apply -f kubernetes/config/secrets.yaml
-kubectl apply -f kubernetes/config/configmap.yaml
-```
+# Start everything
+docker compose up -d && cd backend && python dev-api-server.py &
 
-### Step 4: Deploy Services
-
-```bash
-kubectl apply -f kubernetes/network-policies/isolation.yaml
-kubectl apply -f kubernetes/deployments/v2-deployment.yaml
-kubectl apply -f kubernetes/deployments/v1-deployment.yaml
-kubectl apply -f kubernetes/deployments/v3-deployment.yaml
-```
-
-### Step 5: Verify Deployment
-
-```bash
-kubectl get pods -n platform-v2-stable
-kubectl get pods -n platform-v1-exp
-kubectl get pods -n platform-v3-quarantine
-```
-
-## First Test: Code Review
-
-### Using V2 Production API
-
-```bash
-curl -X POST http://localhost:8001/api/v1/code-review/analyze \
-  -H "Content-Type: application/json" \
-  -d '{
-    "code": "def hello():\n    print(\"Hello, World!\")",
-    "language": "python",
-    "focus_areas": ["security", "performance"],
-    "include_architecture_analysis": true
-  }'
-```
-
-**Expected Response:**
-
-```json
-{
-  "review_id": "review_1701505200000",
-  "timestamp": "2025-12-02T12:10:00Z",
-  "language": "python",
-  "issues": [],
-  "suggestions": ["Add type hints", "Add docstring"],
-  "confidence_score": 0.95,
-  "analysis_time_ms": 1250.5,
-  "model_used": "gpt-4"
-}
-```
-
-## First Experiment: Create and Run
-
-### Step 1: Create Experiment
-
-```bash
-curl -X POST http://localhost:8002/api/v1/experiments/create \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "Test new prompt",
-    "description": "Testing improved prompt template",
-    "primary_model": "gpt-4",
-    "secondary_model": "claude-3-opus-20240229",
-    "prompt_template": "Review this code: {code}",
-    "routing_strategy": "primary",
-    "tags": ["test"]
-  }'
-```
-
-**Response includes `id` field** - save this for next step
-
-### Step 2: Run Experiment
-
-```bash
-curl -X POST http://localhost:8002/api/v1/experiments/run/{experiment_id} \
-  -H "Content-Type: application/json" \
-  -d '{
-    "code_samples": ["def test(): pass"],
-    "language": "python"
-  }'
-```
-
-### Step 3: Check Results
-
-```bash
-curl http://localhost:8002/api/v1/experiments/{experiment_id}
-```
-
-## Monitoring Dashboard
-
-### Access Grafana
-
-1. Open http://localhost:3000
-2. Login: `admin` / `admin`
-3. Click "Dashboards" to see available dashboards
-4. Explore metrics:
-   - V2 Production SLO Compliance
-   - V1 Experiment Progress
-   - V3 Quarantine Statistics
-
-## Troubleshooting
-
-### Services not starting
-
-```bash
-# Check logs
-docker-compose logs platform-v2-api
-docker-compose logs platform-postgres
-
-# Restart services
-docker-compose restart
-```
-
-### API returning errors
-
-```bash
-# Check if database is ready
-docker-compose exec postgres psql -U postgres -d platform -c "SELECT 1"
-
-# Check API logs
-docker-compose logs platform-v2-api
-```
-
-### Port already in use
-
-```bash
-# Find process using port
-lsof -i :8001
-
-# Kill process or use different port
-docker-compose down
-# Edit docker-compose.yml to change ports
-docker-compose up -d
-```
-
-## Next Steps
-
-1. **Read Documentation**
-
-   - [Architecture Guide](docs/architecture.md)
-   - [API Reference](docs/api-reference.md)
-   - [Deployment Guide](docs/deployment.md)
-
-2. **Configure AI Providers**
-
-   - Add your OpenAI API key
-   - Add your Anthropic API key
-   - Test with different models
-
-3. **Create Experiments**
-
-   - Design experiment hypothesis
-   - Test new prompts
-   - Evaluate results
-   - Promote to V2 if successful
-
-4. **Monitor Performance**
-
-   - Check SLO compliance
-   - Review metrics
-   - Optimize configurations
-
-5. **Deploy to Production**
-   - Follow [Deployment Guide](docs/deployment.md)
-   - Set up monitoring and alerting
-   - Configure backups
-   - Train team
-
-## Common Commands
-
-### Docker Compose
-
-```bash
-# Start services
-docker-compose up -d
-
-# Stop services
-docker-compose down
+# Stop everything
+docker compose down
 
 # View logs
-docker-compose logs -f platform-v2-api
+docker compose logs -f
 
-# Restart specific service
-docker-compose restart platform-v2-api
+# Restart a service
+docker compose restart platform-postgres
 
-# Remove all data
-docker-compose down -v
+# Clean restart
+docker compose down -v && docker compose up -d
 ```
 
-### Kubernetes
+---
+
+## ❓ Troubleshooting
+
+### Port Already in Use
 
 ```bash
-# Check pod status
-kubectl get pods -n platform-v2-stable
+# Find and kill process on port 8000
+lsof -i :8000
+kill -9 <PID>
 
-# View logs
-kubectl logs -n platform-v2-stable <pod-name>
-
-# Port forward
-kubectl port-forward -n platform-v2-stable svc/platform-v2-api 8001:8000
-
-# Scale deployment
-kubectl scale deployment platform-v2-api -n platform-v2-stable --replicas=5
-
-# Delete deployment
-kubectl delete deployment platform-v2-api -n platform-v2-stable
+# Or change port in .env
+API_PORT=8001
 ```
 
-## Getting Help
+### Database Connection Failed
 
-- **Documentation**: Check `docs/` directory
-- **Issues**: Review [CONTRIBUTING.md](CONTRIBUTING.md)
-- **API Docs**: See [API Reference](docs/api-reference.md)
-- **Operations**: See [Operations Runbook](docs/operations.md)
+```bash
+# Wait for PostgreSQL to be ready
+docker compose logs platform-postgres
 
-## What's Next?
+# Restart database
+docker compose restart platform-postgres
+```
 
-- Explore the three-version architecture
-- Test different AI models
-- Create your first experiment
-- Monitor performance metrics
-- Deploy to your Kubernetes cluster
+### Frontend Can't Connect to API
 
-Happy experimenting! 🚀
+1. Check backend is running: `curl http://localhost:8000/health`
+2. Check Vite proxy config in `frontend/vite.config.ts`
+3. Ensure CORS is enabled in backend
+
+### Docker Out of Space
+
+```bash
+# Clean up Docker
+docker system prune -a
+docker volume prune
+```
+
+---
+
+## 📚 Next Steps
+
+1. **Explore the UI**: Navigate through Dashboard, Projects, Code Review
+2. **Create a Project**: Add your first repository
+3. **Run Analysis**: Submit code for AI review
+4. **Check Docs**: Read `docs/` folder for detailed guides
+
+## 🆘 Getting Help
+
+- **Issues**: GitHub Issues
+- **Docs**: `/docs` folder
+- **API Reference**: http://localhost:8000/docs
