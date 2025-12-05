@@ -314,13 +314,17 @@ Be precise and consistent. The same commit should always produce the same analys
         
         Runs the same analysis multiple times and checks outputs are identical.
         """
+        # Cap runs to prevent resource exhaustion from user-controlled input
+        MAX_RUNS = 10
+        safe_runs = min(max(1, runs), MAX_RUNS)
+        
         results = []
         
         # Clear cache for this test
         cache_key = f"{request.repo}:{request.commit_hash}"
         self._analysis_cache.pop(cache_key, None)
         
-        for _ in range(runs):  # i unused
+        for _ in range(safe_runs):
             # Clear cache between runs
             self._analysis_cache.pop(cache_key, None)
             

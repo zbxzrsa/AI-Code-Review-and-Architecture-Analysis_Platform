@@ -107,20 +107,27 @@ def load_env_file(env_path: Path) -> Dict[str, str]:
                     env_vars[key.strip()] = value.strip()
     return env_vars
 
-def check_env_vars(env_vars: Dict[str, str]) -> Tuple[int, int, int]:
-    """Check required and optional environment variables"""
-    print_header("Environment Variables Check")
-    
+def _mask_sensitive_value(var_name: str, value: str) -> str:
+    """Mask sensitive values for display."""
+    sensitive_keywords = ('password', 'secret', 'key', 'token')
+    is_sensitive = any(kw in var_name.lower() for kw in sensitive_keywords)
+    if is_sensitive and len(value) > 4:
+        return '***' + value[-4:]
+    elif is_sensitive:
+        return '****'
+    return value
+
+
+def _is_placeholder_value(value: str) -> bool:
+    """Check if value is a placeholder."""
+    return value.startswith('your_') or value.startswith('sk-your')
+
+
+def _check_required_vars(env_vars: Dict[str, str]) -> Tuple[int, int]:
+    """Check required environment variables."""
     errors = 0
-    warnings = 0
     success = 0
     
-    # Check MOCK_MODE
-    mock_mode = env_vars.get('MOCK_MODE', os.getenv('MOCK_MODE', 'true')).lower() == 'true'
-    if mock_mode:
-        print_info(f"MOCK_MODE is enabled - AI provider keys are optional")
-    
-    # Check required variables
     print(f"\n{Colors.BOLD}Required Variables:{Colors.RESET}")
     for category, vars_list in REQUIRED_VARS.items():
         for var_info in vars_list:
@@ -128,38 +135,54 @@ def check_env_vars(env_vars: Dict[str, str]) -> Tuple[int, int, int]:
             value = env_vars.get(var_name) or os.getenv(var_name) or default
             
             if value:
-                if var_name.lower().find('password') >= 0 or var_name.lower().find('secret') >= 0:
-                    display_value = '***' + value[-4:] if len(value) > 4 else '****'
-                else:
-                    display_value = value
+                display_value = _mask_sensitive_value(var_name, value)
                 print_success(f"{var_name}: {display_value}")
                 success += 1
             else:
                 print_error(f"{var_name}: NOT SET - {description}")
                 errors += 1
     
-    # Check optional variables
+    return errors, success
+
+
+def _check_optional_vars(env_vars: Dict[str, str], mock_mode: bool) -> Tuple[int, int]:
+    """Check optional environment variables."""
+    warnings = 0
+    success = 0
+    
     print(f"\n{Colors.BOLD}Optional Variables:{Colors.RESET}")
     for category, vars_list in OPTIONAL_VARS.items():
         for var_info in vars_list:
             var_name, description = var_info
             value = env_vars.get(var_name) or os.getenv(var_name)
             
-            if value and not value.startswith('your_') and not value.startswith('sk-your'):
-                if var_name.lower().find('key') >= 0 or var_name.lower().find('secret') >= 0 or var_name.lower().find('token') >= 0:
-                    display_value = '***' + value[-4:] if len(value) > 4 else '****'
-                else:
-                    display_value = value
+            if value and not _is_placeholder_value(value):
+                display_value = _mask_sensitive_value(var_name, value)
                 print_success(f"{var_name}: {display_value}")
                 success += 1
+            elif mock_mode and category == 'ai_providers':
+                print_info(f"{var_name}: Not set (OK in mock mode)")
             else:
-                if mock_mode and category == 'ai_providers':
-                    print_info(f"{var_name}: Not set (OK in mock mode)")
-                else:
-                    print_warning(f"{var_name}: Not set - {description}")
-                    warnings += 1
+                print_warning(f"{var_name}: Not set - {description}")
+                warnings += 1
     
-    return errors, warnings, success
+    return warnings, success
+
+
+def check_env_vars(env_vars: Dict[str, str]) -> Tuple[int, int, int]:
+    """Check required and optional environment variables."""
+    print_header("Environment Variables Check")
+    
+    # Check MOCK_MODE
+    mock_mode = env_vars.get('MOCK_MODE', os.getenv('MOCK_MODE', 'true')).lower() == 'true'
+    if mock_mode:
+        print_info("MOCK_MODE is enabled - AI provider keys are optional")
+    
+    # Check required and optional variables
+    req_errors, req_success = _check_required_vars(env_vars)
+    opt_warnings, opt_success = _check_optional_vars(env_vars, mock_mode)
+    
+    return req_errors, opt_warnings, req_success + opt_success
 
 def check_port(host: str, port: int, timeout: float = 2.0) -> bool:
     """Check if a port is open"""
@@ -295,7 +318,7 @@ def main():
         print_info(f"Loaded .env from {env_path}")
     elif env_example_path.exists():
         env_vars = load_env_file(env_example_path)
-        print_warning(f"Using .env.example (copy to .env for production)")
+        print_warning("Using .env.example (copy to .env for production)")
     
     # Run checks
     check_node_python_versions()
@@ -318,13 +341,13 @@ def main():
     
     if total_errors == 0 and (total_warnings == 0 or not strict_mode):
         print(f"\n{Colors.GREEN}{Colors.BOLD}✓ Environment is ready!{Colors.RESET}")
-        print(f"\n  Start the platform with:")
-        print(f"    1. docker compose up -d")
-        print(f"    2. cd backend && python dev-api-server.py")
-        print(f"    3. cd frontend && npm run dev")
-        print(f"\n  Access:")
-        print(f"    - Frontend: http://localhost:5173")
-        print(f"    - API Docs: http://localhost:8000/docs")
+        print("\n  Start the platform with:")
+        print("    1. docker compose up -d")
+        print("    2. cd backend && python dev-api-server.py")
+        print("    3. cd frontend && npm run dev")
+        print("\n  Access:")
+        print("    - Frontend: http://localhost:5173")
+        print("    - API Docs: http://localhost:8000/docs")
         return 0
     elif total_errors > 0:
         print(f"\n{Colors.RED}{Colors.BOLD}✗ Environment has errors that must be fixed{Colors.RESET}")

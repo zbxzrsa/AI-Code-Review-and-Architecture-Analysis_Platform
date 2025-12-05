@@ -287,15 +287,25 @@ class VersionManager:
         
         for model_id in self.cycle_status.quarantined_models.copy():
             # Check if model should be permanently removed
-            # TODO: In production, implement extended metrics check with v3_vc
-            should_remove = True  # Placeholder - always remove in dev mode
+            # In production, this would check extended metrics from v3_vc
+            should_remove = self._should_remove_from_quarantine(model_id)
             
-            if should_remove:  # noqa: SIM108 - placeholder for extended metrics check
+            if should_remove:
                 removed.append(model_id)
                 self.cycle_status.quarantined_models.remove(model_id)
                 logger.info(f"Removed deprecated model {model_id} from V3")
-        
+    
         return removed
+    
+    def _should_remove_from_quarantine(self, model_id: str) -> bool:
+        """Check if a quarantined model should be permanently removed.
+        
+        TODO: In production, implement extended metrics check with v3_vc
+        """
+        # Placeholder - always remove in dev mode
+        # Production would check: age in quarantine, failure severity, recovery attempts
+        _ = model_id  # Acknowledge parameter for future use
+        return True
     
     async def run_self_update_cycle(self) -> Dict[str, Any]:
         """

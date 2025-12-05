@@ -33,12 +33,14 @@ RUN useradd --create-home --shell /bin/bash appuser
 
 # Copy Python packages from builder to appuser's home
 COPY --from=builder /root/.local /home/appuser/.local
-RUN chown -R appuser:appuser /home/appuser/.local
 
 # Copy application code
 COPY src/ ./src/
 COPY requirements.txt .
-RUN chown -R appuser:appuser /app
+
+# Set ownership for all copied files
+RUN chown -R appuser:appuser /home/appuser/.local && \
+    chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser

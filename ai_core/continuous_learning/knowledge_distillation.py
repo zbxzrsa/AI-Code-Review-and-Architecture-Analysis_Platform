@@ -331,14 +331,21 @@ class KnowledgeDistillation:
     def _create_compressed_model(
         self,
         model: nn.Module,
-        compression_ratio: float
+        compression_ratio: float  # noqa: ARG002 - reserved for future compression implementation
     ) -> nn.Module:
-        """Create a compressed version of the model"""
+        """Create a compressed version of the model
+        
+        Args:
+            model: Model to compress
+            compression_ratio: Target compression ratio (reserved for future use)
+        """
         # This is a simplified implementation
         # In practice, you would implement proper architecture compression
+        # using the compression_ratio to determine layer sizing
         compressed = copy.deepcopy(model)
         
         # Simple width scaling (placeholder - real implementation would modify layers)
+        # Future: Use compression_ratio to determine output_features = int(features * compression_ratio)
         for _, module in compressed.named_modules():
             if isinstance(module, nn.Linear):
                 # Real architecture compression would resize layers here

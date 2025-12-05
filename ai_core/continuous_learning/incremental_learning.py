@@ -585,11 +585,11 @@ class IncrementalLearner:
         
         for name, param in self.model.named_parameters():
             if 'weight' in name and param.dim() >= 2:
-                # Get absolute values
+                # Get absolute values and flatten for quantile computation
                 abs_weights = param.data.abs()
                 
-                # Find threshold
-                threshold = torch.quantile(abs_weights, prune_ratio)
+                # Find threshold (flatten to compute global quantile)
+                threshold = torch.quantile(abs_weights.flatten(), prune_ratio)
                 
                 # Create mask
                 mask = (abs_weights > threshold).float()

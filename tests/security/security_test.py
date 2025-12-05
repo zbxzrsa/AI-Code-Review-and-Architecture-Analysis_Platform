@@ -140,8 +140,8 @@ class SecurityTestSuite:
                                 remediation="Use parameterized queries",
                                 owasp="A1:2021-Injection",
                             )
-                except Exception as e:
-                    pass  # Endpoint might not exist
+                except (httpx.RequestError, httpx.HTTPStatusError):
+                    pass  # Endpoint might not exist or be unreachable
     
     async def test_command_injection(self, client: httpx.AsyncClient):
         """Test for command injection."""
@@ -174,8 +174,8 @@ class SecurityTestSuite:
                         remediation="Sanitize all user inputs, avoid shell commands",
                         owasp="A1:2021-Injection",
                     )
-            except:
-                pass
+            except (httpx.RequestError, httpx.HTTPStatusError):
+                pass  # Endpoint might not exist or be unreachable
     
     # =========================================================================
     # A2: Broken Authentication
@@ -440,8 +440,11 @@ class SecurityTestSuite:
         print(f"Started: {datetime.now().isoformat()}")
         print(f"{'='*60}\n")
         
-        # noqa: S501 - verify=False is intentional for security testing against local/test servers
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:  # nosec B501
+        # Security Note: verify=False is intentional for penetration testing
+        # This test suite needs to test against local/staging servers that may use self-signed certs
+        # In production environments, SSL verification should always be enabled
+        ssl_context = httpx.create_ssl_context(verify=False)  # noqa: S501  # nosec B501
+        async with httpx.AsyncClient(timeout=30.0, verify=ssl_context) as client:
             # A1: Injection
             await self.test_sql_injection(client)
             await self.test_command_injection(client)

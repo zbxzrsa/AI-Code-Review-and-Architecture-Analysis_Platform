@@ -217,8 +217,9 @@ async def invalidate_pattern(pattern: str):
                 await r.delete(*keys)
             if cursor == 0:
                 break
-    except Exception:
-        pass
+    except redis.RedisError as e:
+        # Best-effort cache invalidation - log but don't fail
+        logger.warning(f"Cache invalidation failed for pattern {pattern}: {e}")
 
 
 # Usage examples:

@@ -262,8 +262,8 @@ def build_file_tree(root_path: Path, relative_path: str = "") -> List[FileNode]:
                     language=detect_language(item.name),
                 ))
                 
-    except PermissionError:
-        pass
+    except PermissionError as e:
+        logger.debug(f"Permission denied when listing {path}: {e}")
     
     return nodes
 

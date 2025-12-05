@@ -3,7 +3,7 @@ Celery Tasks for Code Analysis
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict
 
 from src.celery_app import celery_app
@@ -38,7 +38,7 @@ def analyze_code(self, code: str, language: str, options: Dict[str, Any] = None)
                 "complexity": 0,
                 "maintainability": 100,
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         
         logger.info(f"Code analysis completed for {language}")
@@ -74,7 +74,7 @@ def analyze_security(self, code: str, language: str) -> Dict[str, Any]:
                 "medium": 0,
                 "low": 0,
             },
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         
         logger.info(f"Security analysis completed for {language}")
@@ -99,7 +99,7 @@ def cleanup_old_results() -> Dict[str, Any]:
     return {
         "status": "completed",
         "cleaned_count": 0,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -113,5 +113,5 @@ def health_check() -> Dict[str, Any]:
     """
     return {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

@@ -417,10 +417,15 @@ class V3ComparisonEngine:
     
     async def check_before_experiment(
         self,
-        tech_name: str,
+        tech_name: str,  # noqa: ARG002 - reserved for name-based similarity check
         tech_category: str,
     ) -> Dict[str, Any]:
-        """Check if a new experiment should be warned about similar failures."""
+        """Check if a new experiment should be warned about similar failures.
+
+        Args:
+            tech_name: Technology name (reserved for future similarity matching)
+            tech_category: Category to check for similar failures
+        """
         warnings = []
         
         # Check failure patterns

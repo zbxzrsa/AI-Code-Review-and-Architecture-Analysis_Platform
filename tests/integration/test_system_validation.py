@@ -308,8 +308,8 @@ class TestMetricsCollection:
             if response.status_code == 200:
                 data = response.json()
                 results = data.get("data", {}).get("result", [])
-                # Should have at least one target
-                assert len(results) >= 0
+                # Validate that results is a list (may be empty if services not yet started)
+                assert isinstance(results, list), "Expected results to be a list"
         except httpx.ConnectError:
             pytest.skip("Prometheus not available")
 

@@ -143,6 +143,10 @@ async def revoke_api_key(key_id: str):
 @router.get("/activity")
 async def get_user_activity(limit: int = 20):
     """Get user activity / 获取用户活动"""
+    # Cap limit to prevent resource exhaustion from user-controlled input
+    MAX_LIMIT = 100
+    safe_limit = min(max(1, limit), MAX_LIMIT)
+    
     activities = [
         {
             "id": f"activity_{i}",
@@ -151,7 +155,7 @@ async def get_user_activity(limit: int = 20):
             "timestamp": (datetime.now() - timedelta(hours=i)).isoformat(),
             "metadata": {}
         }
-        for i in range(1, limit + 1)
+        for i in range(1, safe_limit + 1)
     ]
     
     return {

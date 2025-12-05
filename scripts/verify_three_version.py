@@ -27,6 +27,11 @@ BLUE = "\033[94m"
 RESET = "\033[0m"
 BOLD = "\033[1m"
 
+# Constants for repeated messages
+MSG_FILE_NOT_FOUND = "File not found"
+MSG_CLASS_IMPORT = "Class import"
+MSG_MODULE_EXISTS = "Module exists"
+
 
 def print_header(title: str):
     """Print section header."""
@@ -106,7 +111,7 @@ def verify_file_structure() -> Tuple[int, int]:
     for file_path in required_files:
         full_path = root / file_path
         exists = full_path.exists()
-        print_result(file_path, exists, "File not found" if not exists else "")
+        print_result(file_path, exists, MSG_FILE_NOT_FOUND if not exists else "")
         if exists:
             passed += 1
         else:
@@ -127,13 +132,13 @@ def verify_imports() -> Tuple[int, int]:
     sys.path.insert(0, str(root))
     
     imports_to_test = [
-        ("ai_core.three_version_cycle", "Module exists"),
-        ("ai_core.three_version_cycle.VersionManager", "Class import"),
-        ("ai_core.three_version_cycle.DualAICoordinator", "Class import"),
-        ("ai_core.three_version_cycle.CrossVersionFeedbackSystem", "Class import"),
-        ("ai_core.three_version_cycle.V3ComparisonEngine", "Class import"),
-        ("ai_core.three_version_cycle.SpiralEvolutionManager", "Class import"),
-        ("ai_core.three_version_cycle.EnhancedSelfEvolutionCycle", "Class import"),
+        ("ai_core.three_version_cycle", MSG_MODULE_EXISTS),
+        ("ai_core.three_version_cycle.VersionManager", MSG_CLASS_IMPORT),
+        ("ai_core.three_version_cycle.DualAICoordinator", MSG_CLASS_IMPORT),
+        ("ai_core.three_version_cycle.CrossVersionFeedbackSystem", MSG_CLASS_IMPORT),
+        ("ai_core.three_version_cycle.V3ComparisonEngine", MSG_CLASS_IMPORT),
+        ("ai_core.three_version_cycle.SpiralEvolutionManager", MSG_CLASS_IMPORT),
+        ("ai_core.three_version_cycle.EnhancedSelfEvolutionCycle", MSG_CLASS_IMPORT),
     ]
     
     passed = 0
@@ -177,7 +182,7 @@ def verify_configurations() -> Tuple[int, int]:
         passed += 1 if has_service else 0
         failed += 0 if has_service else 1
     else:
-        print_result("docker-compose.yml exists", False, "File not found")
+        print_result("docker-compose.yml exists", False, MSG_FILE_NOT_FOUND)
         failed += 1
     
     # Check nginx.conf
@@ -189,7 +194,7 @@ def verify_configurations() -> Tuple[int, int]:
         passed += 1 if has_route else 0
         failed += 0 if has_route else 1
     else:
-        print_result("gateway/nginx.conf exists", False, "File not found")
+        print_result("gateway/nginx.conf exists", False, MSG_FILE_NOT_FOUND)
         failed += 1
     
     # Check prometheus.yml
@@ -201,7 +206,7 @@ def verify_configurations() -> Tuple[int, int]:
         passed += 1 if has_scrape else 0
         failed += 0 if has_scrape else 1
     else:
-        print_result("observability/prometheus.yml exists", False, "File not found")
+        print_result("observability/prometheus.yml exists", False, MSG_FILE_NOT_FOUND)
         failed += 1
     
     # Check CI/CD
@@ -213,7 +218,7 @@ def verify_configurations() -> Tuple[int, int]:
         passed += 1 if has_build else 0
         failed += 0 if has_build else 1
     else:
-        print_result(".github/workflows/ci-cd.yml exists", False, "File not found")
+        print_result(".github/workflows/ci-cd.yml exists", False, MSG_FILE_NOT_FOUND)
         failed += 1
     
     # Check Helm values

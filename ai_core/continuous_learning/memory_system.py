@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 from collections import deque
 import numpy as np
 import logging
-import random
 import pickle
 from pathlib import Path
 
@@ -46,7 +45,8 @@ class ExperienceReplay:
         capacity: int = 10000,
         prioritized: bool = True,
         alpha: float = 0.6,
-        beta: float = 0.4
+        beta: float = 0.4,
+        seed: int = 42
     ):
         """
         Initialize Experience Replay
@@ -56,11 +56,14 @@ class ExperienceReplay:
             prioritized: Whether to use prioritized replay
             alpha: Priority exponent
             beta: Importance sampling exponent
+            seed: Random seed for reproducibility
         """
         self.capacity = capacity
         self.prioritized = prioritized
         self.alpha = alpha
         self.beta = beta
+        self.seed = seed
+        self.rng = np.random.default_rng(seed)
         
         self.buffer: List[MemoryItem] = []
         self.priorities = np.zeros(capacity, dtype=np.float32)
@@ -131,8 +134,7 @@ class ExperienceReplay:
         elif self.prioritized:
             indices, weights = self._prioritized_sample(batch_size)
         else:
-            rng = np.random.default_rng()
-            indices = rng.choice(len(self.buffer), batch_size, replace=False)
+            indices = self.rng.choice(len(self.buffer), batch_size, replace=False)
             weights = torch.ones(batch_size)
         
         inputs = torch.stack([self.buffer[i].input for i in indices])
@@ -156,8 +158,7 @@ class ExperienceReplay:
         probs = probs / probs.sum()
         
         # Sample indices
-        rng = np.random.default_rng()
-        indices = rng.choice(buffer_len, batch_size, p=probs, replace=False)
+        indices = self.rng.choice(buffer_len, batch_size, p=probs, replace=False)
         
         # Calculate importance sampling weights
         min_prob = probs.min()
@@ -181,13 +182,16 @@ class ExperienceReplay:
         
         for task_id, task_idx in task_indices.items():
             n_samples = min(samples_per_task, len(task_idx))
-            indices.extend(random.sample(task_idx, n_samples))
+            sampled = self.rng.choice(task_idx, size=n_samples, replace=False)
+            indices.extend(sampled.tolist())
         
         # Fill remaining with random samples
-        while len(indices) < batch_size and len(self.buffer) > len(indices):
-            idx = random.randint(0, len(self.buffer) - 1)
-            if idx not in indices:
-                indices.append(idx)
+        remaining = batch_size - len(indices)
+        if remaining > 0:
+            available = [i for i in range(len(self.buffer)) if i not in indices]
+            if available:
+                extra = self.rng.choice(available, size=min(remaining, len(available)), replace=False)
+                indices.extend(extra.tolist())
         
         return np.array(indices)
     
@@ -223,8 +227,8 @@ class ExperienceReplay:
         
         # Reservoir sampling probability
         prob = self.capacity / self.timestamp
-        if random.random() < prob:
-            idx = random.randint(0, self.capacity - 1)
+        if self.rng.random() < prob:
+            idx = self.rng.integers(0, self.capacity)
             self.buffer[idx] = MemoryItem(
                 input=input.detach().cpu().clone(),
                 target=target.detach().cpu().clone() if isinstance(target, torch.Tensor) else torch.tensor(target),
@@ -289,7 +293,8 @@ class LongTermMemory:
         short_term_capacity: int = 1000,
         long_term_capacity: int = 10000,
         consolidation_threshold: float = 0.7,
-        device: str = 'cuda' if torch.cuda.is_available() else 'cpu'
+        device: str = 'cuda' if torch.cuda.is_available() else 'cpu',
+        seed: int = 42
     ):
         """
         Initialize Long-Term Memory
@@ -299,9 +304,11 @@ class LongTermMemory:
             long_term_capacity: Long-term storage size
             consolidation_threshold: Importance threshold for consolidation
             device: Device to use
+            seed: Random seed for reproducibility
         """
         self.device = device
         self.consolidation_threshold = consolidation_threshold
+        self.rng = np.random.default_rng(seed)
         
         # Short-term memory (recent experiences)
         self.short_term = ExperienceReplay(
@@ -464,7 +471,8 @@ class LongTermMemory:
         episodes = self.episodic[task_id]
         n_samples = min(batch_size, len(episodes))
         
-        samples = random.sample(episodes, n_samples)
+        indices = self.rng.choice(len(episodes), size=n_samples, replace=False)
+        samples = [episodes[i] for i in indices]
         
         inputs = torch.stack([s.input for s in samples])
         targets = torch.stack([s.target for s in samples])

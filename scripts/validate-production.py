@@ -58,7 +58,8 @@ class ProductionValidator:
         env = os.getenv("ENVIRONMENT", "")
         if env != "production":
             self.warnings.append(f"ENVIRONMENT is '{env}', not 'production'")
-            return True  # Not blocking
+            # Return False if completely missing, True if just different
+            return bool(env)  # Allow non-empty environment values
         self.passed.append("ENVIRONMENT=production")
         return True
 
@@ -153,16 +154,20 @@ class ProductionValidator:
         return True
 
     def validate_ssl(self) -> bool:
-        """Check for SSL/TLS configuration hints."""
+        """Check for SSL/TLS configuration hints.
+        
+        Note: This is a soft check - returns True with warnings if SSL is not
+        explicitly configured, as HTTPS may be handled at load balancer level.
+        """
         # Check for SSL-related environment variables
         ssl_vars = ["SSL_CERT_PATH", "SSL_KEY_PATH", "FORCE_HTTPS"]
         configured = [var for var in ssl_vars if os.getenv(var)]
         
         if not configured:
             self.warnings.append("No SSL environment variables found - ensure HTTPS is configured at load balancer/proxy")
-        else:
-            self.passed.append(f"SSL variables found: {configured}")
+            return True  # Soft check - SSL may be at proxy level
         
+        self.passed.append(f"SSL variables found: {configured}")
         return True
 
     def validate_api_keys(self) -> bool:
@@ -183,7 +188,8 @@ class ProductionValidator:
             if anthropic and anthropic.startswith("sk-ant-"):
                 self.passed.append("Anthropic API key configured")
         
-        return True
+        # Return True - API keys are optional if mock mode is acceptable
+        return bool(openai or anthropic or mock_mode)
 
     def validate_secrets_not_in_code(self) -> bool:
         """Check that secrets are not hardcoded in source files."""
@@ -213,8 +219,8 @@ class ProductionValidator:
                     if re.search(pattern, content):
                         found_secrets.append(str(file_path))
                         break
-            except Exception:
-                pass
+            except (OSError, UnicodeDecodeError):
+                pass  # Skip unreadable files
         
         if found_secrets:
             self.warnings.append(f"Possible secrets found in {len(found_secrets)} files")

@@ -432,7 +432,8 @@ class TestAIProviderSecurity:
         cost_rate = provider.COST_PER_1K.get("gpt-4", 0.03)
         actual_cost = (tokens / 1000) * cost_rate
         
-        assert actual_cost == expected_cost
+        # Use pytest.approx for floating point comparison
+        assert actual_cost == pytest.approx(expected_cost, rel=1e-9)
 
 
 # Performance benchmark tests

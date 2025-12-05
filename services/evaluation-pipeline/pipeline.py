@@ -10,6 +10,7 @@ Orchestrates the evaluation of versions using:
 
 import asyncio
 import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -17,6 +18,7 @@ from typing import Any, Dict, List, Optional
 import hashlib
 import json
 
+import aiofiles
 import httpx
 import yaml
 from pydantic import BaseModel
@@ -125,11 +127,16 @@ class GoldSetEvaluator:
     async def load_gold_sets(self):
         """Load gold-set configurations"""
         try:
-            with open(self.config_path, 'r') as f:
-                config = yaml.safe_load(f)
+            # Use async file I/O in async function
+            async with aiofiles.open(self.config_path, 'r') as f:
+                content = await f.read()
+                config = yaml.safe_load(content)
                 self.gold_sets = {gs['id']: gs for gs in config.get('gold_sets', [])}
                 self.evaluation_config = config.get('evaluation_config', {})
             logger.info(f"Loaded {len(self.gold_sets)} gold-sets")
+        except FileNotFoundError:
+            logger.warning(f"Gold-set config not found: {self.config_path}")
+            self.gold_sets = {}
         except Exception as e:
             logger.error(f"Failed to load gold-sets: {e}")
             self.gold_sets = {}
@@ -439,9 +446,21 @@ class ShadowComparisonEvaluator:
     def __init__(
         self,
         prometheus_url: str = "http://prometheus.platform-monitoring.svc:9090",
-        v1_db_url: str = "postgresql://v1_service@db:5432/platform",
-        v2_db_url: str = "postgresql://v2_service@db:5432/platform"
+        v1_db_url: Optional[str] = None,
+        v2_db_url: Optional[str] = None
     ):
+        # Use environment variables for database credentials
+        # Never hardcode passwords in source code
+        default_v1_url = os.environ.get(
+            "V1_DATABASE_URL",
+            "postgresql://v1_service:${V1_DB_PASSWORD}@db:5432/platform"  # noqa: S105
+        )
+        default_v2_url = os.environ.get(
+            "V2_DATABASE_URL",
+            "postgresql://v2_service:${V2_DB_PASSWORD}@db:5432/platform"  # noqa: S105
+        )
+        v1_db_url = v1_db_url or default_v1_url
+        v2_db_url = v2_db_url or default_v2_url
         self.prometheus_url = prometheus_url
         self.v1_db_url = v1_db_url
         self.v2_db_url = v2_db_url
