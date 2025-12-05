@@ -374,7 +374,7 @@ async def main():
     env = os.getenv("ENVIRONMENT", "development")
     if env not in ["development", "test", "local"]:
         print(f"⚠️  Environment is '{env}'. This script is for development only.")
-        confirm = input("Are you sure you want to continue? (yes/no): ")
+        confirm = await asyncio.to_thread(input, "Are you sure you want to continue? (yes/no): ")
         if confirm.lower() != "yes":
             print("Aborted.")
             return

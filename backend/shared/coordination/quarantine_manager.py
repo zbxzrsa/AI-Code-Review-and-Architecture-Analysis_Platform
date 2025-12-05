@@ -14,7 +14,7 @@ import logging
 import uuid  # FIXED: Moved from inside function
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from .event_types import (
     EventType,

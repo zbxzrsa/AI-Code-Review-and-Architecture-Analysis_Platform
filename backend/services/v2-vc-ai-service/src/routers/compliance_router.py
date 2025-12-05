@@ -4,7 +4,7 @@ V2 VC-AI Compliance Router
 API endpoints for audit logging and regulatory compliance.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query, Depends, Response
 

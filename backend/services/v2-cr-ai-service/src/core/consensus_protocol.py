@@ -6,7 +6,7 @@ Multi-model consensus verification for production reliability.
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List, Tuple
 
 from ..models.review_models import ReviewFinding, FindingSeverity

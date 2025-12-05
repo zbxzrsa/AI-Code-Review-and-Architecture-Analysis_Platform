@@ -4,7 +4,7 @@ V2 VC-AI Version Models
 Data models for version management operations.
 """
 
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from typing import List, Optional, Dict, Any
 from enum import Enum
 from pydantic import BaseModel, Field

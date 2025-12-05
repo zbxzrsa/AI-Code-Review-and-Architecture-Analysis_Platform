@@ -3,7 +3,7 @@ V3 Quarantine API - Archive and review of failed experiments.
 """
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse

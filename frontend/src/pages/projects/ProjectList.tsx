@@ -241,7 +241,7 @@ export const ProjectList: React.FC = () => {
   // Get unique languages for filter
   const availableLanguages = useMemo(() => {
     const langs = [...new Set(projects.map(p => p.language))];
-    return langs.sort();
+    return langs.sort((a, b) => a.localeCompare(b));
   }, [projects]);
   
   // Handlers
@@ -257,10 +257,7 @@ export const ProjectList: React.FC = () => {
     setFilters({ language: value });
   }, [setFilters]);
   
-  const _handleSortChange = useCallback((field: string) => {
-    const newOrder = filters.sortField === field && filters.sortOrder === 'asc' ? 'desc' : 'asc';
-    setFilters({ sortField: field as any, sortOrder: newOrder });
-  }, [filters.sortField, filters.sortOrder, setFilters]);
+  // Note: Sort change is handled by handleTableChange for table view
   
   const handlePageChange = useCallback((page: number, pageSize: number) => {
     setPagination({ page, pageSize });

@@ -1,7 +1,7 @@
 """
 Database models for version-control-service.
 """
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from sqlalchemy import Column, String, DateTime, Integer, Text, JSON, Enum, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.dialects.postgresql import UUID

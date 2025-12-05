@@ -6,7 +6,7 @@ Production-grade circuit breaker for model failover and resilience.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Optional, Callable, Any
 from dataclasses import dataclass, field

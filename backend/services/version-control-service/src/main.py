@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from enum import Enum
 
 logging.basicConfig(level=logging.INFO)

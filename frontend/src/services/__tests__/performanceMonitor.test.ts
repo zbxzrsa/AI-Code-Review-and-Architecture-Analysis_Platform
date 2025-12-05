@@ -16,8 +16,13 @@ vi.mock("../eventBus", () => ({
 vi.stubGlobal(
   "PerformanceObserver",
   class {
-    observe() {}
-    disconnect() {}
+    // Empty implementation - PerformanceObserver not available in test environment
+    observe() {
+      // No-op: Test environment doesn't support performance observation
+    }
+    disconnect() {
+      // No-op: Nothing to disconnect in test environment
+    }
   }
 );
 

@@ -12,7 +12,7 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional, List, Callable, Awaitable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 from .event_types import (

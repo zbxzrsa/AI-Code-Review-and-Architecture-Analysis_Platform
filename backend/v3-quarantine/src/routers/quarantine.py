@@ -3,7 +3,7 @@ Quarantine management endpoints for V3.
 """
 import logging
 from typing import Optional, List
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, status, Query
 

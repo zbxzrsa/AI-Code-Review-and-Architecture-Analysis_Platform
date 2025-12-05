@@ -20,6 +20,12 @@ from dataclasses import dataclass
 from datetime import datetime
 
 
+# Constants for repeated strings
+CONTENT_TYPE_JSON = "application/json"
+PAYLOAD_PLACEHOLDER = "{payload}"
+OWASP_BROKEN_AUTH = "A2:2021-Broken Authentication"
+
+
 @dataclass
 class SecurityFinding:
     """Security test finding."""
@@ -56,7 +62,7 @@ class SecurityTestSuite:
     
     def _headers(self, auth: bool = True) -> Dict[str, str]:
         """Get request headers."""
-        headers = {'Content-Type': 'application/json'}
+        headers = {'Content-Type': CONTENT_TYPE_JSON}
         if auth and self.api_key:
             headers['Authorization'] = f'Bearer {self.api_key}'
         return headers
@@ -196,7 +202,7 @@ class SecurityTestSuite:
         for endpoint in protected_endpoints:
             resp = await client.get(
                 f"{self.base_url}{endpoint}",
-                headers={'Content-Type': 'application/json'},  # No auth
+                headers={'Content-Type': CONTENT_TYPE_JSON},  # No auth
             )
             
             if resp.status_code == 200:
@@ -207,7 +213,7 @@ class SecurityTestSuite:
                     description="Endpoint accessible without authentication",
                     evidence=f"Status: {resp.status_code}",
                     remediation="Require authentication for all protected endpoints",
-                    owasp="A2:2021-Broken Authentication",
+                    owasp=OWASP_BROKEN_AUTH,
                 )
     
     async def test_jwt_vulnerabilities(self, client: httpx.AsyncClient):
@@ -231,7 +237,7 @@ class SecurityTestSuite:
                 description="Server accepts JWT tokens with 'none' algorithm",
                 evidence=f"Token: {none_token[:50]}..., Status: {resp.status_code}",
                 remediation="Reject tokens with 'none' algorithm",
-                owasp="A2:2021-Broken Authentication",
+                owasp=OWASP_BROKEN_AUTH,
             )
         
         # Test expired token handling
@@ -250,7 +256,7 @@ class SecurityTestSuite:
                 description="Server accepts expired JWT tokens",
                 evidence=f"Status: {resp.status_code}",
                 remediation="Properly validate token expiration",
-                owasp="A2:2021-Broken Authentication",
+                owasp=OWASP_BROKEN_AUTH,
             )
     
     async def test_brute_force_protection(self, client: httpx.AsyncClient):
@@ -280,7 +286,7 @@ class SecurityTestSuite:
                 description="No rate limiting or account lockout after multiple failed attempts",
                 evidence=f"15+ attempts accepted, Status: {resp.status_code}",
                 remediation="Implement rate limiting and account lockout",
-                owasp="A2:2021-Broken Authentication",
+                owasp=OWASP_BROKEN_AUTH,
             )
     
     # =========================================================================

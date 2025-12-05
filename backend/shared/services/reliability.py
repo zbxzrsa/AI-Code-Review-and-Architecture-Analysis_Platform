@@ -15,7 +15,7 @@ import random  # FIXED: Moved from inside function
 import time
 from typing import Optional, Dict, Any, List, Callable, Awaitable, TypeVar
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
 from collections import deque

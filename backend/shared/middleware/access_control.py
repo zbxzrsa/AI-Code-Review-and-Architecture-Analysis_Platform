@@ -11,7 +11,7 @@ Version Control AI (VC-AI) is NEVER accessible to regular users.
 
 import logging
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from enum import Enum
 
 from fastapi import Request, HTTPException

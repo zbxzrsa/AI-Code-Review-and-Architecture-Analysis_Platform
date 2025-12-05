@@ -8,7 +8,7 @@ services:
     container_name: platform-postgres
     environment:
       POSTGRES_USER: coderev
-      POSTGRES_PASSWORD: dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_in_production}
       POSTGRES_DB: code_review_platform
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -52,7 +52,7 @@ services:
     container_name: platform-auth-service
     environment:
       ENVIRONMENT: development
-      DATABASE_URL: postgresql://coderev:dev_password@postgres:5432/code_review_platform
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
       REDIS_URL: redis://redis:6379/0
       JWT_SECRET_KEY: dev_secret_key_change_in_production
     depends_on:
@@ -71,7 +71,7 @@ services:
     container_name: platform-analysis-service
     environment:
       ENVIRONMENT: development
-      DATABASE_URL: postgresql://coderev:dev_password@postgres:5432/code_review_platform
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
       REDIS_URL: redis://redis:6379/0
       OLLAMA_HOST: http://ollama:11434
     depends_on:
@@ -90,7 +90,7 @@ services:
     container_name: platform-project-service
     environment:
       ENVIRONMENT: development
-      DATABASE_URL: postgresql://coderev:dev_password@postgres:5432/code_review_platform
+      DATABASE_URL: postgresql://coderev:${POSTGRES_PASSWORD:-dev_password_change_in_production}@postgres:5432/code_review_platform
       REDIS_URL: redis://redis:6379/0
     depends_on:
       postgres:

@@ -3,7 +3,7 @@ V2 Production API - Stable code review service for end users.
 """
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.responses import JSONResponse

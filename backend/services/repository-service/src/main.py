@@ -17,7 +17,7 @@ import tempfile
 import subprocess
 import asyncio
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, Depends, HTTPException, status, Query, Header, BackgroundTasks

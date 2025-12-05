@@ -11,7 +11,7 @@ Provides endpoints for:
 
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks

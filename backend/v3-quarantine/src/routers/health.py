@@ -1,7 +1,7 @@
 """
 Health check endpoints for V3 quarantine.
 """
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/health")

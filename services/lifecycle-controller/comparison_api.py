@@ -6,7 +6,7 @@ shadow comparison data, trigger rollbacks, and view audit history.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
@@ -14,6 +14,9 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel
 
 logger = logging.getLogger(__name__)
+
+# Error message constants
+ERR_REQUEST_NOT_FOUND = "Request not found"
 
 router = APIRouter(prefix="/comparison-requests", tags=["comparison"])
 
@@ -115,7 +118,7 @@ async def get_comparison_requests(
 async def get_comparison_request(request_id: str):
     """Get a specific comparison request by ID."""
     if request_id not in comparison_store:
-        raise HTTPException(status_code=404, detail="Request not found")
+        raise HTTPException(status_code=404, detail=ERR_REQUEST_NOT_FOUND)
     
     return comparison_store[request_id]
 
@@ -146,7 +149,7 @@ async def create_comparison_request(request: ComparisonRequest):
 async def add_v1_output(request_id: str, output: VersionOutput):
     """Add V1 shadow output to an existing request."""
     if request_id not in comparison_store:
-        raise HTTPException(status_code=404, detail="Request not found")
+        raise HTTPException(status_code=404, detail=ERR_REQUEST_NOT_FOUND)
     
     comparison_store[request_id].v1Output = output
     return comparison_store[request_id]
@@ -156,7 +159,7 @@ async def add_v1_output(request_id: str, output: VersionOutput):
 async def add_v3_output(request_id: str, output: VersionOutput):
     """Add V3 comparison output to an existing request."""
     if request_id not in comparison_store:
-        raise HTTPException(status_code=404, detail="Request not found")
+        raise HTTPException(status_code=404, detail=ERR_REQUEST_NOT_FOUND)
     
     comparison_store[request_id].v3Output = output
     return comparison_store[request_id]

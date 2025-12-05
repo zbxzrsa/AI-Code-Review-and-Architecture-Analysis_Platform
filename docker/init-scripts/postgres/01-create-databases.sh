@@ -37,7 +37,7 @@ EOSQL
 }
 
 # Parse POSTGRES_MULTIPLE_DATABASES environment variable
-if [ -n "${POSTGRES_MULTIPLE_DATABASES:-}" ]; then
+if [[ -n "${POSTGRES_MULTIPLE_DATABASES:-}" ]]; then
     echo "Creating multiple databases: $POSTGRES_MULTIPLE_DATABASES"
     
     for db in $(echo "$POSTGRES_MULTIPLE_DATABASES" | tr ',' ' '); do

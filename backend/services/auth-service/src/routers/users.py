@@ -4,7 +4,7 @@ Users router - User management endpoints.
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 router = APIRouter()
 

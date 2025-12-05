@@ -4,7 +4,7 @@ V2 VC-AI Version Management Router
 API endpoints for version history and release management.
 """
 
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, Depends
 from pydantic import BaseModel

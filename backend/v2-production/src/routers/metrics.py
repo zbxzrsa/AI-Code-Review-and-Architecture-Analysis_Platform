@@ -1,7 +1,7 @@
 """
 Metrics endpoints for V2 production.
 """
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/metrics")

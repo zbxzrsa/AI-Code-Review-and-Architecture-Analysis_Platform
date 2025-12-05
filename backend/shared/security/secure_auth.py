@@ -10,7 +10,7 @@ Implements:
 import secrets
 import hashlib
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Tuple
 from dataclasses import dataclass
 
@@ -324,21 +324,22 @@ async def get_current_user(
 async def verify_csrf(
     request: Request,
     csrf_token: Optional[str] = Cookie(None),  # noqa: ARG001 - cookie fallback
-) -> bool:
+) -> None:
     """
     Verify CSRF token for state-changing requests.
+    Raises HTTPException on failure, returns None on success.
     
     Usage:
         @app.post("/api/data")
         async def create_data(
-            csrf_valid: bool = Depends(verify_csrf),
+            _: None = Depends(verify_csrf),
             user: dict = Depends(get_current_user),
         ):
             ...
     """
     # Skip CSRF for safe methods
     if request.method in ("GET", "HEAD", "OPTIONS"):
-        return True
+        return
     
     # Get CSRF token from header
     header_token = request.headers.get("X-CSRF-Token")
@@ -354,8 +355,6 @@ async def verify_csrf(
             status_code=403,
             detail="Invalid CSRF token",
         )
-    
-    return True
 
 
 class CSRFProtectedRoute:

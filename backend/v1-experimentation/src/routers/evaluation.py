@@ -2,7 +2,7 @@
 Experiment evaluation and promotion endpoints for V1.
 """
 import logging
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status

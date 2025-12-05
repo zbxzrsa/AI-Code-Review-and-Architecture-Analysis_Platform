@@ -14,7 +14,7 @@ import logging
 import asyncio
 from typing import Optional, AsyncGenerator, Dict, Any
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,

@@ -16,7 +16,7 @@ import logging
 import hashlib
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 import statistics
 import math
@@ -147,8 +147,10 @@ class ShadowComparator:
             try:
                 await self._cleanup_task
             except asyncio.CancelledError:
+                # Expected when we cancel - swallow since we initiated the cancellation
                 pass
-            self._cleanup_task = None
+            finally:
+                self._cleanup_task = None
     
     # ==================== Output Collection ====================
     

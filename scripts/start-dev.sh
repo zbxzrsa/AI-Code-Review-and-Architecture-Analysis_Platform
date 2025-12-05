@@ -21,12 +21,12 @@ docker-compose up -d postgres redis
 echo -e "\033[33mWaiting for PostgreSQL to be ready...\033[0m"
 max_attempts=30
 attempt=0
-until docker exec platform-postgres pg_isready &> /dev/null || [ $attempt -ge $max_attempts ]; do
+until docker exec platform-postgres pg_isready &> /dev/null || [[ $attempt -ge $max_attempts ]]; do
     attempt=$((attempt + 1))
     sleep 2
 done
 
-if [ $attempt -lt $max_attempts ]; then
+if [[ $attempt -lt $max_attempts ]]; then
     echo -e "\033[32mPostgreSQL is ready!\033[0m"
 else
     echo -e "\033[33mWarning: PostgreSQL may not be ready yet\033[0m"

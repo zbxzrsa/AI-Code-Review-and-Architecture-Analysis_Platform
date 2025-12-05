@@ -156,19 +156,26 @@ class ProductionValidator:
     def validate_ssl(self) -> bool:
         """Check for SSL/TLS configuration hints.
         
-        Note: This is a soft check - returns True with warnings if SSL is not
-        explicitly configured, as HTTPS may be handled at load balancer level.
+        Returns True if SSL is properly configured, False if explicitly disabled.
+        Adds warnings for missing but non-critical configuration.
         """
         # Check for SSL-related environment variables
         ssl_vars = ["SSL_CERT_PATH", "SSL_KEY_PATH", "FORCE_HTTPS"]
         configured = [var for var in ssl_vars if os.getenv(var)]
         
+        # Check if SSL is explicitly disabled
+        force_https = os.getenv("FORCE_HTTPS", "").lower()
+        if force_https == "false":
+            self.warnings.append("FORCE_HTTPS is explicitly disabled")
+            return False  # Explicitly disabled
+        
         if not configured:
             self.warnings.append("No SSL environment variables found - ensure HTTPS is configured at load balancer/proxy")
-            return True  # Soft check - SSL may be at proxy level
+            # Not a failure - SSL may be at proxy level
+        else:
+            self.passed.append(f"SSL variables found: {configured}")
         
-        self.passed.append(f"SSL variables found: {configured}")
-        return True
+        return len(configured) > 0 or force_https != "false"
 
     def validate_api_keys(self) -> bool:
         """Validate AI provider API keys."""

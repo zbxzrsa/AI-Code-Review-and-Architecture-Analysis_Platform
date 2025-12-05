@@ -1,0 +1,56 @@
+# Foundation Model Training Requirements
+# For 500B-1T parameter MoE Transformer training
+
+# Core ML frameworks
+torch>=2.2.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Distributed training
+deepspeed>=0.13.0
+fairscale>=0.4.13
+megatron-core>=0.3.0
+
+# Attention optimizations
+flash-attn>=2.5.0
+xformers>=0.0.24
+triton>=2.2.0
+
+# Data processing
+pyarrow>=14.0.0
+h5py>=3.10.0
+warcio>=1.7.4
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+
+# Tokenization
+tiktoken>=0.5.0
+sentencepiece>=0.1.99
+transformers>=4.36.0
+
+# RLHF/Alignment
+trl>=0.7.0
+peft>=0.7.0
+
+# Monitoring & Logging
+wandb>=0.16.0
+tensorboard>=2.15.0
+prometheus-client>=0.19.0
+
+# Utilities
+tqdm>=4.66.0
+pyyaml>=6.0.1
+python-dotenv>=1.0.0
+
+# Optional: Multi-modal
+# pillow>=10.0.0
+# torchvision>=0.17.0
+# torchaudio>=2.2.0
+
+# Optional: Ray for distributed
+# ray[default]>=2.9.0
+
+# Development
+pytest>=7.4.0
+black>=23.12.0
+ruff>=0.1.9

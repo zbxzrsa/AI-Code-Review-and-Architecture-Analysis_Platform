@@ -10,7 +10,7 @@ Tests the version lifecycle management including:
 
 import asyncio
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict
 
 import httpx

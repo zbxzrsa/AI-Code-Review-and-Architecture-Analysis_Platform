@@ -3,7 +3,7 @@ V1 Experimentation API - Testing ground for new AI models and techniques.
 """
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.responses import JSONResponse

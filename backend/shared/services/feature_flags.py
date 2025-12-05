@@ -5,7 +5,7 @@ Enables gradual rollout of new features and A/B testing capabilities.
 """
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
 from enum import Enum
 import json

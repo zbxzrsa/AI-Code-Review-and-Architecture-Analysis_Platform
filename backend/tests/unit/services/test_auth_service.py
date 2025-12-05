@@ -3,7 +3,7 @@ Auth Service Unit Tests
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from jose import jwt
 

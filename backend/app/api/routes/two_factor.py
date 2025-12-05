@@ -368,9 +368,8 @@ async def regenerate_backup_codes(
         for code in backup_codes
     ]
     
-    # Update in database
-    # current_user.two_factor_backup_codes = hashed_codes
-    # db.commit()
+    # TODO: Store hashed_codes in database when DB integration is complete
+    # Example: current_user.two_factor_backup_codes = hashed_codes; db.commit()
     
     # Format for display
     formatted_codes = [

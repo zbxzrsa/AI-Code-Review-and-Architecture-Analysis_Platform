@@ -17,7 +17,7 @@ Includes:
 import asyncio
 import signal
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List, Callable, Awaitable
 from contextlib import asynccontextmanager
 from enum import Enum

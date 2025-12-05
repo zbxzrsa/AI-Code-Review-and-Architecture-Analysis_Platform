@@ -14,7 +14,7 @@ import logging
 import time
 from typing import Optional, Dict, Any, AsyncIterator, Callable, Awaitable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import Response
 from fastapi.responses import StreamingResponse

@@ -12,7 +12,7 @@ Manages the promotion/downgrade lifecycle across V1, V2, and V3:
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 import httpx

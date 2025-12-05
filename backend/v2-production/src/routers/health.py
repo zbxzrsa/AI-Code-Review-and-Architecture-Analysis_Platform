@@ -1,7 +1,7 @@
 """
 Health check endpoints for V2 production.
 """
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from fastapi import APIRouter, HTTPException, status
 
 router = APIRouter(prefix="/health")

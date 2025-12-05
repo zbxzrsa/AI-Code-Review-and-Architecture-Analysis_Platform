@@ -14,7 +14,7 @@ import hashlib
 import uuid
 from typing import Optional, Dict, Any, List, Callable, Awaitable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from contextlib import asynccontextmanager
 

@@ -2,7 +2,7 @@
 Data models for experiments and analysis results.
 """
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from enum import Enum
 from typing import Optional, Dict, Any, List
 from uuid import uuid4

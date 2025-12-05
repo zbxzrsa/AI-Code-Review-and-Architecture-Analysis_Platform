@@ -28,7 +28,7 @@ import hashlib
 import logging
 import json
 from typing import Dict, Any, Optional, List, Set
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from functools import lru_cache
 import jwt

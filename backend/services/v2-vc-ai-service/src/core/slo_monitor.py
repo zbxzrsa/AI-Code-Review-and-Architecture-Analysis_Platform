@@ -6,7 +6,7 @@ Real-time SLO monitoring and error budget tracking.
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, List, Callable
 from dataclasses import dataclass, field
 from collections import deque

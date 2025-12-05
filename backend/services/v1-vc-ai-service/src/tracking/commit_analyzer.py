@@ -11,7 +11,7 @@ Provides semantic understanding of commits:
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Any
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 import re
 import hashlib
 import logging

@@ -149,12 +149,12 @@ export const Profile: React.FC = () => {
       const isImage = file.type.startsWith('image/');
       if (!isImage) {
         message.error(t('profile.avatar_type_error', 'You can only upload image files!'));
-        return false;
+        return Upload.LIST_IGNORE;  // Reject: wrong type
       }
       const isLt2M = file.size / 1024 / 1024 < 2;
       if (!isLt2M) {
         message.error(t('profile.avatar_size_error', 'Image must be smaller than 2MB!'));
-        return false;
+        return Upload.LIST_IGNORE;  // Reject: too large
       }
       // In production, this would upload to server
       const reader = new FileReader();
@@ -163,7 +163,7 @@ export const Profile: React.FC = () => {
         message.success(t('profile.avatar_updated', 'Avatar updated'));
       };
       reader.readAsDataURL(file);
-      return false;
+      return false;  // Prevent auto upload, handle manually
     }
   };
 

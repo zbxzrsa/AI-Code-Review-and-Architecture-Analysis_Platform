@@ -18,7 +18,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
@@ -260,6 +260,7 @@ class InMemoryEventBackend(EventBackend):
         logger.info("In-memory event backend ready")
     
     async def disconnect(self):
+        # No-op for in-memory backend - no external connections to close
         pass
     
     async def publish(self, event: LifecycleEvent) -> bool:

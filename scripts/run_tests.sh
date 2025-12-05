@@ -79,13 +79,13 @@ done
 
 # Set pytest options
 PYTEST_OPTS=""
-if [ "$VERBOSE" = true ]; then
+if [[ "$VERBOSE" == true ]]; then
     PYTEST_OPTS="$PYTEST_OPTS -v"
 fi
-if [ "$COVERAGE" = true ]; then
+if [[ "$COVERAGE" == true ]]; then
     PYTEST_OPTS="$PYTEST_OPTS --cov=backend --cov=services --cov-report=xml --cov-report=html"
 fi
-if [ "$CI_MODE" = true ]; then
+if [[ "$CI_MODE" == true ]]; then
     PYTEST_OPTS="$PYTEST_OPTS --tb=short -q"
 fi
 
@@ -188,7 +188,7 @@ run_e2e_tests() {
     cd frontend
     
     # Install Playwright if needed
-    if [ ! -d "node_modules/@playwright" ]; then
+    if [[ ! -d "node_modules/@playwright" ]]; then
         echo "Installing Playwright..."
         npx playwright install
     fi
@@ -211,21 +211,21 @@ run_e2e_tests() {
 # Run Tests
 # =============================================================================
 
-if [ "$RUN_ALL" = true ]; then
+if [[ "$RUN_ALL" == true ]]; then
     RUN_UNIT=true
     RUN_INTEGRATION=true
     RUN_E2E=true
 fi
 
-if [ "$RUN_UNIT" = true ]; then
+if [[ "$RUN_UNIT" == true ]]; then
     run_unit_tests
 fi
 
-if [ "$RUN_INTEGRATION" = true ]; then
+if [[ "$RUN_INTEGRATION" == true ]]; then
     run_integration_tests
 fi
 
-if [ "$RUN_E2E" = true ]; then
+if [[ "$RUN_E2E" == true ]]; then
     run_e2e_tests
 fi
 
@@ -240,14 +240,14 @@ echo -e "Passed: ${GREEN}$PASSED${NC}"
 echo -e "Failed: ${RED}$FAILED${NC}"
 echo ""
 
-if [ "$COVERAGE" = true ]; then
+if [[ "$COVERAGE" == true ]]; then
     echo -e "${YELLOW}Coverage report generated:${NC}"
     echo "  - HTML: htmlcov/index.html"
     echo "  - XML:  coverage.xml"
     echo ""
 fi
 
-if [ $FAILED -gt 0 ]; then
+if [[ $FAILED -gt 0 ]]; then
     echo -e "${RED}Some tests failed!${NC}"
     exit 1
 else

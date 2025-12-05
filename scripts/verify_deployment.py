@@ -25,6 +25,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Check name constants
+CHECK_GATEWAY_HEALTH = "Gateway Health"
+CHECK_V1_SERVICES = "V1 Services"
+CHECK_V2_SERVICES = "V2 Services"
+CHECK_V3_SERVICES = "V3 Services"
+CHECK_LIFECYCLE_CONTROLLER = "Lifecycle Controller"
+CHECK_EVALUATION_PIPELINE = "Evaluation Pipeline"
+CHECK_OPA_POLICY_ENGINE = "OPA Policy Engine"
+CHECK_SHADOW_TRAFFIC = "Shadow Traffic"
+CHECK_SLO_METRICS = "SLO Metrics"
+CHECK_PROMETHEUS = "Prometheus"
+
 
 @dataclass
 class CheckResult:
@@ -110,18 +122,18 @@ class DeploymentVerifier:
             response = await self.client.get(f"{self.gateway_url}/api/health")
             if response.status_code == 200:
                 return CheckResult(
-                    name="Gateway Health",
+                    name=CHECK_GATEWAY_HEALTH,
                     passed=True,
                     message="API Gateway is healthy"
                 )
             return CheckResult(
-                name="Gateway Health",
+                name=CHECK_GATEWAY_HEALTH,
                 passed=False,
                 message=f"Gateway returned status {response.status_code}"
             )
         except Exception as e:
             return CheckResult(
-                name="Gateway Health",
+                name=CHECK_GATEWAY_HEALTH,
                 passed=False,
                 message=f"Cannot connect to gateway: {e}"
             )
@@ -136,18 +148,18 @@ class DeploymentVerifier:
             )
             if response.status_code == 200:
                 return CheckResult(
-                    name="V1 Services",
+                    name=CHECK_V1_SERVICES,
                     passed=True,
                     message="V1 experiment services are running"
                 )
             return CheckResult(
-                name="V1 Services",
+                name=CHECK_V1_SERVICES,
                 passed=False,
                 message=f"V1 services returned status {response.status_code}"
             )
         except Exception as e:
             return CheckResult(
-                name="V1 Services",
+                name=CHECK_V1_SERVICES,
                 passed=False,
                 message=f"V1 services unreachable: {e}"
             )
@@ -159,19 +171,19 @@ class DeploymentVerifier:
             if response.status_code == 200:
                 data = response.json()
                 return CheckResult(
-                    name="V2 Services",
+                    name=CHECK_V2_SERVICES,
                     passed=True,
                     message="V2 production services are running",
                     details=data
                 )
             return CheckResult(
-                name="V2 Services",
+                name=CHECK_V2_SERVICES,
                 passed=False,
                 message=f"V2 services returned status {response.status_code}"
             )
         except Exception as e:
             return CheckResult(
-                name="V2 Services",
+                name=CHECK_V2_SERVICES,
                 passed=False,
                 message=f"V2 services unreachable: {e}"
             )
@@ -186,19 +198,19 @@ class DeploymentVerifier:
             # V3 may be scaled down, so 503 is acceptable
             if response.status_code in [200, 503]:
                 return CheckResult(
-                    name="V3 Services",
+                    name=CHECK_V3_SERVICES,
                     passed=True,
                     message="V3 legacy services are configured (may be scaled down)"
                 )
             return CheckResult(
-                name="V3 Services",
+                name=CHECK_V3_SERVICES,
                 passed=False,
                 message=f"V3 services returned unexpected status {response.status_code}"
             )
         except Exception as e:
             # V3 being unreachable is often acceptable
             return CheckResult(
-                name="V3 Services",
+                name=CHECK_V3_SERVICES,
                 passed=True,
                 message=f"V3 services not responding (expected if scaled down)"
             )
@@ -211,18 +223,18 @@ class DeploymentVerifier:
             )
             if response.status_code == 200:
                 return CheckResult(
-                    name="Lifecycle Controller",
+                    name=CHECK_LIFECYCLE_CONTROLLER,
                     passed=True,
                     message="Lifecycle controller is healthy"
                 )
             return CheckResult(
-                name="Lifecycle Controller",
+                name=CHECK_LIFECYCLE_CONTROLLER,
                 passed=False,
                 message=f"Lifecycle controller returned {response.status_code}"
             )
         except Exception as e:
             return CheckResult(
-                name="Lifecycle Controller",
+                name=CHECK_LIFECYCLE_CONTROLLER,
                 passed=False,
                 message=f"Lifecycle controller unreachable: {e}"
             )
@@ -235,18 +247,18 @@ class DeploymentVerifier:
             )
             if response.status_code == 200:
                 return CheckResult(
-                    name="Evaluation Pipeline",
+                    name=CHECK_EVALUATION_PIPELINE,
                     passed=True,
                     message="Evaluation pipeline is healthy"
                 )
             return CheckResult(
-                name="Evaluation Pipeline",
+                name=CHECK_EVALUATION_PIPELINE,
                 passed=False,
                 message=f"Evaluation pipeline returned {response.status_code}"
             )
         except Exception as e:
             return CheckResult(
-                name="Evaluation Pipeline",
+                name=CHECK_EVALUATION_PIPELINE,
                 passed=False,
                 message=f"Evaluation pipeline unreachable: {e}"
             )
@@ -265,19 +277,19 @@ class DeploymentVerifier:
                     data = query_response.json()
                     targets = len(data.get('data', {}).get('result', []))
                     return CheckResult(
-                        name="Prometheus",
+                        name=CHECK_PROMETHEUS,
                         passed=True,
                         message=f"Prometheus healthy, {targets} targets up",
                         details={"targets_up": targets}
                     )
             return CheckResult(
-                name="Prometheus",
+                name=CHECK_PROMETHEUS,
                 passed=False,
                 message="Prometheus not responding correctly"
             )
         except Exception as e:
             return CheckResult(
-                name="Prometheus",
+                name=CHECK_PROMETHEUS,
                 passed=False,
                 message=f"Prometheus unreachable: {e}"
             )
@@ -295,19 +307,19 @@ class DeploymentVerifier:
                     data = policy_response.json()
                     policies = len(data.get('result', []))
                     return CheckResult(
-                        name="OPA Policy Engine",
+                        name=CHECK_OPA_POLICY_ENGINE,
                         passed=True,
                         message=f"OPA healthy, {policies} policies loaded",
                         details={"policies_loaded": policies}
                     )
             return CheckResult(
-                name="OPA Policy Engine",
+                name=CHECK_OPA_POLICY_ENGINE,
                 passed=False,
                 message="OPA not responding correctly"
             )
         except Exception as e:
             return CheckResult(
-                name="OPA Policy Engine",
+                name=CHECK_OPA_POLICY_ENGINE,
                 passed=False,
                 message=f"OPA unreachable: {e}"
             )
@@ -327,24 +339,24 @@ class DeploymentVerifier:
                     value = float(results[0]['value'][1])
                     if value > 0:
                         return CheckResult(
-                            name="Shadow Traffic",
+                            name=CHECK_SHADOW_TRAFFIC,
                             passed=True,
                             message=f"Shadow traffic flowing to V1: {value:.2f} req/s",
                             details={"requests_per_second": value}
                         )
                 return CheckResult(
-                    name="Shadow Traffic",
+                    name=CHECK_SHADOW_TRAFFIC,
                     passed=False,
                     message="No shadow traffic detected to V1"
                 )
             return CheckResult(
-                name="Shadow Traffic",
+                name=CHECK_SHADOW_TRAFFIC,
                 passed=False,
                 message="Cannot query shadow traffic metrics"
             )
         except Exception as e:
             return CheckResult(
-                name="Shadow Traffic",
+                name=CHECK_SHADOW_TRAFFIC,
                 passed=False,
                 message=f"Shadow traffic check failed: {e}"
             )
@@ -384,7 +396,7 @@ class DeploymentVerifier:
                     
                     if error_ok and latency_ok:
                         return CheckResult(
-                            name="SLO Metrics",
+                            name=CHECK_SLO_METRICS,
                             passed=True,
                             message=f"SLOs met: error={error_rate:.4f}, p95={latency_ms:.0f}ms",
                             details={"error_rate": error_rate, "p95_latency_ms": latency_ms}
@@ -396,26 +408,26 @@ class DeploymentVerifier:
                         if not latency_ok:
                             issues.append(f"p95 latency {latency_ms:.0f}ms > 3000ms")
                         return CheckResult(
-                            name="SLO Metrics",
+                            name=CHECK_SLO_METRICS,
                             passed=False,
                             message=f"SLO violations: {', '.join(issues)}",
                             details={"error_rate": error_rate, "p95_latency_ms": latency_ms}
                         )
                 
                 return CheckResult(
-                    name="SLO Metrics",
+                    name=CHECK_SLO_METRICS,
                     passed=True,
                     message="No SLO metrics available yet (new deployment)"
                 )
             
             return CheckResult(
-                name="SLO Metrics",
+                name=CHECK_SLO_METRICS,
                 passed=False,
                 message="Cannot query SLO metrics"
             )
         except Exception as e:
             return CheckResult(
-                name="SLO Metrics",
+                name=CHECK_SLO_METRICS,
                 passed=False,
                 message=f"SLO check failed: {e}"
             )

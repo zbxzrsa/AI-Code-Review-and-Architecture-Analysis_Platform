@@ -10,7 +10,7 @@ Tracks model and architecture evolution:
 
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import json
 import hashlib

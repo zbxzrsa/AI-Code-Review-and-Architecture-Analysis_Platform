@@ -16,6 +16,17 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+# Model name constants
+MODEL_CODELLAMA_34B = "codellama:34b"
+MODEL_CODELLAMA_13B = "codellama:13b"
+MODEL_CODELLAMA_7B = "codellama:7b"
+MODEL_DEEPSEEK_33B = "deepseek-coder:33b"
+MODEL_DEEPSEEK_6B = "deepseek-coder:6.7b"
+MODEL_LLAMA3_70B = "llama3:70b"
+MODEL_LLAMA3_8B = "llama3:8b"
+MODEL_MISTRAL_7B = "mistral:7b"
+MODEL_MIXTRAL_8X7B = "mixtral:8x7b"
+
 
 @dataclass
 class OllamaConfig:

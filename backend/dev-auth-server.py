@@ -440,8 +440,8 @@ if __name__ == "__main__":
     print("🚀 Dev Auth Server Starting...")
     print("=" * 50)
     print(f"📧 Invitation Code: {ADMIN_INVITATION_CODE}")
-    print(f"🌐 Server: http://localhost:8001")
-    print(f"📖 Docs: http://localhost:8001/docs")
+    print("🌐 Server: http://localhost:8001")
+    print("📖 Docs: http://localhost:8001/docs")
     print("=" * 50)
     
     uvicorn.run(

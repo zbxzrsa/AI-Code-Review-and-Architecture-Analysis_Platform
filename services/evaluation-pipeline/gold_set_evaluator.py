@@ -13,7 +13,7 @@ enabling objective measurement of model accuracy and regression detection.
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 

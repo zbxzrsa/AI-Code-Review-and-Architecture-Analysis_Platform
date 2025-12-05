@@ -15,7 +15,7 @@ import logging
 import uuid  # FIXED: Moved from inside function
 from typing import Dict, Any, Optional, List, Callable, Awaitable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from collections import deque
 
@@ -166,7 +166,7 @@ class HealthMonitor:
             try:
                 await self._monitor_task
             except asyncio.CancelledError:
-                pass
+                raise  # Re-raise after cleanup
         logger.info("Health monitor stopped")
     
     async def _monitor_loop(self):

@@ -8,7 +8,7 @@ import uuid
 from enum import Enum
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 
 
 class EventType(str, Enum):

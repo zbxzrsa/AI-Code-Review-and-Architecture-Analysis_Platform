@@ -46,17 +46,41 @@ export type Middleware = (
 // Event Definitions
 // ============================================
 
+// Type definitions for event payloads
+export interface AnalysisResult {
+  issues: Array<{
+    id: string;
+    type: string;
+    severity: string;
+    message: string;
+  }>;
+  score: number;
+  summary: string;
+}
+
+export interface ProjectChanges {
+  name?: string;
+  description?: string;
+  settings?: Record<string, unknown>;
+}
+
+export interface ErrorInfo {
+  message: string;
+  code?: string;
+  stack?: string;
+}
+
 export interface EventMap {
   // Analysis events
   "analysis:started": { id: string; file: string };
   "analysis:progress": { id: string; progress: number; file?: string };
-  "analysis:completed": { id: string; result: any };
-  "analysis:failed": { id: string; error: any };
+  "analysis:completed": { id: string; result: AnalysisResult };
+  "analysis:failed": { id: string; error: ErrorInfo };
   "analysis:cancelled": { id: string };
 
   // Project events
   "project:created": { id: string; name: string };
-  "project:updated": { id: string; changes: any };
+  "project:updated": { id: string; changes: ProjectChanges };
   "project:deleted": { id: string };
   "project:selected": { id: string };
 
@@ -64,7 +88,7 @@ export interface EventMap {
   "ai:response:started": { requestId: string };
   "ai:response:chunk": { requestId: string; chunk: string };
   "ai:response:completed": { requestId: string; response: string };
-  "ai:response:error": { requestId: string; error: any };
+  "ai:response:error": { requestId: string; error: ErrorInfo };
 
   // Auto-fix events
   "fix:suggested": { issueId: string; suggestion: string };
@@ -74,24 +98,31 @@ export interface EventMap {
   // Security events
   "security:scan:started": { scanId: string };
   "security:scan:completed": { scanId: string; issues: number };
-  "security:vulnerability:found": { vulnerability: any };
+  "security:vulnerability:found": {
+    vulnerability: {
+      id: string;
+      severity: string;
+      description: string;
+      location?: string;
+    };
+  };
 
   // User events
   "user:login": { userId: string };
   "user:logout": { userId: string };
-  "user:preferences:changed": { changes: any };
+  "user:preferences:changed": { changes: Record<string, unknown> };
 
   // System events
   "system:online": Record<string, never>;
   "system:offline": Record<string, never>;
-  "system:error": { error: any };
+  "system:error": { error: ErrorInfo };
   "system:notification": { type: string; message: string };
 
   // WebSocket events
   "ws:connected": Record<string, never>;
   "ws:disconnected": { reason?: string };
-  "ws:message": { type: string; data: any };
-  "ws:error": { error: any };
+  "ws:message": { type: string; data: Record<string, unknown> };
+  "ws:error": { error: ErrorInfo };
 
   // Performance events
   "performance:api:critical": {
@@ -116,13 +147,24 @@ export interface EventMap {
   };
   "performance:memory:critical": { usage: number; threshold: number };
   "performance:memory:warning": { usage: number; threshold: number };
-  "performance:report": any;
+  "performance:report": {
+    apiMetrics: Record<string, { count: number; avgDuration: number }>;
+    renderMetrics: Record<string, { count: number; avgTime: number }>;
+    memoryUsage: number;
+    timestamp: number;
+  };
   "performance:longTask": { duration: number; name: string };
   "performance:lcp": { value: number };
   "performance:fid": { value: number };
 
   // Security events
-  "security:event": any;
+  "security:event": {
+    type: string;
+    severity: "low" | "medium" | "high" | "critical";
+    message: string;
+    timestamp: number;
+    metadata?: Record<string, unknown>;
+  };
 }
 
 // ============================================

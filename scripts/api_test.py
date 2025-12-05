@@ -79,7 +79,7 @@ async def run_test(
         if response.status_code in [200, 201, 202]:
             try:
                 data = response.json()
-            except:
+            except (ValueError, TypeError):
                 data = {"raw": response.text[:100]}
             
             return TestResult(

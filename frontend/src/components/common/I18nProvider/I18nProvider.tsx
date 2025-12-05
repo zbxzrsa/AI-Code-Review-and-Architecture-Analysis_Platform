@@ -70,7 +70,7 @@ const I18nInnerProvider: React.FC<I18nProviderProps> = ({ children }) => {
     document.body.classList.add(rtl ? 'lang-rtl' : 'lang-ltr');
     
     // Update theme direction for Ant Design / 更新 Ant Design 的主题方向
-    document.body.setAttribute('data-direction', rtl ? 'rtl' : 'ltr');
+    document.body.dataset.direction = rtl ? 'rtl' : 'ltr';
   }, [currentLanguage, rtl]);
 
   return (

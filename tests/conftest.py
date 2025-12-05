@@ -15,6 +15,9 @@ from unittest.mock import Mock, AsyncMock
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
+# Test data constants
+TEST_TIMESTAMP = "2024-01-01T00:00:00Z"
+
 
 # ============================================================================
 # Pytest Configuration
@@ -198,7 +201,7 @@ def test_user():
         "email": "test@example.com",
         "name": "Test User",
         "role": "user",
-        "created_at": "2024-01-01T00:00:00Z",
+        "created_at": TEST_TIMESTAMP,
     }
 
 
@@ -210,7 +213,7 @@ def admin_user():
         "email": "admin@example.com",
         "name": "Admin User",
         "role": "admin",
-        "created_at": "2024-01-01T00:00:00Z",
+        "created_at": TEST_TIMESTAMP,
     }
 
 
@@ -320,8 +323,8 @@ def test_project():
         "language": "python",
         "framework": "fastapi",
         "owner_id": "user-123",
-        "created_at": "2024-01-01T00:00:00Z",
-        "updated_at": "2024-01-01T00:00:00Z",
+        "created_at": TEST_TIMESTAMP,
+        "updated_at": TEST_TIMESTAMP,
     }
 
 

@@ -107,7 +107,7 @@ api.interceptors.request.use(
           const error = new Error("Too many requests. Please try again later.");
           (error as any).isRateLimited = true;
           (error as any).resetTime = resetTime;
-          return Promise.reject(error);
+          throw error;
         }
       }
     }
@@ -167,7 +167,7 @@ api.interceptors.response.use(
         originalRequest?.url || "unknown",
         originalRequest?.method || "unknown"
       );
-      return Promise.reject(error);
+      throw error;
     }
 
     const status = error.response.status;
@@ -180,7 +180,7 @@ api.interceptors.response.use(
         useAuthStore.getState().logout();
         csrfManager.clearToken();
         window.location.href = "/login";
-        return Promise.reject(error);
+        throw error;
       }
 
       originalRequest._retry = true;
@@ -224,7 +224,7 @@ api.interceptors.response.use(
         );
         window.location.href = `/login?returnUrl=${returnUrl}`;
 
-        return Promise.reject(refreshError);
+        throw refreshError;
       }
     }
 
@@ -269,7 +269,7 @@ api.interceptors.response.use(
       status
     );
 
-    return Promise.reject(error);
+    throw error;
   }
 );
 

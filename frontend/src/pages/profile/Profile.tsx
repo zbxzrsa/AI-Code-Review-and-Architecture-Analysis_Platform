@@ -166,15 +166,15 @@ const ProfileInfoSection: React.FC = () => {
       const isValidType = ['image/jpeg', 'image/png', 'image/webp'].includes(file.type);
       if (!isValidType) {
         message.error(t('profile.avatar_type_error', 'Only JPG, PNG, and WebP files are allowed'));
-        return false;
+        return Upload.LIST_IGNORE;  // Reject: invalid type
       }
       const isLt5M = file.size / 1024 / 1024 < 5;
       if (!isLt5M) {
         message.error(t('profile.avatar_size_error', 'Image must be smaller than 5MB'));
-        return false;
+        return Upload.LIST_IGNORE;  // Reject: too large
       }
       uploadAvatar.mutate(file);
-      return false;
+      return false;  // Prevent auto upload, handle via mutation
     },
   };
 

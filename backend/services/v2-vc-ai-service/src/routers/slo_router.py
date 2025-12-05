@@ -4,7 +4,7 @@ V2 VC-AI SLO Router
 API endpoints for SLO monitoring and error budget tracking.
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Query, Request
 

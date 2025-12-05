@@ -4,7 +4,7 @@ V2 CR-AI CI/CD Integration Router
 API endpoints for CI/CD platform integration.
 """
 
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Request, Header
 from pydantic import BaseModel, Field

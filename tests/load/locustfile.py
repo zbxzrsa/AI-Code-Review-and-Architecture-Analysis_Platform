@@ -39,6 +39,10 @@ TEST_USERS = [
     for i in range(100)
 ]
 
+# API endpoint constants
+API_PROJECTS = "/api/projects/"
+API_ANALYSIS_ANALYZE = "/api/analysis/analyze"
+
 
 # =============================================================================
 # Auth Service Load Tests
@@ -121,7 +125,7 @@ class ProjectServiceUser(HttpUser):
     def list_projects(self):
         """Test list projects"""
         self.client.get(
-            "/api/projects/",
+            API_PROJECTS,
             headers={"Authorization": f"Bearer {self.token}"},
             name="List Projects"
         )
@@ -130,7 +134,7 @@ class ProjectServiceUser(HttpUser):
     def create_project(self):
         """Test create project"""
         response = self.client.post(
-            "/api/projects/",
+            API_PROJECTS,
             json={
                 "name": f"LoadTest Project {random.randint(1, 10000)}",
                 "description": "Load test project",
@@ -179,7 +183,7 @@ class AnalysisServiceUser(HttpUser):
     def analyze_code(self):
         """Test code analysis"""
         self.client.post(
-            "/api/analysis/analyze",
+            API_ANALYSIS_ANALYZE,
             json={
                 "code": SAMPLE_CODE,
                 "language": "python",
@@ -194,7 +198,7 @@ class AnalysisServiceUser(HttpUser):
     def analyze_code_deep(self):
         """Test deep code analysis"""
         self.client.post(
-            "/api/analysis/analyze",
+            API_ANALYSIS_ANALYZE,
             json={
                 "code": SAMPLE_CODE,
                 "language": "python",
@@ -254,7 +258,7 @@ class MixedWorkloadUser(HttpUser):
     @task(10)
     def browse_projects(self):
         """Simulate browsing projects"""
-        self.client.get("/api/projects/", name="Browse Projects")
+        self.client.get(API_PROJECTS, name="Browse Projects")
     
     @task(5)
     def view_project(self):
@@ -266,7 +270,7 @@ class MixedWorkloadUser(HttpUser):
     def run_analysis(self):
         """Simulate running analysis"""
         self.client.post(
-            "/api/analysis/analyze",
+            API_ANALYSIS_ANALYZE,
             json={
                 "code": "print('hello')",
                 "language": "python"
@@ -279,7 +283,7 @@ class MixedWorkloadUser(HttpUser):
     def create_project(self):
         """Simulate creating a project"""
         response = self.client.post(
-            "/api/projects/",
+            API_PROJECTS,
             json={
                 "name": f"Project {random.randint(1, 10000)}",
                 "language": "python"

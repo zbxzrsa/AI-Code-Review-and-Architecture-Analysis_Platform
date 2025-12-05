@@ -47,12 +47,12 @@ echo "⏱️  Checking P95 Latency..."
 LATENCY_QUERY="histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{namespace=\"${NAMESPACE}\",rollout_type=\"canary\"}[5m])) by (le)) * 1000"
 P95_LATENCY=$(query_prometheus "$LATENCY_QUERY")
 
-if [ "$P95_LATENCY" == "NaN" ] || [ -z "$P95_LATENCY" ]; then
+if [[ "$P95_LATENCY" == "NaN" ]] || [[ -z "$P95_LATENCY" ]]; then
     echo "   ⚠️  No latency data available (may be early in rollout)"
     LATENCY_OK=true
 else
     P95_LATENCY_INT=$(printf "%.0f" "$P95_LATENCY")
-    if [ "$P95_LATENCY_INT" -le "$P95_LATENCY_THRESHOLD_MS" ]; then
+    if [[ "$P95_LATENCY_INT" -le "$P95_LATENCY_THRESHOLD_MS" ]]; then
         echo "   ✅ P95 Latency: ${P95_LATENCY_INT}ms (threshold: ${P95_LATENCY_THRESHOLD_MS}ms)"
         LATENCY_OK=true
     else
@@ -67,7 +67,7 @@ echo "🔴 Checking Error Rate..."
 ERROR_QUERY="sum(rate(http_requests_total{namespace=\"${NAMESPACE}\",rollout_type=\"canary\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{namespace=\"${NAMESPACE}\",rollout_type=\"canary\"}[5m]))"
 ERROR_RATE=$(query_prometheus "$ERROR_QUERY")
 
-if [ "$ERROR_RATE" == "NaN" ] || [ -z "$ERROR_RATE" ]; then
+if [[ "$ERROR_RATE" == "NaN" ]] || [[ -z "$ERROR_RATE" ]]; then
     echo "   ⚠️  No error rate data available"
     ERROR_OK=true
 else
@@ -89,7 +89,7 @@ echo "✅ Checking Success Rate..."
 SUCCESS_QUERY="sum(rate(http_requests_total{namespace=\"${NAMESPACE}\",rollout_type=\"canary\",status=~\"2..\"}[5m])) / sum(rate(http_requests_total{namespace=\"${NAMESPACE}\",rollout_type=\"canary\"}[5m]))"
 SUCCESS_RATE=$(query_prometheus "$SUCCESS_QUERY")
 
-if [ "$SUCCESS_RATE" == "NaN" ] || [ -z "$SUCCESS_RATE" ]; then
+if [[ "$SUCCESS_RATE" == "NaN" ]] || [[ -z "$SUCCESS_RATE" ]]; then
     echo "   ⚠️  No success rate data available"
     SUCCESS_OK=true
 else
@@ -111,7 +111,7 @@ echo "📈 Checking Request Volume..."
 VOLUME_QUERY="sum(rate(http_requests_total{namespace=\"${NAMESPACE}\",rollout_type=\"canary\"}[5m]))"
 REQUEST_VOLUME=$(query_prometheus "$VOLUME_QUERY")
 
-if [ "$REQUEST_VOLUME" == "NaN" ] || [ -z "$REQUEST_VOLUME" ]; then
+if [[ "$REQUEST_VOLUME" == "NaN" ]] || [[ -z "$REQUEST_VOLUME" ]]; then
     echo "   ⚠️  No request volume data"
 else
     printf "   📊 Current RPS: %.2f\n" "$REQUEST_VOLUME"
@@ -127,11 +127,11 @@ TOTAL_PODS=$(kubectl get pods -n "$NAMESPACE" -l "app=$ROLLOUT_NAME,rollout-type
 
 echo "   Ready Pods: ${READY_PODS:-0}/${TOTAL_PODS:-0}"
 
-if [ "${READY_PODS:-0}" -gt 0 ]; then
+if [[ "${READY_PODS:-0}" -gt 0 ]]; then
     POD_HEALTH_OK=true
     echo "   ✅ Pods are healthy"
 else
-    if [ "$CANARY_WEIGHT" -gt 0 ]; then
+    if [[ "$CANARY_WEIGHT" -gt 0 ]]; then
         POD_HEALTH_OK=false
         echo "   ❌ No ready pods for canary"
     else
@@ -174,35 +174,35 @@ echo "╠═══════════════════════�
 
 OVERALL_HEALTHY=true
 
-if [ "$LATENCY_OK" = true ]; then
+if [[ "$LATENCY_OK" == true ]]; then
     echo "║ ✅ Latency Check      : PASSED                              ║"
 else
     echo "║ ❌ Latency Check      : FAILED                              ║"
     OVERALL_HEALTHY=false
 fi
 
-if [ "$ERROR_OK" = true ]; then
+if [[ "$ERROR_OK" == true ]]; then
     echo "║ ✅ Error Rate Check   : PASSED                              ║"
 else
     echo "║ ❌ Error Rate Check   : FAILED                              ║"
     OVERALL_HEALTHY=false
 fi
 
-if [ "$SUCCESS_OK" = true ]; then
+if [[ "$SUCCESS_OK" == true ]]; then
     echo "║ ✅ Success Rate Check : PASSED                              ║"
 else
     echo "║ ❌ Success Rate Check : FAILED                              ║"
     OVERALL_HEALTHY=false
 fi
 
-if [ "$POD_HEALTH_OK" = true ]; then
+if [[ "$POD_HEALTH_OK" == true ]]; then
     echo "║ ✅ Pod Health Check   : PASSED                              ║"
 else
     echo "║ ❌ Pod Health Check   : FAILED                              ║"
     OVERALL_HEALTHY=false
 fi
 
-if [ "$ANALYSIS_OK" = true ]; then
+if [[ "$ANALYSIS_OK" == true ]]; then
     echo "║ ✅ Analysis Check     : PASSED                              ║"
 else
     echo "║ ❌ Analysis Check     : FAILED                              ║"
@@ -211,7 +211,7 @@ fi
 
 echo "╠══════════════════════════════════════════════════════════════╣"
 
-if [ "$OVERALL_HEALTHY" = true ]; then
+if [[ "$OVERALL_HEALTHY" == true ]]; then
     echo "║ 🎉 OVERALL STATUS     : HEALTHY                             ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     exit 0

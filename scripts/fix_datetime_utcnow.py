@@ -32,6 +32,48 @@ SKIP_FILES = [
     "fix_datetime_utcnow.py",  # This script
 ]
 
+# Replacement patterns configuration
+REPLACEMENT_PATTERNS = [
+    # (pattern_for_counting, is_literal, replacement)
+    (r"datetime\.utcnow\(\)", True, "datetime.utcnow()", "datetime.now(timezone.utc)"),
+    (r"datetime\.datetime\.utcnow\(\)", True, "datetime.datetime.utcnow()", "datetime.datetime.now(timezone.utc)"),
+    (r"default=datetime\.utcnow(?!\()", False, None, "default=lambda: datetime.now(timezone.utc)"),
+    (r"onupdate=datetime\.utcnow(?!\()", False, None, "onupdate=lambda: datetime.now(timezone.utc)"),
+    (r"default_factory=datetime\.utcnow(?!\()", False, None, "default_factory=lambda: datetime.now(timezone.utc)"),
+]
+
+
+def _count_and_apply_replacements(content: str) -> Tuple[str, int]:
+    """Count occurrences and apply all replacements."""
+    total_fixes = 0
+    for pattern, is_literal, literal_str, replacement in REPLACEMENT_PATTERNS:
+        count = len(re.findall(pattern, content))
+        total_fixes += count
+        if count > 0:
+            if is_literal and literal_str:
+                content = content.replace(literal_str, replacement)
+            else:
+                content = re.sub(pattern, replacement, content)
+    return content, total_fixes
+
+
+def _add_timezone_import(content: str) -> Tuple[str, bool]:
+    """Add timezone import if needed. Returns (content, was_modified)."""
+    has_timezone_import = (
+        "from datetime import" in content and "timezone" in content
+    ) or "import datetime" in content
+    
+    if has_timezone_import:
+        return content, False
+    
+    import_pattern = r"from datetime import ([^;\n]+)"
+    match = re.search(import_pattern, content)
+    if match and "timezone" not in match.group(1):
+        new_imports = match.group(1).rstrip() + ", timezone"
+        content = re.sub(import_pattern, f"from datetime import {new_imports}", content, count=1)
+        return content, True
+    return content, False
+
 
 def find_python_files(base_path: Path) -> List[Path]:
     """Find all Python files in the given directories."""
@@ -51,91 +93,36 @@ def fix_file(file_path: Path, dry_run: bool = True) -> Tuple[int, List[str]]:
     Returns:
         Tuple of (number of fixes, list of changes)
     """
-    changes = []
-    
     if file_path.name in SKIP_FILES:
         return 0, []
     
     try:
         content = file_path.read_text(encoding="utf-8")
-    except Exception as e:
+    except (OSError, UnicodeDecodeError) as e:
         print(f"  Error reading {file_path}: {e}")
         return 0, []
     
     original_content = content
+    changes = []
     
-    # Pattern 1: datetime.utcnow() → datetime.now(timezone.utc)
-    pattern1 = r"datetime\.utcnow\(\)"
-    replacement1 = "datetime.now(timezone.utc)"
-    
-    # Pattern 2: datetime.datetime.utcnow() → datetime.datetime.now(timezone.utc)
-    pattern2 = r"datetime\.datetime\.utcnow\(\)"
-    replacement2 = "datetime.datetime.now(timezone.utc)"
-    
-    # Pattern 3: default=datetime.utcnow (SQLAlchemy factory) → lambda
-    pattern3 = r"default=datetime\.utcnow(?!\()"
-    replacement3 = "default=lambda: datetime.now(timezone.utc)"
-    
-    # Pattern 4: onupdate=datetime.utcnow (SQLAlchemy factory) → lambda
-    pattern4 = r"onupdate=datetime\.utcnow(?!\()"
-    replacement4 = "onupdate=lambda: datetime.now(timezone.utc)"
-    
-    # Pattern 5: default_factory=datetime.utcnow (Pydantic) → lambda
-    pattern5 = r"default_factory=datetime\.utcnow(?!\()"
-    replacement5 = "default_factory=lambda: datetime.now(timezone.utc)"
-    
-    # Count matches
-    count1 = len(re.findall(pattern1, content))
-    count2 = len(re.findall(pattern2, content))
-    count3 = len(re.findall(pattern3, content))
-    count4 = len(re.findall(pattern4, content))
-    count5 = len(re.findall(pattern5, content))
-    total_fixes = count1 + count2 + count3 + count4 + count5
+    # Apply all replacements
+    content, total_fixes = _count_and_apply_replacements(content)
     
     if total_fixes == 0:
         return 0, []
     
-    # Apply replacements
-    content = re.sub(pattern1, replacement1, content)
-    content = re.sub(pattern2, replacement2, content)
-    content = re.sub(pattern3, replacement3, content)
-    content = re.sub(pattern4, replacement4, content)
-    content = re.sub(pattern5, replacement5, content)
+    # Add timezone import if needed
+    content, import_added = _add_timezone_import(content)
+    if import_added:
+        changes.append("  Added 'timezone' to datetime imports")
     
-    # Check if we need to add timezone import
-    needs_import = False
-    if total_fixes > 0:
-        # Check various import patterns
-        has_timezone_import = (
-            "from datetime import" in content and "timezone" in content
-        ) or "import datetime" in content
-        
-        if not has_timezone_import:
-            # Need to add timezone to imports
-            needs_import = True
-            
-            # Try to add to existing datetime import
-            import_pattern = r"from datetime import ([^;\n]+)"
-            match = re.search(import_pattern, content)
-            if match:
-                existing_imports = match.group(1)
-                if "timezone" not in existing_imports:
-                    new_imports = existing_imports.rstrip() + ", timezone"
-                    content = re.sub(
-                        import_pattern,
-                        f"from datetime import {new_imports}",
-                        content,
-                        count=1
-                    )
-                    changes.append(f"  Added 'timezone' to datetime imports")
+    changes.append(f"  Replaced {total_fixes} occurrences of datetime.utcnow()")
     
-    if total_fixes > 0:
-        changes.append(f"  Replaced {total_fixes} occurrences of datetime.utcnow()")
-    
+    # Write changes if not dry run
     if not dry_run and content != original_content:
         try:
             file_path.write_text(content, encoding="utf-8")
-        except Exception as e:
+        except OSError as e:
             print(f"  Error writing {file_path}: {e}")
             return 0, []
     

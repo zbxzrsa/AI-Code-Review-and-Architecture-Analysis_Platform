@@ -15,7 +15,7 @@ import hashlib
 import time
 from typing import Optional, Dict, Any, List, Callable, Awaitable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 logger = logging.getLogger(__name__)

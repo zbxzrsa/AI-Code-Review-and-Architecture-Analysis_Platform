@@ -67,7 +67,7 @@ async def check_http_health(
         if response.status_code == 200:
             try:
                 details = response.json()
-            except:
+            except (ValueError, TypeError):
                 details = {"raw": response.text[:100]}
             
             return ServiceHealth(

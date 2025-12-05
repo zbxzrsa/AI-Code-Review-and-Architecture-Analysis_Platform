@@ -11,7 +11,7 @@ Provides shared fixtures for all service tests:
 import asyncio
 import os
 from typing import AsyncGenerator, Generator
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 import pytest
 import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock

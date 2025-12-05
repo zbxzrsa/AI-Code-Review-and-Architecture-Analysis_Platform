@@ -10,7 +10,7 @@ Provides endpoints for:
 
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime, timezone import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
@@ -25,6 +25,10 @@ from .shadow_comparator import (
 from .gold_set_evaluator import GoldSetEvaluator
 
 logger = logging.getLogger(__name__)
+
+# Error message constants
+ERR_COMPARATOR_NOT_INITIALIZED = "Comparator not initialized"
+ERR_EVALUATOR_NOT_INITIALIZED = "Evaluator not initialized"
 
 
 # ==================== Request/Response Models ====================
@@ -129,7 +133,7 @@ async def health_check():
 async def record_v1_output(request: AnalysisOutputRequest):
     """Record V1 shadow traffic output"""
     if not comparator:
-        raise HTTPException(status_code=503, detail="Comparator not initialized")
+        raise HTTPException(status_code=503, detail=ERR_COMPARATOR_NOT_INITIALIZED)
     
     import hashlib
     code_hash = hashlib.sha256(request.code.encode()).hexdigest()[:16]
@@ -157,7 +161,7 @@ async def record_v1_output(request: AnalysisOutputRequest):
 async def record_v2_output(request: AnalysisOutputRequest):
     """Record V2 production output"""
     if not comparator:
-        raise HTTPException(status_code=503, detail="Comparator not initialized")
+        raise HTTPException(status_code=503, detail=ERR_COMPARATOR_NOT_INITIALIZED)
     
     import hashlib
     code_hash = hashlib.sha256(request.code.encode()).hexdigest()[:16]
@@ -185,7 +189,7 @@ async def record_v2_output(request: AnalysisOutputRequest):
 async def get_shadow_status():
     """Get shadow comparison status"""
     if not comparator:
-        raise HTTPException(status_code=503, detail="Comparator not initialized")
+        raise HTTPException(status_code=503, detail=ERR_COMPARATOR_NOT_INITIALIZED)
     
     return comparator.get_status()
 
@@ -194,7 +198,7 @@ async def get_shadow_status():
 async def start_evaluation(version_id: str):
     """Start evaluation tracking for a version"""
     if not comparator:
-        raise HTTPException(status_code=503, detail="Comparator not initialized")
+        raise HTTPException(status_code=503, detail=ERR_COMPARATOR_NOT_INITIALIZED)
     
     comparator.start_evaluation(version_id)
     
@@ -208,7 +212,7 @@ async def start_evaluation(version_id: str):
 async def get_promotion_recommendation(version_id: str):
     """Get promotion recommendation for a V1 version"""
     if not comparator:
-        raise HTTPException(status_code=503, detail="Comparator not initialized")
+        raise HTTPException(status_code=503, detail=ERR_COMPARATOR_NOT_INITIALIZED)
     
     recommendation = comparator.evaluate_promotion(version_id)
     
@@ -238,7 +242,7 @@ async def get_promotion_recommendation(version_id: str):
 async def run_gold_set_evaluation(request: GoldSetRequest):
     """Run gold-set evaluation for a version"""
     if not gold_evaluator:
-        raise HTTPException(status_code=503, detail="Evaluator not initialized")
+        raise HTTPException(status_code=503, detail=ERR_EVALUATOR_NOT_INITIALIZED)
     
     report = await gold_evaluator.evaluate(
         version_id=request.version_id,

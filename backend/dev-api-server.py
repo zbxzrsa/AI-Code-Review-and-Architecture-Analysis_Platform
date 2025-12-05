@@ -146,6 +146,8 @@ class ProjectSettings(BaseModel):
     review_on_push: bool = False
     review_on_pr: bool = True
     severity_threshold: str = "warning"
+    enabled_rules: List[str] = []
+    ignored_paths: List[str] = ["node_modules", ".git", "__pycache__", "dist", "build"]
 
 
 class Project(BaseModel):
@@ -257,14 +259,13 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         content_length = request.headers.get("content-length")
         
-        if content_length:
-            if int(content_length) > MAX_REQUEST_SIZE_BYTES:
-                return JSONResponse(
-                    status_code=413,
-                    content={
-                        "detail": f"Request body too large. Maximum size is {MAX_REQUEST_SIZE_MB}MB"
-                    }
-                )
+        if content_length and int(content_length) > MAX_REQUEST_SIZE_BYTES:
+            return JSONResponse(
+                status_code=413,
+                content={
+                    "detail": f"Request body too large. Maximum size is {MAX_REQUEST_SIZE_MB}MB"
+                }
+            )
         
         return await call_next(request)
 
@@ -766,11 +767,19 @@ async def create_repository(
 ):
     """Create repository from URL / 从URL创建仓库"""
     repo_id = f"repo_{secrets.token_hex(4)}"
+    # Determine provider from URL
+    if "github" in url:
+        provider = "github"
+    elif "gitlab" in url:
+        provider = "gitlab"
+    else:
+        provider = "bitbucket"
+    
     repo = {
         "id": repo_id,
         "name": name or url.split("/")[-1].replace(".git", ""),
         "full_name": "/".join(url.split("/")[-2:]).replace(".git", ""),
-        "provider": "github" if "github" in url else "gitlab" if "gitlab" in url else "bitbucket",
+        "provider": provider,
         "clone_url": url,
         "default_branch": "main",
         "is_private": False,
@@ -791,7 +800,7 @@ async def connect_repository(
 ):
     """Connect repository from OAuth provider / 从OAuth提供商连接仓库"""
     repo_id = f"repo_{secrets.token_hex(4)}"
-    owner, name = repo_full_name.split("/") if "/" in repo_full_name else ("user", repo_full_name)
+    _, name = repo_full_name.split("/") if "/" in repo_full_name else ("user", repo_full_name)
     repo = {
         "id": repo_id,
         "name": name,
@@ -919,8 +928,8 @@ async def get_user_profile():
     """Get user profile / 获取用户资料"""
     return {
         "id": "user_demo",
-        "email": "demo@example.com",
-        "name": "Demo User",
+        "email": Constants.DEMO_EMAIL,
+        "name": Constants.DEMO_USER,
         "username": "demouser",
         "bio": "Software developer passionate about code quality",
         "avatar": None,
@@ -1105,8 +1114,8 @@ async def update_user_profile():
     return {
         "message": "Profile updated successfully",
         "id": "user_demo",
-        "email": "demo@example.com",
-        "name": "Demo User",
+        "email": Constants.DEMO_EMAIL,
+        "name": Constants.DEMO_USER,
         "username": "demouser"
     }
 
@@ -1169,8 +1178,8 @@ async def list_users(page: int = 1, limit: int = 10, search: Optional[str] = Non
     users = [
         {
             "id": "user_1",
-            "email": "admin@example.com",
-            "name": "Admin User",
+            "email": Constants.ADMIN_EMAIL,
+            "name": Constants.ADMIN_USER,
             "role": "admin",
             "status": "active",
             "created_at": (datetime.now() - timedelta(days=90)).isoformat(),
@@ -1178,7 +1187,7 @@ async def list_users(page: int = 1, limit: int = 10, search: Optional[str] = Non
         },
         {
             "id": "user_2",
-            "email": "user@example.com",
+            "email": Constants.USER_EMAIL,
             "name": "Regular User",
             "role": "user",
             "status": "active",
@@ -1205,8 +1214,8 @@ async def get_user(user_id: str):
     """Get user details (Admin) / 获取用户详情（管理员）"""
     return {
         "id": user_id,
-        "email": "user@example.com",
-        "name": "Demo User",
+        "email": Constants.USER_EMAIL,
+        "name": Constants.DEMO_USER,
         "role": "user",
         "status": "active",
         "created_at": (datetime.now() - timedelta(days=30)).isoformat(),
@@ -1251,7 +1260,7 @@ async def admin_list_projects(page: int = 1, limit: int = 10, search: Optional[s
         {
             "id": "proj_1",
             "name": "AI Code Review Platform",
-            "owner": {"id": "user_1", "name": "Admin User", "email": "admin@example.com"},
+            "owner": {"id": "user_1", "name": Constants.ADMIN_USER, "email": Constants.ADMIN_EMAIL},
             "language": "TypeScript",
             "status": "active",
             "issues_count": 12,
@@ -1261,7 +1270,7 @@ async def admin_list_projects(page: int = 1, limit: int = 10, search: Optional[s
         {
             "id": "proj_2",
             "name": Literals.BACKEND_SERVICES,
-            "owner": {"id": "user_2", "name": "Regular User", "email": "user@example.com"},
+            "owner": {"id": "user_2", "name": "Regular User", "email": Constants.USER_EMAIL},
             "language": "Python",
             "status": "active",
             "issues_count": 5,
@@ -3094,7 +3103,14 @@ async def ai_chat(message: str = "", context: dict = None):
         "default": "I'm your AI assistant for code review. How can I help you today?"
     }
     msg_lower = message.lower() if message else ""
-    response = responses.get("security") if "security" in msg_lower else responses.get("performance") if "performance" in msg_lower else responses.get("default")
+    
+    # Determine response based on message content
+    if "security" in msg_lower:
+        response = responses["security"]
+    elif "performance" in msg_lower:
+        response = responses["performance"]
+    else:
+        response = responses["default"]
     return {"response": response, "model": "gpt-4-turbo", "latency": random.randint(100, 500), "tokens": len(response.split()) * 2, "version": "v2", "response_id": secrets.token_hex(8)}
 
 
@@ -3282,9 +3298,9 @@ async def reset_user_password(user_id: str):
 
 
 @app.post("/api/admin/users/bulk")
-async def bulk_user_action(userIds: list = None, action: str = ""):
+async def bulk_user_action(user_ids: list = None, action: str = ""):
     """Bulk user operations / 批量用户操作"""
-    count = len(userIds) if userIds else 0
+    count = len(user_ids) if user_ids else 0
     return {"message": f"{action} applied to {count} users", "affected": count}
 
 
@@ -3666,7 +3682,7 @@ async def get_version_history():
                 "from": "v3",
                 "to": "v1",
                 "reason": "Manual re-evaluation requested",
-                "by": "admin@example.com",
+                "by": Constants.ADMIN_EMAIL,
                 "at": (datetime.now() - timedelta(days=14)).isoformat()
             }
         ],
@@ -3806,7 +3822,7 @@ async def get_demo_walkthrough():
             }
         ],
         "demo_credentials": {
-            "email": "demo@example.com",
+            "email": Constants.DEMO_EMAIL,
             "password": "demo123"
         }
     }

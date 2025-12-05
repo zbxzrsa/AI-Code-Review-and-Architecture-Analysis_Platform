@@ -75,10 +75,15 @@ http:
           - text/event-stream
 
     # Authentication middleware
+    # NOTE: For production, generate a secure password hash using:
+    #   htpasswd -nb admin <secure-password>
+    # Then set BASIC_AUTH_USERS environment variable or update this file
     auth-basic:
       basicAuth:
         users:
-          - "admin:$apr1$H6uskkkW$IgXLP6ewTrSuBkTrqE8OU/"
+          # Development only - CHANGE IN PRODUCTION
+          # Default: admin / admin (insecure, for dev only)
+          - "admin:$apr1$CHANGE_ME$REPLACE_WITH_SECURE_HASH"
 
     # Request timeout
     timeout:

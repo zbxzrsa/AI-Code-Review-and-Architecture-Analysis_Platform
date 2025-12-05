@@ -1,5 +1,10 @@
 # Common Weak Cryptography Pattern - For Cache Warming
 # This pattern should be detected as a security vulnerability
+#
+# NOTE: This file intentionally contains insecure code patterns for training
+# the code review AI to detect vulnerabilities. DO NOT use these patterns
+# in production code. See the "SAFE ALTERNATIVES" section for secure examples.
+# noqa: S324,S303 - Intentionally weak crypto for pattern detection
 
 import hashlib
 import random
@@ -87,7 +92,7 @@ def verify_password_argon2(password, hashed):
     ph = PasswordHasher()
     try:
         return ph.verify(hashed, password)
-    except:
+    except Exception:  # Catch verification failures
         return False
 
 

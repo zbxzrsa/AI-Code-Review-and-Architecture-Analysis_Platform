@@ -17,7 +17,7 @@ Key responsibilities:
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -115,8 +115,10 @@ class RecoveryManager:
             try:
                 await self._recovery_task
             except asyncio.CancelledError:
+                # Expected when we cancel - swallow since we initiated the cancellation
                 pass
-            self._recovery_task = None
+            finally:
+                self._recovery_task = None
         
         if self._http_client:
             await self._http_client.aclose()

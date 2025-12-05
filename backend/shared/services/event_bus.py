@@ -6,7 +6,7 @@ and trigger automatic evaluation and promotion decisions.
 """
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, Dict, List, Any, Optional
 from enum import Enum
 from uuid import uuid4

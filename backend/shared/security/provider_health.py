@@ -5,7 +5,7 @@ Tracks provider availability, response times, error rates, and automatic failove
 """
 import logging
 from typing import Dict, Any, Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 import asyncio
 
