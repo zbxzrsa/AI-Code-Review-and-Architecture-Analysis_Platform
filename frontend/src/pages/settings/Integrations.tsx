@@ -158,11 +158,27 @@ export const Integrations: React.FC = () => {
     // Check if it's a Git provider (OAuth supported)
     if (gitProviders.some(p => p.id === provider)) {
       try {
-        const response = await apiService.oauth.connect(provider, window.location.href);
-        window.location.href = response.data.authorization_url;
+        // Use fetch directly to avoid axios interceptors that might redirect on 401
+        const response = await fetch(`/api/auth/oauth/connect/${provider}?return_url=${encodeURIComponent(window.location.href)}`);
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to initiate OAuth');
+        }
+        
+        const data = await response.json();
+        
+        if (data.authorization_url) {
+          // Redirect to OAuth provider
+          window.location.href = data.authorization_url;
+        } else if (data.connected) {
+          // Already connected (Bitbucket API Token)
+          message.success(`${provider} is already connected via API Token`);
+          queryClient.invalidateQueries({ queryKey: ['oauth-connections'] });
+        }
       } catch (error: any) {
-        // Fallback for demo mode
-        message.info(`OAuth for ${provider} requires backend configuration. Using demo mode.`);
+        // Show error message instead of redirecting
+        message.error(error.message || `Failed to connect to ${provider}. Please check if OAuth is configured.`);
       }
     } else {
       // For notification providers, show a configuration modal (not OAuth)

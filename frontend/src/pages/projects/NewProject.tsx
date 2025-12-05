@@ -32,6 +32,7 @@ import {
   Spin,
   Result,
 } from 'antd';
+import type { FormInstance } from 'antd';
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -99,9 +100,9 @@ const digestOptions = [
 
 /** Step 1: Basic Information */
 const BasicInfoStep: React.FC<{
-  form: any;
+  form: FormInstance;
   draft: ProjectDraft;
-  onValuesChange: (values: any) => void;
+  onValuesChange: (values: Partial<ProjectDraft>) => void;
 }> = ({ form, draft, onValuesChange }) => {
   const { t } = useTranslation();
 
@@ -214,9 +215,9 @@ const BasicInfoStep: React.FC<{
 
 /** Step 2: Analysis Settings */
 const AnalysisSettingsStep: React.FC<{
-  form: any;
+  form: FormInstance;
   draft: ProjectDraft;
-  onValuesChange: (values: any) => void;
+  onValuesChange: (values: Partial<ProjectDraft>) => void;
 }> = ({ form, draft, onValuesChange }) => {
   const { t } = useTranslation();
 
@@ -331,9 +332,9 @@ const AnalysisSettingsStep: React.FC<{
 
 /** Step 3: Notification Settings */
 const NotificationSettingsStep: React.FC<{
-  form: any;
+  form: FormInstance;
   draft: ProjectDraft;
-  onValuesChange: (values: any) => void;
+  onValuesChange: (values: Partial<ProjectDraft>) => void;
 }> = ({ form, draft, onValuesChange }) => {
   const { t } = useTranslation();
 

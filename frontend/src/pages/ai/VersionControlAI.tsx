@@ -67,7 +67,7 @@ import {
 
 const { Title, Text, Paragraph } = Typography;
 
-// Types
+// Types - extend aiService Technology with local fields
 interface Technology {
   id: string;
   name: string;
@@ -77,8 +77,8 @@ interface Technology {
   errorRate: number;
   latency: number;
   samples: number;
-  lastUpdated: Date;
-  experiments: number;
+  lastUpdated: Date | string;
+  experiments?: number;
 }
 
 interface Experiment {
@@ -315,9 +315,12 @@ export const VersionControlAI: React.FC = () => {
   const reEvalMutation = useRequestReEvaluation();
 
   // Use API data or fallback to mock data
-  const technologies: Technology[] = (apiTechnologies as unknown as Technology[]) || mockTechnologies;
-  const experiments = mockExperiments; // TODO: Add experiments API
-  const events = mockEvents; // TODO: Add events API
+  // Ensure technologies is always an array to prevent Table errors
+  const technologies: Technology[] = Array.isArray(apiTechnologies) 
+    ? apiTechnologies 
+    : mockTechnologies;
+  const experiments: Experiment[] = mockExperiments; // TODO: Add experiments API
+  const events: EvolutionEvent[] = mockEvents; // TODO: Add events API
   const cycleRunning = cycleStatus?.running ?? true;
 
   const handlePromote = (tech: Technology) => {

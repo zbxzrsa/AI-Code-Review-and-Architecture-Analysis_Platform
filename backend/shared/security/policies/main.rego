@@ -1,6 +1,8 @@
 package platform
 
-default allow = false
+import rego.v1
+
+default allow := false
 
 # Allow all authenticated requests
 allow if {

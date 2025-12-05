@@ -65,6 +65,56 @@ import { apiService } from '../services/api';
 
 const { Title, Text } = Typography;
 
+/** API response repository format */
+interface ApiRepository {
+  id: string;
+  name: string;
+  full_name?: string;
+  fullName?: string;
+  description?: string;
+  provider: 'github' | 'gitlab' | 'bitbucket' | 'azure';
+  visibility?: 'public' | 'private';
+  private?: boolean;
+  default_branch?: string;
+  defaultBranch?: string;
+  language?: string;
+  stars_count?: number;
+  stargazers_count?: number;
+  forks_count?: number;
+  open_issues_count?: number;
+  updated_at?: string;
+  clone_url?: string;
+  html_url?: string;
+}
+
+/** OAuth connection */
+interface OAuthConnection {
+  provider: string;
+  connected: boolean;
+  username?: string;
+}
+
+/** Provider repos response */
+interface ProviderReposResponse {
+  repositories: ApiRepository[];
+}
+
+/** API error response */
+interface ApiErrorResponse {
+  response?: {
+    data?: {
+      detail?: string;
+    };
+  };
+  message?: string;
+}
+
+/** Extract error message from API error */
+const getApiErrorMessage = (error: unknown, fallback: string): string => {
+  const apiError = error as ApiErrorResponse;
+  return apiError?.response?.data?.detail || apiError?.message || fallback;
+};
+
 interface Repository {
   id: string;
   name: string;
@@ -232,8 +282,8 @@ export const Repositories: React.FC = () => {
       setSelectRepoModalOpen(false);
       setSelectedProvider(null);
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to connect repository');
+    onError: (error: unknown) => {
+      message.error(getApiErrorMessage(error, 'Failed to connect repository'));
     },
   });
 
@@ -249,8 +299,8 @@ export const Repositories: React.FC = () => {
       form.resetFields();
       setConnectModalOpen(false);
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to add repository');
+    onError: (error: unknown) => {
+      message.error(getApiErrorMessage(error, 'Failed to add repository'));
     },
   });
 
@@ -264,8 +314,8 @@ export const Repositories: React.FC = () => {
       message.success('Repository disconnected');
       queryClient.invalidateQueries({ queryKey: ['repositories'] });
     },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || 'Failed to disconnect repository');
+    onError: (error: unknown) => {
+      message.error(getApiErrorMessage(error, 'Failed to disconnect repository'));
     },
   });
 
@@ -282,7 +332,7 @@ export const Repositories: React.FC = () => {
   });
 
   // Map API data to UI format
-  const repositories: Repository[] = (reposData?.items || mockRepositories).map((repo: any) => ({
+  const repositories: Repository[] = (reposData?.items || mockRepositories).map((repo: ApiRepository & Record<string, unknown>) => ({
     id: repo.id,
     name: repo.name,
     fullName: repo.full_name || repo.fullName || repo.name,
@@ -311,7 +361,7 @@ export const Repositories: React.FC = () => {
 
   const handleConnectProvider = async (provider: string) => {
     // Check if already connected
-    const isConnected = connectionsData?.connections?.some((c: any) => c.provider === provider);
+    const isConnected = connectionsData?.connections?.some((c: OAuthConnection) => c.provider === provider);
     
     if (isConnected) {
       // Already connected, show repository selection
@@ -323,8 +373,8 @@ export const Repositories: React.FC = () => {
       try {
         const response = await apiService.oauth.connect(provider, window.location.href);
         window.location.href = response.data.authorization_url;
-      } catch (error: any) {
-        message.error(error.response?.data?.detail || `Failed to connect to ${provider}`);
+      } catch (error: unknown) {
+        message.error(getApiErrorMessage(error, `Failed to connect to ${provider}`));
       }
     }
   };
@@ -685,7 +735,7 @@ export const Repositories: React.FC = () => {
               { provider: 'github', name: 'GitHub', icon: <GithubOutlined style={{ fontSize: 32 }} />, color: '#24292e' },
               { provider: 'gitlab', name: 'GitLab', icon: <GitlabOutlined style={{ fontSize: 32 }} />, color: '#fc6d26' },
             ].map(p => {
-              const isConnected = connectionsData?.connections?.some((c: any) => c.provider === p.provider);
+              const isConnected = connectionsData?.connections?.some((c: OAuthConnection) => c.provider === p.provider);
               return (
                 <Col span={12} key={p.provider}>
                   <Card
@@ -776,14 +826,14 @@ export const Repositories: React.FC = () => {
           <List
             dataSource={providerRepos.repositories}
             style={{ maxHeight: 400, overflow: 'auto' }}
-            renderItem={(repo: any) => (
+            renderItem={(repo: ApiRepository) => (
               <List.Item
                 key={repo.id}
                 actions={[
                   <Button
                     type="primary"
                     size="small"
-                    onClick={() => handleSelectRepo(repo.full_name)}
+                    onClick={() => handleSelectRepo(repo.full_name || repo.fullName || repo.name)}
                     loading={connectRepoMutation.isPending}
                   >
                     Connect
@@ -793,22 +843,22 @@ export const Repositories: React.FC = () => {
                 <List.Item.Meta
                   avatar={
                     <Avatar 
-                      icon={repo.is_private ? <LockOutlined /> : <UnlockOutlined />}
-                      style={{ backgroundColor: repo.is_private ? '#faad14' : '#52c41a' }}
+                      icon={repo.private ? <LockOutlined /> : <UnlockOutlined />}
+                      style={{ backgroundColor: repo.private ? '#faad14' : '#52c41a' }}
                     />
                   }
                   title={
                     <Space>
-                      <Text strong>{repo.full_name}</Text>
-                      {repo.is_private && <Tag color="orange">Private</Tag>}
+                      <Text strong>{repo.full_name || repo.fullName}</Text>
+                      {repo.private && <Tag color="orange">Private</Tag>}
                     </Space>
                   }
                   description={
                     <Space split={<Divider type="vertical" />}>
                       <Text type="secondary">{repo.description || 'No description'}</Text>
                       <Space size={12}>
-                        <span><StarOutlined /> {repo.stars}</span>
-                        <span><ForkOutlined /> {repo.forks}</span>
+                        <span><StarOutlined /> {repo.stargazers_count || repo.stars_count || 0}</span>
+                        <span><ForkOutlined /> {repo.forks_count || 0}</span>
                       </Space>
                     </Space>
                   }

@@ -204,16 +204,16 @@ export const Sidebar: React.FC = () => {
       path: '/teams',
     },
     {
+      key: 'profile',
+      label: t('nav.profile', 'Profile'),
+      icon: <UserOutlined />,
+      path: '/profile',
+    },
+    {
       key: 'settings',
       label: t('nav.settings', 'Settings'),
       icon: <SettingOutlined />,
-      children: [
-        { key: 'profile', label: t('nav.profile', 'Profile'), path: '/profile', icon: <UserOutlined /> },
-        { key: 'settings-general', label: t('nav.preferences', 'Preferences'), path: '/settings' },
-        { key: 'settings-api-keys', label: t('nav.api_keys', 'API Keys'), path: '/settings/api-keys', icon: <KeyOutlined /> },
-        { key: 'settings-integrations', label: t('nav.integrations', 'Integrations'), path: '/settings/integrations', icon: <LinkOutlined /> },
-        { key: 'billing', label: t('nav.billing', 'Billing'), path: '/billing', icon: <DollarOutlined /> },
-      ],
+      path: '/settings',
     },
     {
       key: 'docs',
@@ -221,40 +221,26 @@ export const Sidebar: React.FC = () => {
       icon: <BookOutlined />,
       path: '/docs',
     },
-    {
-      key: 'ai',
-      label: t('nav.ai', 'AI Assistant'),
-      icon: <RobotOutlined />,
-      children: [
-        { key: 'ai-hub', label: t('nav.ai_hub', 'AI Hub'), path: '/ai-hub', icon: <RobotOutlined /> },
-        { key: 'ai-code-review', label: t('nav.ai_code_review', 'Code Review AI'), path: '/ai-code-review', icon: <CodeOutlined /> },
-        { key: 'ai-assistant', label: t('nav.ai_assistant', 'Chat Assistant'), path: '/ai-assistant', icon: <RobotOutlined /> },
-      ],
-    },
+    // Administration Menu (Admin Only)
     {
       key: 'admin',
       label: t('nav.admin', 'Administration'),
       icon: <SettingOutlined />,
       adminOnly: true,
       children: [
-        { key: 'admin-users', label: t('nav.users', 'Users'), path: '/admin/users', icon: <TeamOutlined /> },
-        { key: 'admin-ai-models', label: t('nav.ai_models', 'AI Models'), path: '/admin/ai-models', icon: <RobotOutlined /> },
-        { key: 'admin-auto-fix', label: t('nav.auto_fix', 'AI Auto-Fix'), path: '/admin/auto-fix', icon: <ThunderboltOutlined /> },
+        // User Management
+        { key: 'admin-users', label: t('nav.users', 'User Management'), path: '/admin/users', icon: <TeamOutlined /> },
+        
+        // AI Management (consolidated)
+        { key: 'admin-ai-models', label: t('nav.ai_models', 'AI Models & Version Control'), path: '/admin/ai-models', icon: <RobotOutlined /> },
         { key: 'admin-providers', label: t('nav.providers', 'AI Providers'), path: '/admin/providers', icon: <ApiOutlined /> },
-        { key: 'admin-experiments', label: t('nav.experiments', 'Experiments'), path: '/admin/experiments', icon: <ExperimentOutlined /> },
-        { key: 'admin-vulnerabilities', label: t('nav.vulnerabilities', 'Vulnerabilities'), path: '/admin/vulnerabilities', icon: <SafetyCertificateOutlined /> },
-        { key: 'admin-security', label: t('nav.security', 'Security Scanner'), path: '/admin/security', icon: <SafetyCertificateOutlined /> },
-        { key: 'admin-quality', label: t('nav.quality', 'Code Quality'), path: '/admin/quality', icon: <CodeOutlined /> },
-        { key: 'admin-evolution', label: t('nav.evolution', 'Evolution Cycle'), path: '/admin/evolution', icon: <RocketOutlined /> },
-        { key: 'admin-model-testing', label: t('nav.model_testing', 'Model Testing'), path: '/admin/model-testing', icon: <ExperimentOutlined /> },
-        { key: 'admin-model-comparison', label: t('nav.model_comparison', 'Model Comparison'), path: '/admin/model-comparison', icon: <BarChartOutlined /> },
-        { key: 'admin-version-comparison', label: t('nav.version_comparison', 'Version Comparison'), path: '/admin/version-comparison', icon: <DiffOutlined /> },
+        
+        // System Monitoring
         { key: 'admin-performance', label: t('nav.performance', 'Performance'), path: '/admin/performance', icon: <DashboardOutlined /> },
         { key: 'admin-health', label: t('nav.system_health', 'System Health'), path: '/admin/health', icon: <DesktopOutlined /> },
-        { key: 'admin-learning', label: t('nav.learning', 'Learning Cycle'), path: '/admin/learning', icon: <BookOutlined /> },
-        { key: 'admin-ml-promotion', label: t('nav.ml_promotion', 'ML Auto-Promotion'), path: '/admin/ml-promotion', icon: <RocketOutlined /> },
-        { key: 'admin-three-version', label: t('nav.three_version', 'Three-Version Control'), path: '/admin/three-version', icon: <ExperimentOutlined /> },
-        { key: 'admin-vcai', label: t('nav.vcai', 'Version Control AI'), path: '/admin/vcai', icon: <RobotOutlined /> },
+        
+        // Security & Audit
+        { key: 'admin-security', label: t('nav.security', 'Security'), path: '/admin/security', icon: <SafetyCertificateOutlined /> },
         { key: 'admin-audit', label: t('nav.audit', 'Audit Logs'), path: '/admin/audit', icon: <AuditOutlined /> },
       ],
     },

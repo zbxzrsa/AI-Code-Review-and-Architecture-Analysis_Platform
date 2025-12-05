@@ -505,42 +505,53 @@ const EvolutionCycleDashboard: React.FC = () => {
     version: string,
     title: string,
     icon: React.ReactNode,
-    metrics: VersionMetrics,
+    metrics: VersionMetrics | undefined,
     description: string
-  ) => (
-    <Card
-      title={
-        <Space>
-          {icon}
-          {title}
-        </Space>
-      }
-      extra={<Tag color={versionColors[version]}>{version.toUpperCase()}</Tag>}
-    >
-      <Descriptions column={1} size="small">
-        <Descriptions.Item label="Requests">
-          {metrics.request_count.toLocaleString()}
-        </Descriptions.Item>
-        <Descriptions.Item label="Error Rate">
-          <Text type={metrics.error_rate <= 0.05 ? 'success' : 'danger'}>
-            {(metrics.error_rate * 100).toFixed(2)}%
-          </Text>
-        </Descriptions.Item>
-        <Descriptions.Item label="Avg Latency">
-          <Text type={metrics.avg_latency_ms <= 3000 ? 'success' : 'warning'}>
-            {metrics.avg_latency_ms.toFixed(0)}ms
-          </Text>
-        </Descriptions.Item>
-        <Descriptions.Item label="Technologies">
-          {metrics.technology_count}
-        </Descriptions.Item>
-      </Descriptions>
-      <Divider style={{ margin: '12px 0' }} />
-      <Text type="secondary" style={{ fontSize: 12 }}>
-        {description}
-      </Text>
-    </Card>
-  );
+  ) => {
+    // Default metrics if undefined
+    const safeMetrics = metrics ?? {
+      request_count: 0,
+      error_count: 0,
+      error_rate: 0,
+      avg_latency_ms: 0,
+      technology_count: 0,
+    };
+
+    return (
+      <Card
+        title={
+          <Space>
+            {icon}
+            {title}
+          </Space>
+        }
+        extra={<Tag color={versionColors[version]}>{version.toUpperCase()}</Tag>}
+      >
+        <Descriptions column={1} size="small">
+          <Descriptions.Item label="Requests">
+            {safeMetrics.request_count.toLocaleString()}
+          </Descriptions.Item>
+          <Descriptions.Item label="Error Rate">
+            <Text type={safeMetrics.error_rate <= 0.05 ? 'success' : 'danger'}>
+              {(safeMetrics.error_rate * 100).toFixed(2)}%
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Avg Latency">
+            <Text type={safeMetrics.avg_latency_ms <= 3000 ? 'success' : 'warning'}>
+              {safeMetrics.avg_latency_ms.toFixed(0)}ms
+            </Text>
+          </Descriptions.Item>
+          <Descriptions.Item label="Technologies">
+            {safeMetrics.technology_count}
+          </Descriptions.Item>
+        </Descriptions>
+        <Divider style={{ margin: '12px 0' }} />
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          {description}
+        </Text>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (

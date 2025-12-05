@@ -42,6 +42,7 @@ import {
   WarningOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
+import type { VersionAIStatus, FeedbackStats } from '../../services/threeVersionService';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -66,6 +67,55 @@ interface CycleStatus {
   };
 }
 
+/** Error report form values */
+interface ErrorFormValues {
+  error_type: string;
+  description: string;
+  stack_trace?: string;
+}
+
+/** Promotion form values */
+interface PromotionFormValues {
+  version_id: string;
+  reason: string;
+}
+
+/** Degradation form values */
+interface DegradationFormValues {
+  version_id: string;
+  reason: string;
+}
+
+/** Quarantine insight */
+interface QuarantineInsight {
+  category: string;
+  insight: string;
+  failure_count: number;
+  avg_accuracy: number;
+}
+
+/** Quarantine stats */
+interface QuarantineStats {
+  total_quarantined?: number;
+  recovery_rate?: number;
+  permanent_exclusions?: number;
+  temporary_exclusions?: number;
+  insights?: QuarantineInsight[];
+  statistics?: {
+    total_quarantined: number;
+    permanent_exclusions: number;
+    temporary_exclusions: number;
+  };
+}
+
+/** Metric row for table */
+interface MetricRow {
+  key: string;
+  metric: string;
+  value: number;
+  color?: string;
+}
+
 const ThreeVersionControl: React.FC = () => {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
@@ -74,9 +124,9 @@ const ThreeVersionControl: React.FC = () => {
   
   // State
   const [cycleStatus, setCycleStatus] = useState<CycleStatus | null>(null);
-  const [aiStatus, setAiStatus] = useState<Record<string, any>>({});
-  const [quarantineStats, setQuarantineStats] = useState<any>(null);
-  const [feedbackStats, setFeedbackStats] = useState<any>(null);
+  const [aiStatus, setAiStatus] = useState<Record<string, VersionAIStatus>>({});
+  const [quarantineStats, setQuarantineStats] = useState<QuarantineStats | null>(null);
+  const [feedbackStats, setFeedbackStats] = useState<FeedbackStats | null>(null);
   
   // Dialog states
   const [errorModalOpen, setErrorModalOpen] = useState(false);
@@ -143,7 +193,7 @@ const ThreeVersionControl: React.FC = () => {
     }
   };
 
-  const reportError = async (values: any) => {
+  const reportError = async (values: ErrorFormValues) => {
     try {
       await fetch(`${API_BASE}/v1/errors`, {
         method: 'POST',
@@ -158,7 +208,7 @@ const ThreeVersionControl: React.FC = () => {
     }
   };
 
-  const triggerPromotion = async (values: any) => {
+  const triggerPromotion = async (values: PromotionFormValues) => {
     try {
       await fetch(`${API_BASE}/promote`, {
         method: 'POST',
@@ -173,7 +223,7 @@ const ThreeVersionControl: React.FC = () => {
     }
   };
 
-  const triggerDegradation = async (values: any) => {
+  const triggerDegradation = async (values: DegradationFormValues) => {
     try {
       await fetch(`${API_BASE}/degrade`, {
         method: 'POST',
@@ -369,7 +419,7 @@ const ThreeVersionControl: React.FC = () => {
                       title: 'Value',
                       dataIndex: 'value',
                       key: 'value',
-                      render: (value: number, record: any) =>
+                      render: (value: number, record: MetricRow) =>
                         record.color ? (
                           <Tag color={record.color}>{value}</Tag>
                         ) : (
@@ -385,7 +435,7 @@ const ThreeVersionControl: React.FC = () => {
           </Col>
           <Col xs={24} md={12}>
             <Card title="Failure Insights">
-              {quarantineStats?.insights?.map((insight: any, index: number) => (
+              {quarantineStats?.insights?.map((insight: QuarantineInsight, index: number) => (
                 <Alert
                   key={index}
                   type="info"

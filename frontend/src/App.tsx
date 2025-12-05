@@ -74,7 +74,7 @@ const SearchResults = lazy(() => import('./pages/SearchResults'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Changelog = lazy(() => import('./pages/Changelog'));
 const Shortcuts = lazy(() => import('./pages/Shortcuts'));
-const AIAssistant = lazy(() => import('./pages/AIAssistant'));
+// AIAssistant redirects to CodeReview - import removed
 const Webhooks = lazy(() => import('./pages/Webhooks'));
 const CodeMetrics = lazy(() => import('./pages/CodeMetrics'));
 const ScheduledJobs = lazy(() => import('./pages/ScheduledJobs'));
@@ -110,9 +110,7 @@ const WelcomeDashboard = lazy(() => import('./pages/WelcomeDashboard'));
 const MLAutoPromotion = lazy(() => import('./pages/MLAutoPromotion'));
 
 // AI Interaction pages / AI交互页面
-const AIInteractionHub = lazy(() => import('./pages/ai/AIInteractionHub'));
 const VersionControlAI = lazy(() => import('./pages/ai/VersionControlAI'));
-const CodeReviewAI = lazy(() => import('./pages/ai/CodeReviewAI'));
 
 // OAuth Callback / OAuth回调
 const OAuthCallback = lazy(() => import('./pages/OAuthCallback'));
@@ -254,9 +252,9 @@ export default function App() {
                   <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/changelog" element={<Changelog />} />
                   <Route path="/shortcuts" element={<Shortcuts />} />
-                  <Route path="/ai-assistant" element={<AIAssistant />} />
-                  <Route path="/ai-hub" element={<AIInteractionHub />} />
-                  <Route path="/ai-code-review" element={<CodeReviewAI />} />
+                  {/* AI Assistant redirects to Code Review with AI Chat */}
+                  <Route path="/ai-assistant" element={<Navigate to="/review" replace />} />
+                  <Route path="/ai-code-review" element={<Navigate to="/review" replace />} />
                   <Route path="/webhooks" element={<Webhooks />} />
                   <Route path="/metrics" element={<CodeMetrics />} />
                   <Route path="/scheduled-jobs" element={<ScheduledJobs />} />

@@ -61,7 +61,8 @@ export interface Technology {
   errorRate: number;
   latency: number;
   samples: number;
-  lastUpdated: string;
+  lastUpdated: string | Date;
+  experiments?: number;
 }
 
 export interface EvolutionCycleStatus {

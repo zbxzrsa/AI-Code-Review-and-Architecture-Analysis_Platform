@@ -598,16 +598,18 @@ export const ProviderManagement: React.FC = () => {
     testProvider.mutate(providerId);
   }, [testProvider]);
 
-  // Summary stats
+  // Summary stats - ensure providers is always an array
+  const providerList = Array.isArray(providers) ? providers : [];
+  
   const stats = useMemo(() => {
-    if (!providers) return null;
+    if (!providerList.length) return null;
     return {
-      total: providers.length,
-      active: providers.filter(p => p.status === 'active').length,
-      totalRequests: providers.reduce((sum, p) => sum + p.requestsToday, 0),
-      totalCost: providers.reduce((sum, p) => sum + p.costToday, 0),
+      total: providerList.length,
+      active: providerList.filter(p => p.status === 'active').length,
+      totalRequests: providerList.reduce((sum, p) => sum + (p.requestsToday || 0), 0),
+      totalCost: providerList.reduce((sum, p) => sum + (p.costToday || 0), 0),
     };
-  }, [providers]);
+  }, [providerList]);
 
   return (
     <div className="provider-management" role="main" aria-label={t('admin.providers.title', 'Provider Management')}>
@@ -675,7 +677,7 @@ export const ProviderManagement: React.FC = () => {
             className="providers-list-card"
             loading={isLoading}
           >
-            {providers?.map(provider => (
+            {providerList.map(provider => (
               <ProviderCard
                 key={provider.id}
                 provider={provider}
@@ -685,7 +687,7 @@ export const ProviderManagement: React.FC = () => {
                 testing={testProvider.isPending}
               />
             ))}
-            {!providers?.length && (
+            {!providerList.length && (
               <Empty description={t('admin.providers.no_providers', 'No providers configured')} />
             )}
           </Card>

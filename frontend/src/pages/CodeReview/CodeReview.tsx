@@ -460,9 +460,9 @@ export const CodeReview: React.FC = () => {
           />
         )}
 
-        <Row gutter={16}>
-          {/* Code Editor */}
-          <Col xs={24} lg={14}>
+        <Row gutter={16} style={{ padding: '16px' }}>
+          {/* Code Editor - Give more space to code */}
+          <Col xs={24} xl={16} lg={14}>
             <Card
               title={
                 <Space>
@@ -508,7 +508,7 @@ export const CodeReview: React.FC = () => {
           </Col>
 
           {/* Issues Panel */}
-          <Col xs={24} lg={10}>
+          <Col xs={24} xl={8} lg={10}>
             <Card
               title={
                 <Space>

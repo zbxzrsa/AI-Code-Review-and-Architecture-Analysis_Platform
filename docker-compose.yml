@@ -53,7 +53,7 @@ services:
     image: neo4j:5-community
     container_name: platform-neo4j
     environment:
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-dev_password_change_in_production}
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-dev_password}
       NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
     volumes:
       - neo4j_data:/data
@@ -65,7 +65,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-dev_password_change_in_production} 'RETURN 1'",
+          "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-dev_password} 'RETURN 1'",
         ]
       interval: 10s
       timeout: 5s
@@ -379,7 +379,7 @@ services:
       - platform-network
 
   # ==================== Three-Version AI Services ====================
-  
+
   # V1 Version Control AI (Experimental)
   v1-vc-ai:
     build:
@@ -399,14 +399,15 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8011:8011"
+      - "8011:8000"
     networks:
       - platform-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8011/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 30s
 
   # V1 Code Review AI (Shadow Testing)
   v1-cr-ai:
@@ -427,14 +428,15 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8012:8012"
+      - "8012:8000"
     networks:
       - platform-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8012/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
+      start_period: 30s
 
   # V2 Version Control AI (Production - Admin)
   v2-vc-ai:
@@ -595,10 +597,11 @@ services:
     networks:
       - platform-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8181/health"]
+      test: ["CMD", "/opa", "eval", "1"]
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
   # ==================== Observability ====================
   prometheus:

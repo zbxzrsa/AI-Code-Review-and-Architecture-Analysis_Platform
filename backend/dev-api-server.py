@@ -8,6 +8,7 @@ Run with: python dev-api-server.py
 运行命令: python dev-api-server.py
 """
 
+import os
 import secrets
 from datetime import datetime, timedelta
 from typing import Optional, List
@@ -16,6 +17,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 import random
+
+# ============================================
+# OAuth Configuration / OAuth配置
+# ============================================
+GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', '')
+GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', '')
+GITLAB_CLIENT_ID = os.getenv('GITLAB_CLIENT_ID', '')
+GITLAB_CLIENT_SECRET = os.getenv('GITLAB_CLIENT_SECRET', '')
+# Bitbucket uses API Token instead of OAuth (since Sep 2025)
+BITBUCKET_API_TOKEN = os.getenv('BITBUCKET_API_TOKEN', '')
 
 # ============================================
 # Models / 模型
@@ -219,27 +230,68 @@ async def get_project(project_id: str):
     raise HTTPException(status_code=404, detail="Project not found")
 
 
-@app.post("/api/projects")
-async def create_project(
-    name: str,
-    language: str,
-    description: Optional[str] = None,
-    framework: Optional[str] = None,
+class CreateProjectRequest(BaseModel):
+    name: str
+    language: str
+    description: Optional[str] = None
+    framework: Optional[str] = None
     repository_url: Optional[str] = None
-):
+
+
+class UpdateProjectRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    language: Optional[str] = None
+    framework: Optional[str] = None
+    status: Optional[str] = None
+    settings: Optional[dict] = None
+
+
+@app.post("/api/projects")
+async def create_project(request: CreateProjectRequest):
     """Create project / 创建项目"""
     project = Project(
         id=f"proj_{secrets.token_hex(4)}",
-        name=name,
-        description=description,
-        language=language,
-        framework=framework,
-        repository_url=repository_url,
+        name=request.name,
+        description=request.description or "",
+        language=request.language,
+        framework=request.framework or "",
+        repository_url=request.repository_url or "",
+        status="active",
+        issues_count=0,
+        settings=ProjectSettings(
+            auto_review=True,
+            review_on_push=True,
+            review_on_pr=True,
+            severity_threshold="warning",
+            enabled_rules=[],
+            ignored_paths=["node_modules", ".git", "__pycache__", "dist", "build"]
+        ),
         created_at=datetime.now(),
         updated_at=datetime.now()
     )
     mock_projects.append(project)
     return project
+
+
+@app.put("/api/projects/{project_id}")
+async def update_project(project_id: str, request: UpdateProjectRequest):
+    """Update project / 更新项目"""
+    for project in mock_projects:
+        if project.id == project_id:
+            if request.name:
+                project.name = request.name
+            if request.description is not None:
+                project.description = request.description
+            if request.language:
+                project.language = request.language
+            if request.framework is not None:
+                project.framework = request.framework
+            if request.status:
+                project.status = request.status
+            project.updated_at = datetime.now()
+            return project
+    raise HTTPException(status_code=404, detail="Project not found")
 
 
 @app.delete("/api/projects/{project_id}")
@@ -248,7 +300,7 @@ async def delete_project(project_id: str):
     for i, project in enumerate(mock_projects):
         if project.id == project_id:
             mock_projects.pop(i)
-            return {"message": "Project deleted"}
+            return {"message": "Project deleted", "id": project_id}
     raise HTTPException(status_code=404, detail="Project not found")
 
 
@@ -256,13 +308,22 @@ async def delete_project(project_id: str):
 # Analysis / 分析
 # ============================================
 
+class AnalyzeRequest(BaseModel):
+    files: Optional[List[str]] = None
+    version: Optional[str] = None
+
+
 @app.post("/api/projects/{project_id}/analyze")
-async def start_analysis(project_id: str):
+async def start_analysis(project_id: str, request: Optional[AnalyzeRequest] = None):
     """Start analysis / 开始分析"""
+    session_id = f"session_{secrets.token_hex(8)}"
     return {
-        "session_id": f"session_{secrets.token_hex(8)}",
+        "id": session_id,
+        "session_id": session_id,
         "status": "started",
-        "project_id": project_id
+        "project_id": project_id,
+        "files": request.files if request else None,
+        "created_at": datetime.now().isoformat()
     }
 
 
@@ -296,6 +357,87 @@ async def get_analysis_issues(session_id: str):
             for i in range(random.randint(0, 10))
         ],
         "total": random.randint(0, 10)
+    }
+
+
+# ============================================
+# Project Files / 项目文件
+# ============================================
+
+@app.get("/api/projects/{project_id}/files")
+async def get_project_files(project_id: str, path: Optional[str] = None):
+    """Get project file tree / 获取项目文件树"""
+    return {
+        "path": path or "",
+        "items": [
+            {"name": "src", "path": "src", "type": "directory"},
+            {"name": "tests", "path": "tests", "type": "directory"},
+            {"name": "main.py", "path": "main.py", "type": "file", "size": 1024, "language": "python"},
+            {"name": "app.ts", "path": "app.ts", "type": "file", "size": 2048, "language": "typescript"},
+            {"name": "README.md", "path": "README.md", "type": "file", "size": 512, "language": "markdown"},
+        ]
+    }
+
+
+@app.get("/api/projects/{project_id}/files/{file_path:path}")
+async def get_project_file(project_id: str, file_path: str):
+    """Get file content / 获取文件内容"""
+    # Sample code based on file type
+    if file_path.endswith('.py'):
+        content = '''# Sample Python Code
+
+def process_user_input(input_data):
+    """Process user input - potential SQL injection"""
+    # WARNING: This is vulnerable to SQL injection
+    query = f"SELECT * FROM users WHERE id = {input_data}"
+    return execute_query(query)
+
+async def fetch_data(url: str):
+    """Fetch data from URL"""
+    try:
+        response = await http_client.get(url)
+        return response.json()
+    except Exception as e:
+        print(f"Error: {e}")
+        # TODO: Better error handling
+
+class UserService:
+    def __init__(self, db_connection):
+        self.db = db_connection
+    
+    def get_user(self, user_id: int):
+        return self.db.query(User).filter_by(id=user_id).first()
+'''
+    elif file_path.endswith('.ts') or file_path.endswith('.tsx'):
+        content = '''// Sample TypeScript Code
+
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+async function fetchUserData(userId: string): Promise<User> {
+  // TODO: Add input validation
+  const response = await fetch(`/api/users/${userId}`);
+  return response.json();
+}
+
+function processData(data: any) {
+  // Warning: Using 'any' type defeats TypeScript benefits
+  console.log(data.value);
+  return data;
+}
+'''
+    else:
+        content = f"# Content of {file_path}\n\nSample file content for demonstration."
+    
+    return {
+        "path": file_path,
+        "content": content,
+        "size": len(content),
+        "language": file_path.split('.')[-1] if '.' in file_path else "text",
+        "last_modified": datetime.now().isoformat()
     }
 
 
@@ -341,11 +483,40 @@ mock_repositories = [
 @app.get("/api/auth/oauth/providers")
 async def get_oauth_providers():
     """Get available OAuth providers / 获取可用的OAuth提供商"""
+    # Check which providers are configured
+    github_configured = bool(GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET)
+    gitlab_configured = bool(GITLAB_CLIENT_ID and GITLAB_CLIENT_SECRET)
+    bitbucket_configured = bool(BITBUCKET_API_TOKEN)  # Bitbucket uses API Token
+    
     return {
         "providers": [
-            {"name": "github", "display_name": "GitHub", "icon": "github", "connected": False},
-            {"name": "gitlab", "display_name": "GitLab", "icon": "gitlab", "connected": False},
-            {"name": "bitbucket", "display_name": "Bitbucket", "icon": "bitbucket", "connected": False},
+            {
+                "name": "github",
+                "display_name": "GitHub",
+                "icon": "github",
+                "connected": False,
+                "configured": github_configured,
+                "auth_type": "oauth",
+                "message": "Ready to connect" if github_configured else "OAuth not configured - set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET"
+            },
+            {
+                "name": "gitlab",
+                "display_name": "GitLab",
+                "icon": "gitlab",
+                "connected": False,
+                "configured": gitlab_configured,
+                "auth_type": "oauth",
+                "message": "Ready to connect" if gitlab_configured else "OAuth not configured - set GITLAB_CLIENT_ID and GITLAB_CLIENT_SECRET"
+            },
+            {
+                "name": "bitbucket",
+                "display_name": "Bitbucket",
+                "icon": "bitbucket",
+                "connected": bitbucket_configured,  # API Token = already connected
+                "configured": bitbucket_configured,
+                "auth_type": "api_token",
+                "message": "Connected via API Token" if bitbucket_configured else "API Token not configured - set BITBUCKET_API_TOKEN"
+            },
         ]
     }
 
@@ -354,11 +525,44 @@ async def get_oauth_providers():
 async def initiate_oauth(provider: str, return_url: str = "/"):
     """Initiate OAuth flow / 启动OAuth流程"""
     state = secrets.token_urlsafe(32)
-    # In production, this redirects to the OAuth provider
-    auth_url = f"https://{provider}.com/login/oauth/authorize?client_id=demo&state={state}&redirect_uri=http://localhost:5173/oauth/callback/{provider}"
+    # Use port 5173 for Vite dev server, 3000 for production
+    callback_url = f"http://localhost:5173/oauth/callback/{provider}"
+    
+    # Get OAuth configuration based on provider
+    if provider == "github":
+        if not GITHUB_CLIENT_ID:
+            raise HTTPException(
+                status_code=400,
+                detail="GitHub OAuth not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables."
+            )
+        auth_url = f"https://github.com/login/oauth/authorize?client_id={GITHUB_CLIENT_ID}&scope=repo,user:email&state={state}&redirect_uri={callback_url}"
+    elif provider == "gitlab":
+        if not GITLAB_CLIENT_ID:
+            raise HTTPException(
+                status_code=400,
+                detail="GitLab OAuth not configured. Please set GITLAB_CLIENT_ID and GITLAB_CLIENT_SECRET environment variables."
+            )
+        auth_url = f"https://gitlab.com/oauth/authorize?client_id={GITLAB_CLIENT_ID}&scope=read_user+read_repository+api&response_type=code&state={state}&redirect_uri={callback_url}"
+    elif provider == "bitbucket":
+        # Bitbucket uses API Token instead of OAuth (since Sep 2025)
+        if not BITBUCKET_API_TOKEN:
+            raise HTTPException(
+                status_code=400,
+                detail="Bitbucket API Token not configured. Please set BITBUCKET_API_TOKEN environment variable."
+            )
+        # No OAuth flow needed - API Token is used directly
+        return {
+            "message": "Bitbucket uses API Token authentication. Already connected.",
+            "connected": True,
+            "auth_type": "api_token"
+        }
+    else:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+    
     return {
         "authorization_url": auth_url,
-        "state": state
+        "state": state,
+        "callback_url": callback_url
     }
 
 

@@ -102,15 +102,16 @@ i18n
       formatSeparator: ",",
     },
 
-    // Language detection configuration / 语言检测配置
+    // Language detection configuration
     detection: {
-      // Detection order / 检测顺序
-      order: ["localStorage", "querystring", "navigator", "htmlTag"],
-      // Cache user language / 缓存用户语言
+      // Detection order - only check localStorage and querystring, NOT browser language
+      // This ensures English is default unless user explicitly changes it
+      order: ["localStorage", "querystring"],
+      // Cache user language
       caches: ["localStorage"],
-      // localStorage key / 本地存储键
+      // localStorage key
       lookupLocalStorage: LANGUAGE_STORAGE_KEY,
-      // Query string key / 查询字符串键
+      // Query string key
       lookupQuerystring: "lang",
     },
 
