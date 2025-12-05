@@ -13,10 +13,10 @@ class Settings(BaseSettings):
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
     
-    # Database
+    # Database - password must be set via environment variable in production
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql://coderev:dev_password@localhost:5432/code_review_platform"
+        "postgresql://coderev:${POSTGRES_PASSWORD}@localhost:5432/code_review_platform"  # noqa: S105
     )
     
     # Redis

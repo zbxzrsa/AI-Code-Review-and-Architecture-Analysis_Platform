@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import re
 import secrets
 import hashlib
@@ -174,7 +174,7 @@ async def login(request: LoginRequest, response: Response):
             email=request.email,
             name="Test User",
             role="user",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     )
 
@@ -230,7 +230,7 @@ async def register(request: RegisterRequest, response: Response):
             email=request.email,
             name=request.name,
             role="user",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
     )
 
@@ -286,7 +286,7 @@ async def get_current_user():
         email="user@example.com",
         name="Test User",
         role="user",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
 

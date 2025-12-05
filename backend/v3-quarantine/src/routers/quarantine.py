@@ -98,7 +98,7 @@ async def create_quarantine_record(
         "id": record.id,
         "experiment_id": experiment_id,
         "status": "quarantined",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -122,7 +122,7 @@ async def request_re_evaluation(
             detail="This record cannot be re-evaluated",
         )
 
-    record.re_evaluation_requested_at = datetime.utcnow()
+    record.re_evaluation_requested_at = datetime.now(timezone.utc)
     record.re_evaluation_requested_by = "admin"
     record.re_evaluation_notes = notes
 
@@ -135,7 +135,7 @@ async def request_re_evaluation(
     return {
         "record_id": record_id,
         "re_evaluation_status": "requested",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 

@@ -59,12 +59,12 @@ settings = Settings()
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     logger.info("Starting V3 Version Control AI Service (Quarantine)...")
-    logger.info(f"Mode: READ-ONLY (Archive)")
+    logger.info("Mode: READ-ONLY (Archive)")
     logger.info(f"Retention: {settings.retention_days} days")
     
     # Load quarantine data
-    app.state.quarantine_records = await load_quarantine_records()
-    app.state.failed_promotions = await load_failed_promotions()
+    app.state.quarantine_records = load_quarantine_records()
+    app.state.failed_promotions = load_failed_promotions()
     app.state.re_evaluation_queue = []
     
     logger.info(f"Loaded {len(app.state.quarantine_records)} quarantine records")
@@ -74,7 +74,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down V3 VC-AI Service...")
 
 
-async def load_quarantine_records() -> list:
+def load_quarantine_records() -> list:
     """Load quarantine records."""
     return [
         {
@@ -108,7 +108,7 @@ async def load_quarantine_records() -> list:
     ]
 
 
-async def load_failed_promotions() -> list:
+def load_failed_promotions() -> list:
     """Load failed promotion attempts."""
     return [
         {
@@ -201,7 +201,7 @@ async def health_check():
         "service": settings.service_name,
         "version": settings.version,
         "mode": "quarantine",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -251,11 +251,11 @@ async def get_quarantine_record(record_id: str, request: Request):
         if record["id"] == record_id:
             return {
                 "record": record,
-                "age_days": (datetime.utcnow() - datetime.fromisoformat(
+                "age_days": (datetime.now(timezone.utc) - datetime.fromisoformat(
                     record["quarantined_at"].replace("Z", "+00:00")
                 ).replace(tzinfo=None)).days,
                 "retention_remaining_days": settings.retention_days - (
-                    datetime.utcnow() - datetime.fromisoformat(
+                    datetime.now(timezone.utc) - datetime.fromisoformat(
                         record["quarantined_at"].replace("Z", "+00:00")
                     ).replace(tzinfo=None)
                 ).days,
@@ -310,7 +310,7 @@ async def request_reevaluation(
     re_eval_request = {
         "record_id": record_id,
         "experiment_id": record["experiment_id"],
-        "requested_at": datetime.utcnow().isoformat(),
+        "requested_at": datetime.now(timezone.utc).isoformat(),
         "requested_by": request.headers.get("X-User-Id", "admin"),
         "reason": reason,
         "status": "pending_approval",

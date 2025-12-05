@@ -14,7 +14,7 @@ async def health_status():
         "status": "healthy",
         "version": "v3-quarantine",
         "mode": "read-only",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "checks": {
             "database": "ok",
             "archive_integrity": "ok",

@@ -15,6 +15,14 @@ router = APIRouter(prefix="/api/auto-fix", tags=["auto-fix"])
 
 
 # =============================================================================
+# Constants
+# =============================================================================
+
+AUTH_FILE_PATH = "backend/shared/security/auth.py"
+FIX_NOT_FOUND = "Fix not found"
+
+
+# =============================================================================
 # Models
 # =============================================================================
 
@@ -121,7 +129,7 @@ _vulnerabilities: List[VulnerabilityInfo] = [
     VulnerabilityInfo(
         vuln_id="vuln-001",
         pattern_id="SEC-001",
-        file_path="backend/shared/security/auth.py",
+        file_path=AUTH_FILE_PATH,
         line_number=19,
         code_snippet='SECRET_KEY = os.getenv("JWT_SECRET_KEY", "default")',
         severity=Severity.CRITICAL,
@@ -136,10 +144,10 @@ _vulnerabilities: List[VulnerabilityInfo] = [
         pattern_id="REL-001",
         file_path="backend/shared/services/reliability.py",
         line_number=41,
-        code_snippet='expire = datetime.utcnow() + expires_delta',
+        code_snippet='expire = datetime.now(timezone.utc) + expires_delta',
         severity=Severity.MEDIUM,
         category="reliability",
-        description="Using deprecated datetime.utcnow()",
+        description="Using deprecated datetime.now(timezone.utc)",
         detected_at=datetime.now(timezone.utc),
         fix_suggestion='Use datetime.now(timezone.utc) instead',
         confidence=0.90,
@@ -147,7 +155,7 @@ _vulnerabilities: List[VulnerabilityInfo] = [
     VulnerabilityInfo(
         vuln_id="vuln-003",
         pattern_id="SEC-003",
-        file_path="backend/shared/security/auth.py",
+        file_path=AUTH_FILE_PATH,
         line_number=97,
         code_snippet='payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])',
         severity=Severity.HIGH,
@@ -163,7 +171,7 @@ _fixes: List[FixInfo] = [
     FixInfo(
         fix_id="fix-001",
         vuln_id="vuln-001",
-        file_path="backend/shared/security/auth.py",
+        file_path=AUTH_FILE_PATH,
         original_code='SECRET_KEY = os.getenv("JWT_SECRET_KEY", "default")',
         fixed_code='SECRET_KEY = os.getenv("JWT_SECRET_KEY")\nif not SECRET_KEY:\n    raise ValueError("JWT_SECRET_KEY must be set")',
         fix_description="Remove default fallback for secret key",
@@ -176,9 +184,9 @@ _fixes: List[FixInfo] = [
         fix_id="fix-002",
         vuln_id="vuln-002",
         file_path="backend/shared/services/reliability.py",
-        original_code='datetime.utcnow()',
+        original_code='datetime.now(timezone.utc)',
         fixed_code='datetime.now(timezone.utc)',
-        fix_description="Replace deprecated datetime.utcnow()",
+        fix_description="Replace deprecated datetime.now(timezone.utc)",
         status="applied",
         applied_at=datetime.now(timezone.utc),
         verified_at=None,
@@ -190,7 +198,7 @@ _pending_fixes: List[FixInfo] = [
     FixInfo(
         fix_id="fix-003",
         vuln_id="vuln-003",
-        file_path="backend/shared/security/auth.py",
+        file_path=AUTH_FILE_PATH,
         original_code='payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])',
         fixed_code='payload = jwt.decode(\n    token, SECRET_KEY, algorithms=[ALGORITHM],\n    options={"require": ["exp", "sub"], "verify_aud": True, "verify_iss": True}\n)',
         fix_description="Add JWT validation options",
@@ -310,7 +318,7 @@ async def approve_fix(fix_id: str):
             fix.status = "approved"
             return {"success": True, "message": "Fix approved"}
     
-    raise HTTPException(status_code=404, detail="Fix not found")
+    raise HTTPException(status_code=404, detail=FIX_NOT_FOUND)
 
 
 @router.post("/fixes/{fix_id}/reject")
@@ -323,7 +331,7 @@ async def reject_fix(fix_id: str):
             _pending_fixes.pop(i)
             return {"success": True, "message": "Fix rejected"}
     
-    raise HTTPException(status_code=404, detail="Fix not found")
+    raise HTTPException(status_code=404, detail=FIX_NOT_FOUND)
 
 
 @router.post("/fixes/{fix_id}/apply")
@@ -340,7 +348,7 @@ async def apply_fix(fix_id: str):
             _cycle_status.metrics.fixes_applied += 1
             return {"success": True, "message": "Fix applied"}
     
-    raise HTTPException(status_code=404, detail="Fix not found")
+    raise HTTPException(status_code=404, detail=FIX_NOT_FOUND)
 
 
 @router.post("/fixes/{fix_id}/rollback")
@@ -357,7 +365,7 @@ async def rollback_fix(fix_id: str):
             _cycle_status.metrics.fixes_rolled_back += 1
             return {"success": True, "message": "Fix rolled back"}
     
-    raise HTTPException(status_code=404, detail="Fix not found")
+    raise HTTPException(status_code=404, detail=FIX_NOT_FOUND)
 
 
 @router.get("/config", response_model=CycleConfig)

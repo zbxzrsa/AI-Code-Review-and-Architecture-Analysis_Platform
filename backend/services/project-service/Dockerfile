@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Builder - Install dependencies
 # -----------------------------------------------------------------------------
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 WORKDIR /app
 
@@ -32,10 +32,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     curl \
     && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
-# Create non-root user for security
-RUN useradd --create-home --shell /bin/bash --uid 1000 appuser
+    && apt-get clean \
+    && useradd --create-home --shell /bin/bash --uid 1000 appuser
 
 # Copy Python packages from builder stage
 COPY --from=builder /root/.local /home/appuser/.local

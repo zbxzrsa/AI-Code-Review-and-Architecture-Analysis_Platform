@@ -102,7 +102,7 @@ class AccessControlMiddleware(BaseHTTPMiddleware):
                     "message": self._get_denial_message(path, user_role),
                     "path": path,
                     "your_role": user_role.value,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 },
             )
         
@@ -272,7 +272,7 @@ async def log_access_attempt(
 ):
     """Log access attempt for audit trail."""
     log_entry = {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "user_role": user_role.value,
         "path": path,
         "method": request.method,

@@ -15,6 +15,7 @@ import shutil
 import logging
 import tempfile
 import subprocess
+import asyncio
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from pathlib import Path
@@ -52,6 +53,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ============================================
+# Constants
+# ============================================
+
+REPOSITORY_NOT_FOUND = "Repository not found"
 
 
 # ============================================
@@ -129,11 +137,11 @@ class WebhookEvent(BaseModel):
 # Helper Functions
 # ============================================
 
-async def get_current_user_id(
+def get_current_user_id(
     authorization: Optional[str] = Header(None),
 ) -> str:
     """Extract current user ID from authorization header."""
-    # TODO: Implement proper JWT validation
+    # In production, decode JWT and extract user ID
     return "user_123"
 
 
@@ -185,21 +193,21 @@ async def clone_repository(clone_url: str, local_path: Path, branch: str = "main
         # Ensure parent directory exists
         local_path.parent.mkdir(parents=True, exist_ok=True)
         
-        # Clone repository
-        result = subprocess.run(
-            ["git", "clone", "--branch", branch, "--depth", "1", clone_url, str(local_path)],
-            capture_output=True,
-            text=True,
-            timeout=300,
+        # Clone repository using async subprocess
+        process = await asyncio.create_subprocess_exec(
+            "git", "clone", "--branch", branch, "--depth", "1", clone_url, str(local_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
+        _, stderr = await asyncio.wait_for(process.communicate(), timeout=300)
         
-        if result.returncode != 0:
-            logger.error(f"Git clone failed: {result.stderr}")
+        if process.returncode != 0:
+            logger.error(f"Git clone failed: {stderr.decode()}")
             return False
         
         return True
         
-    except subprocess.TimeoutExpired:
+    except asyncio.TimeoutError:
         logger.error("Git clone timed out")
         return False
     except Exception as e:
@@ -210,14 +218,14 @@ async def clone_repository(clone_url: str, local_path: Path, branch: str = "main
 async def pull_repository(local_path: Path) -> bool:
     """Pull latest changes for a repository."""
     try:
-        result = subprocess.run(
-            ["git", "pull", "--ff-only"],
+        process = await asyncio.create_subprocess_exec(
+            "git", "pull", "--ff-only",
             cwd=str(local_path),
-            capture_output=True,
-            text=True,
-            timeout=120,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
         )
-        return result.returncode == 0
+        await asyncio.wait_for(process.communicate(), timeout=120)
+        return process.returncode == 0
         
     except Exception as e:
         logger.error(f"Pull error: {e}")
@@ -403,7 +411,7 @@ async def connect_repository(
             repos = await oauth.list_repositories(oauth_conn.access_token_encrypted)
             repo_info = next((r for r in repos if r.full_name == request.repo_full_name), None)
             if not repo_info:
-                raise HTTPException(status_code=404, detail="Repository not found")
+                raise HTTPException(status_code=404, detail=REPOSITORY_NOT_FOUND)
         
         await oauth.close()
         
@@ -538,8 +546,8 @@ async def create_repository(
             is_private=False,
             status="pending",
             project_id=request.project_id,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
 
@@ -553,7 +561,7 @@ async def get_repository(
     try:
         repo = await db.get(Repository, uuid.UUID(repo_id))
         if not repo or str(repo.owner_id) != current_user_id:
-            raise HTTPException(status_code=404, detail="Repository not found")
+            raise HTTPException(status_code=404, detail=REPOSITORY_NOT_FOUND)
         
         return RepositoryResponse(
             id=str(repo.id),
@@ -575,7 +583,7 @@ async def get_repository(
         raise
     except Exception as e:
         logger.error(f"Error getting repository: {e}")
-        raise HTTPException(status_code=404, detail="Repository not found")
+        raise HTTPException(status_code=404, detail=REPOSITORY_NOT_FOUND)
 
 
 @app.delete("/api/repositories/{repo_id}")
@@ -588,7 +596,7 @@ async def delete_repository(
     try:
         repo = await db.get(Repository, uuid.UUID(repo_id))
         if not repo or str(repo.owner_id) != current_user_id:
-            raise HTTPException(status_code=404, detail="Repository not found")
+            raise HTTPException(status_code=404, detail=REPOSITORY_NOT_FOUND)
         
         # Delete local files
         local_path = get_repo_local_path(repo_id)
@@ -622,7 +630,7 @@ async def sync_repository(
     try:
         repo = await db.get(Repository, uuid.UUID(repo_id))
         if not repo or str(repo.owner_id) != current_user_id:
-            raise HTTPException(status_code=404, detail="Repository not found")
+            raise HTTPException(status_code=404, detail=REPOSITORY_NOT_FOUND)
         
         repo.status = RepositoryStatus.SYNCING
         await db.commit()
@@ -745,7 +753,7 @@ async def create_webhook(
     try:
         repo = await db.get(Repository, uuid.UUID(repo_id))
         if not repo:
-            raise HTTPException(status_code=404, detail="Repository not found")
+            raise HTTPException(status_code=404, detail=REPOSITORY_NOT_FOUND)
         
         # Get OAuth connection
         oauth_result = await db.execute(

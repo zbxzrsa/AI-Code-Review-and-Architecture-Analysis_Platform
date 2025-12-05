@@ -427,10 +427,12 @@ class TransferLearning:
             return
         
         elif self.freeze_strategy == 'all':
-            for param in self.target_model.encoder.parameters():
+            # Freeze entire model including head
+            for param in self.target_model.parameters():
                 param.requires_grad = False
         
         elif self.freeze_strategy == 'encoder':
+            # Freeze only encoder, keep head trainable
             for param in self.target_model.encoder.parameters():
                 param.requires_grad = False
         
@@ -472,15 +474,15 @@ class TransferLearning:
             self.create_target_model()
         
         device = next(self.target_model.parameters()).device
-        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
         
         # Optimizer with different LRs for encoder and head
         encoder_params = list(self.target_model.encoder.parameters())
         head_params = list(self.target_model.head.parameters())
         
         optimizer = optim.AdamW([
-            {'params': encoder_params, 'lr': lr * 0.1},
-            {'params': head_params, 'lr': lr}
+            {'params': encoder_params, 'lr': lr * 0.1, 'weight_decay': 1e-4},
+            {'params': head_params, 'lr': lr, 'weight_decay': 1e-4}
         ])
         
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs)
@@ -543,7 +545,7 @@ class TransferLearning:
         device = next(self.target_model.parameters()).device
         self.target_model.eval()
         
-        loader = DataLoader(dataset, batch_size=32, shuffle=False)
+        loader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=0)
         correct = 0
         total = 0
         
@@ -581,7 +583,7 @@ class TransferLearning:
         device = next(self.target_model.parameters()).device
         self.target_model.eval()
         
-        loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+        loader = DataLoader(dataset, batch_size=batch_size, shuffle=False, num_workers=0)
         
         all_features = []
         all_labels = []

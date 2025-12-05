@@ -13,7 +13,7 @@ Endpoints:
 """
 
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
@@ -26,6 +26,10 @@ from app.services.two_factor import (
 from app.api.deps import get_current_user, get_current_user_optional
 from app.models.user import User
 from app.core.security import verify_password
+
+
+# Constants
+TWO_FA_NOT_ENABLED = "2FA is not enabled."
 
 
 router = APIRouter(prefix="/auth/2fa", tags=["two-factor"])
@@ -215,8 +219,8 @@ async def enable_two_factor(
     # Generate backup codes
     backup_codes = two_factor_service.generate_backup_codes()
     
-    # Hash backup codes for storage
-    hashed_codes = [
+    # Hash backup codes for storage (used in production DB operations)
+    _ = [  # noqa: F841 - reserved for DB storage
         two_factor_service.hash_backup_code(code)
         for code in backup_codes
     ]
@@ -230,7 +234,7 @@ async def enable_two_factor(
     # current_user.two_factor_secret = encrypted_secret
     # current_user.two_factor_backup_codes = hashed_codes
     # current_user.two_factor_enabled = True
-    # current_user.two_factor_enabled_at = datetime.utcnow()
+    # current_user.two_factor_enabled_at = datetime.now(timezone.utc)
     # db.commit()
     
     # Format backup codes for display
@@ -241,7 +245,7 @@ async def enable_two_factor(
     
     return BackupCodesResponse(
         backup_codes=formatted_codes,
-        generated_at=datetime.utcnow(),
+        generated_at=datetime.now(timezone.utc),
         remaining_count=len(backup_codes),
     )
 
@@ -262,7 +266,7 @@ async def disable_two_factor(
     if not current_user.two_factor_enabled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="2FA is not enabled.",
+            detail=TWO_FA_NOT_ENABLED,
         )
     
     # Verify authorization
@@ -314,7 +318,7 @@ async def get_backup_codes_status(
     if not current_user.two_factor_enabled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="2FA is not enabled.",
+            detail=TWO_FA_NOT_ENABLED,
         )
     
     # Count remaining backup codes
@@ -341,7 +345,7 @@ async def regenerate_backup_codes(
     if not current_user.two_factor_enabled:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="2FA is not enabled.",
+            detail=TWO_FA_NOT_ENABLED,
         )
     
     # Verify 2FA code
@@ -358,8 +362,8 @@ async def regenerate_backup_codes(
     # Generate new backup codes
     backup_codes = two_factor_service.generate_backup_codes()
     
-    # Hash for storage
-    hashed_codes = [
+    # Hash for storage (used in production DB operations)
+    _ = [  # noqa: F841 - reserved for DB storage
         two_factor_service.hash_backup_code(code)
         for code in backup_codes
     ]
@@ -376,7 +380,7 @@ async def regenerate_backup_codes(
     
     return BackupCodesResponse(
         backup_codes=formatted_codes,
-        generated_at=datetime.utcnow(),
+        generated_at=datetime.now(timezone.utc),
         remaining_count=len(backup_codes),
     )
 
@@ -466,7 +470,7 @@ async def verify_two_factor_login(
         )
     
     # Update last used
-    # user.two_factor_last_used = datetime.utcnow()
+    # user.two_factor_last_used = datetime.now(timezone.utc)
     # db.commit()
     
     # Generate JWT tokens

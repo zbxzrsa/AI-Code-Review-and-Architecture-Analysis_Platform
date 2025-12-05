@@ -19,6 +19,14 @@ router = APIRouter(prefix="/api/evolution", tags=["evolution"])
 
 
 # =============================================================================
+# Constants
+# =============================================================================
+
+TECHNOLOGY_NOT_FOUND = "Technology not found"
+EXPERIMENT_NOT_FOUND = "Experiment not found"
+
+
+# =============================================================================
 # Models
 # =============================================================================
 
@@ -238,7 +246,7 @@ async def list_technologies(
 async def get_technology(tech_id: str):
     """Get a specific technology by ID."""
     if tech_id not in _technologies:
-        raise HTTPException(status_code=404, detail="Technology not found")
+        raise HTTPException(status_code=404, detail=TECHNOLOGY_NOT_FOUND)
     return _technologies[tech_id]
 
 
@@ -288,7 +296,7 @@ async def create_experiment(request: CreateExperimentRequest):
 async def start_experiment(experiment_id: str):
     """Start an experiment."""
     if experiment_id not in _experiments:
-        raise HTTPException(status_code=404, detail="Experiment not found")
+        raise HTTPException(status_code=404, detail=EXPERIMENT_NOT_FOUND)
     
     _experiments[experiment_id].status = ExperimentStatus.RUNNING
     _experiments[experiment_id].started_at = datetime.now(timezone.utc)
@@ -300,7 +308,7 @@ async def start_experiment(experiment_id: str):
 async def stop_experiment(experiment_id: str):
     """Stop an experiment."""
     if experiment_id not in _experiments:
-        raise HTTPException(status_code=404, detail="Experiment not found")
+        raise HTTPException(status_code=404, detail=EXPERIMENT_NOT_FOUND)
     
     _experiments[experiment_id].status = ExperimentStatus.COMPLETED
     
@@ -311,7 +319,7 @@ async def stop_experiment(experiment_id: str):
 async def evaluate_experiment(experiment_id: str):
     """Evaluate an experiment and get recommendation."""
     if experiment_id not in _experiments:
-        raise HTTPException(status_code=404, detail="Experiment not found")
+        raise HTTPException(status_code=404, detail=EXPERIMENT_NOT_FOUND)
     
     exp = _experiments[experiment_id]
     exp.status = ExperimentStatus.EVALUATING
@@ -344,7 +352,7 @@ async def promote_technology(request: PromoteTechnologyRequest):
     import uuid
     
     if request.tech_id not in _technologies:
-        raise HTTPException(status_code=404, detail="Technology not found")
+        raise HTTPException(status_code=404, detail=TECHNOLOGY_NOT_FOUND)
     
     tech = _technologies[request.tech_id]
     if tech.version != Version.V1:
@@ -381,7 +389,7 @@ async def degrade_technology(request: DegradeTechnologyRequest):
     import uuid
     
     if request.tech_id not in _technologies:
-        raise HTTPException(status_code=404, detail="Technology not found")
+        raise HTTPException(status_code=404, detail=TECHNOLOGY_NOT_FOUND)
     
     tech = _technologies[request.tech_id]
     from_version = tech.version
@@ -415,7 +423,7 @@ async def degrade_technology(request: DegradeTechnologyRequest):
 async def request_re_evaluation(tech_id: str):
     """Request re-evaluation of a quarantined technology."""
     if tech_id not in _technologies:
-        raise HTTPException(status_code=404, detail="Technology not found")
+        raise HTTPException(status_code=404, detail=TECHNOLOGY_NOT_FOUND)
     
     tech = _technologies[tech_id]
     if tech.version != Version.V3:

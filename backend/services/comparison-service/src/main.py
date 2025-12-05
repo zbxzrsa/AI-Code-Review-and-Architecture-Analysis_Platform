@@ -70,7 +70,7 @@ async def list_comparisons(page: int = 1, limit: int = 20):
                 "experiment_b": "exp_2",
                 "winner": "exp_1",
                 "confidence": 0.95,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }
         ],
         "total": 1,
@@ -84,7 +84,7 @@ async def create_comparison(request: ComparisonRequest):
         id="comp_new",
         experiment_a=request.experiment_a,
         experiment_b=request.experiment_b,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         results={
             "accuracy": {
                 "a": 0.92,
@@ -120,7 +120,7 @@ async def get_comparison(comparison_id: str):
         id=comparison_id,
         experiment_a="exp_1",
         experiment_b="exp_2",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         results={
             "accuracy": {"a": 0.92, "b": 0.89, "p_value": 0.023},
             "latency_p95": {"a": 2500, "b": 2800, "p_value": 0.041},

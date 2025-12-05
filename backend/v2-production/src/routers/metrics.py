@@ -11,7 +11,7 @@ router = APIRouter(prefix="/metrics")
 async def performance_metrics():
     """Get performance metrics."""
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "period": "last_24h",
         "metrics": {
             "total_requests": 45230,
@@ -30,7 +30,7 @@ async def performance_metrics():
 async def slo_compliance():
     """Get SLO compliance metrics."""
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "period": "last_30d",
         "slo_targets": {
             "response_time_p95_ms": 3000,
@@ -54,7 +54,7 @@ async def slo_compliance():
 async def model_metrics():
     """Get AI model performance metrics."""
     return {
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "models": {
             "gpt-4": {
                 "requests": 22500,

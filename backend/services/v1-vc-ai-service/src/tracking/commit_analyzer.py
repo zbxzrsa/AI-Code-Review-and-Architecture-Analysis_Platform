@@ -245,7 +245,7 @@ class CommitAnalyzer:
         import time
         start_time = time.time()
         
-        timestamp = timestamp or datetime.utcnow()
+        timestamp = timestamp or datetime.now(timezone.utc)
         
         # Parse diff to extract file changes
         file_changes = self._parse_diff(diff)
@@ -453,7 +453,7 @@ class CommitAnalyzer:
         self,
         file_changes: List[FileChange],
         modules: List[str],
-        functions: List[str],
+        functions: List[str],  # noqa: ARG002 - Reserved for function-level analysis
     ) -> Tuple[ImpactLevel, float]:
         """Predict impact level using rules"""
         total_changes = sum(fc.additions + fc.deletions for fc in file_changes)
@@ -500,7 +500,7 @@ class CommitAnalyzer:
         else:
             return ImpactLevel.LOW, 0.70
     
-    async def _model_classify(
+    def _model_classify(
         self,
         message: str,
         diff: str,
@@ -530,7 +530,7 @@ class CommitAnalyzer:
         
         return change_type, confidence, embedding
     
-    async def _model_predict_impact(
+    def _model_predict_impact(
         self,
         message: str,
         diff: str,

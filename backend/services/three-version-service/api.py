@@ -38,6 +38,16 @@ from metrics import (
 
 logger = logging.getLogger(__name__)
 
+
+# =============================================================================
+# Constants
+# =============================================================================
+
+ADDITIONAL_CONTEXT = "Additional context"
+EVAL_PATTERN = "eval("
+EXCEPT_PATTERN = "except:"
+
+
 # =============================================================================
 # Request/Response Models
 # =============================================================================
@@ -191,7 +201,7 @@ async def start_evolution_cycle():
     return {
         "success": True,
         "message": "Evolution cycle started",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -204,7 +214,7 @@ async def stop_evolution_cycle():
     return {
         "success": True,
         "message": "Evolution cycle stopped",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -240,7 +250,7 @@ async def report_v1_error(request: ErrorReportRequest):
         "success": True,
         "error_id": result.get("error_id"),
         "message": "Error reported, V2 will analyze and generate fix",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -365,7 +375,7 @@ async def trigger_promotion(request: PromotionRequest):
         "tech_id": request.tech_id,
         "status": result.get("status"),
         "message": "Technology queued for promotion (V1 → V2)",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -388,7 +398,7 @@ async def trigger_degradation(request: DegradationRequest):
         "tech_id": request.tech_id,
         "status": result.get("status"),
         "message": "Technology queued for degradation (V2 → V3)",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -411,7 +421,7 @@ async def request_reevaluation(request: ReEvaluationRequest):
         "tech_id": request.tech_id,
         "status": result.get("status"),
         "message": "Re-evaluation request submitted (V3 → V1)",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -568,14 +578,14 @@ async def _handle_analyze(version: str, request: AnalyzeRequest) -> Dict[str, An
     
     # Security checks
     if "security" in request.review_types:
-        if "eval(" in request.code or "exec(" in request.code:
+        if EVAL_PATTERN in request.code or "exec(" in request.code:
             issues.append({
                 "id": f"sec-{code_hash}-1",
                 "type": "security",
                 "severity": "critical",
                 "title": "Code Injection Vulnerability",
                 "description": "Use of eval() or exec() can lead to code injection attacks.",
-                "line": request.code.find("eval(") // 50 + 1 if "eval(" in request.code else 1,
+                "line": request.code.find(EVAL_PATTERN) // 50 + 1 if EVAL_PATTERN in request.code else 1,
                 "suggestion": "Avoid eval/exec. Use safe alternatives like ast.literal_eval() for parsing.",
                 "fixAvailable": True,
             })
@@ -644,14 +654,14 @@ async def _handle_analyze(version: str, request: AnalyzeRequest) -> Dict[str, An
     
     # Bug checks
     if "bug" in request.review_types:
-        if "except:" in request.code:
+        if EXCEPT_PATTERN in request.code:
             issues.append({
                 "id": f"bug-{code_hash}-1",
                 "type": "bug",
                 "severity": "medium",
                 "title": "Bare Except Clause",
                 "description": "Bare except catches all exceptions including KeyboardInterrupt.",
-                "line": request.code.find("except:") // 50 + 1,
+                "line": request.code.find(EXCEPT_PATTERN) // 50 + 1,
                 "suggestion": "Catch specific exceptions: except ValueError as e:",
                 "fixAvailable": True,
             })
@@ -764,7 +774,7 @@ async def get_technologies():
             "errorRate": 0.02,
             "latency": 450,
             "samples": 15000,
-            "lastUpdated": datetime.utcnow().isoformat(),
+            "lastUpdated": datetime.now(timezone.utc).isoformat(),
         },
         {
             "id": "tech-claude3-v1",
@@ -775,7 +785,7 @@ async def get_technologies():
             "errorRate": 0.04,
             "latency": 380,
             "samples": 2500,
-            "lastUpdated": datetime.utcnow().isoformat(),
+            "lastUpdated": datetime.now(timezone.utc).isoformat(),
         },
         {
             "id": "tech-llama3-v1",
@@ -786,7 +796,7 @@ async def get_technologies():
             "errorRate": 0.05,
             "latency": 320,
             "samples": 1800,
-            "lastUpdated": datetime.utcnow().isoformat(),
+            "lastUpdated": datetime.now(timezone.utc).isoformat(),
         },
         {
             "id": "tech-gpt35-v3",
@@ -797,7 +807,7 @@ async def get_technologies():
             "errorRate": 0.08,
             "latency": 280,
             "samples": 50000,
-            "lastUpdated": datetime.utcnow().isoformat(),
+            "lastUpdated": datetime.now(timezone.utc).isoformat(),
         },
         {
             "id": "tech-codellama-v3",
@@ -808,7 +818,7 @@ async def get_technologies():
             "errorRate": 0.12,
             "latency": 250,
             "samples": 8000,
-            "lastUpdated": datetime.utcnow().isoformat(),
+            "lastUpdated": datetime.now(timezone.utc).isoformat(),
         },
     ]
 
@@ -851,7 +861,7 @@ async def health_check():
         "status": "healthy",
         "service": "three-version-evolution",
         "cycle_running": cycle._running,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 

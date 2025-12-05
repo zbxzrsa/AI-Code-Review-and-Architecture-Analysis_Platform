@@ -188,7 +188,7 @@ class LifecycleCoordinator:
                     f"Auto-remediation due to {alert.metric_name} alert",
                 )
     
-    async def _handle_scale_up(self, alert):
+    def _handle_scale_up(self, alert):
         """Handle scale-up remediation."""
         logger.info(f"Executing scale-up remediation for {alert.metric_name}")
         
@@ -210,7 +210,7 @@ class LifecycleCoordinator:
             },
         )
     
-    async def _on_promotion_phase_complete(self, request, phase):
+    def _on_promotion_phase_complete(self, request, phase):
         """Handle promotion phase completion."""
         logger.info(f"Promotion {request.request_id} completed phase {phase.value}")
     
@@ -254,7 +254,7 @@ class LifecycleCoordinator:
         self._experiments[proposal.experiment_id] = {
             "proposal": proposal,
             "status": "proposed",
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }
         
         await self._emit_event(
@@ -284,7 +284,7 @@ class LifecycleCoordinator:
             return False
         
         self._experiments[experiment_id]["status"] = "running"
-        self._experiments[experiment_id]["started_at"] = datetime.utcnow()
+        self._experiments[experiment_id]["started_at"] = datetime.now(timezone.utc)
         self._experiments[experiment_id]["approver"] = approver
         
         await self._emit_event(
@@ -376,11 +376,11 @@ class LifecycleCoordinator:
     
     def get_system_status(self) -> Dict[str, Any]:
         """Get overall system status."""
-        health = self.health.get_current_health()
+        _ = self.health.get_current_health()  # noqa: F841 - health reserved for future
         slo = self.health.calculate_slo_compliance()
         
         return {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "versions": {
                 "v1_experiments": len([
                     e for e in self._experiments.values()

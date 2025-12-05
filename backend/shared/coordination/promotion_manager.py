@@ -126,7 +126,7 @@ class PromotionManager:
             logger.error(f"Promotion request {request_id} not found")
             return False
         
-        request.approved_at = datetime.utcnow()
+        request.approved_at = datetime.now(timezone.utc)
         request.approved_by = approver
         
         # Emit event
@@ -140,8 +140,8 @@ class PromotionManager:
             },
         )
         
-        # Start canary deployment
-        asyncio.create_task(self._run_canary_deployment(request))
+        # Start canary deployment - save task to prevent GC
+        request.deployment_task = asyncio.create_task(self._run_canary_deployment(request))
         
         logger.info(f"Promotion {request_id} approved by {approver}")
         return True
@@ -249,13 +249,13 @@ class PromotionManager:
         )
         
         # Monitor for duration
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         end_time = start_time + timedelta(hours=config.duration_hours)
         
         # For demo, use shorter intervals
         check_interval = 60  # 1 minute
         
-        while datetime.utcnow() < end_time:
+        while datetime.now(timezone.utc) < end_time:
             # Check health metrics
             health_ok = await self._check_phase_health(request, config)
             
@@ -341,7 +341,7 @@ class PromotionManager:
             {
                 "request_id": request.request_id,
                 "experiment_id": request.experiment_id,
-                "completed_at": datetime.utcnow().isoformat(),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
             },
         )
         

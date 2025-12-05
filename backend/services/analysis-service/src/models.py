@@ -54,7 +54,7 @@ class AnalysisSession(Base):
     project_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     version = Column(String(10), nullable=False)  # v1, v2, v3
     status = Column(Enum(SessionStatus), default=SessionStatus.CREATED, nullable=False)
-    started_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    started_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     finished_at = Column(DateTime, nullable=True)
     error_message = Column(Text, nullable=True)
     metadata = Column(JSON, default={}, nullable=False)  # Custom metadata
@@ -87,7 +87,7 @@ class AnalysisTask(Base):
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -114,7 +114,7 @@ class Artifact(Base):
     sha256 = Column(String(64), nullable=False)  # SHA256 checksum
     size_bytes = Column(Integer, nullable=False)
     metadata = Column(JSON, default={}, nullable=False)  # Custom metadata
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -139,7 +139,7 @@ class AnalysisCache(Base):
     code_hash = Column(String(64), nullable=False, unique=True)  # SHA256 of code
     language = Column(String(50), nullable=False)
     result = Column(JSON, nullable=False)  # Cached analysis result
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     expires_at = Column(DateTime, nullable=False)
 
     def to_dict(self):

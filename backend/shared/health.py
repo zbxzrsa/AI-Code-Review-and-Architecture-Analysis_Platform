@@ -47,7 +47,7 @@ class ComponentHealth(BaseModel):
     status: HealthStatus
     latency_ms: Optional[float] = None
     message: Optional[str] = None
-    last_check: datetime = Field(default_factory=datetime.utcnow)
+    last_check: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class HealthResponse(BaseModel):
@@ -55,7 +55,7 @@ class HealthResponse(BaseModel):
     status: HealthStatus
     service: str
     version: str = "1.0.0"
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     uptime_seconds: float = 0
     components: List[ComponentHealth] = []
     details: Optional[Dict[str, Any]] = None
@@ -65,7 +65,7 @@ class LivenessResponse(BaseModel):
     """Simple liveness response"""
     status: str = "alive"
     service: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class ReadinessResponse(BaseModel):
@@ -74,7 +74,7 @@ class ReadinessResponse(BaseModel):
     service: str
     ready: bool
     checks: Dict[str, bool] = {}
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # =============================================================================
@@ -91,7 +91,7 @@ class HealthCheckRegistry:
     def __init__(self, service_name: str, version: str = "1.0.0"):
         self.service_name = service_name
         self.version = version
-        self.start_time = datetime.utcnow()
+        self.start_time = datetime.now(timezone.utc)
         self._checks: Dict[str, Callable[[], Awaitable[ComponentHealth]]] = {}
         self._is_shutting_down = False
         self._is_ready = False
@@ -122,7 +122,7 @@ class HealthCheckRegistry:
     @property
     def uptime_seconds(self) -> float:
         """Get service uptime in seconds"""
-        return (datetime.utcnow() - self.start_time).total_seconds()
+        return (datetime.now(timezone.utc) - self.start_time).total_seconds()
     
     async def check_component(self, name: str) -> ComponentHealth:
         """Run a single component check"""
@@ -134,10 +134,10 @@ class HealthCheckRegistry:
                 message="Check not found"
             )
         
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         try:
             result = await asyncio.wait_for(check_func(), timeout=5.0)
-            result.latency_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+            result.latency_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             return result
         except asyncio.TimeoutError:
             return ComponentHealth(
@@ -150,7 +150,7 @@ class HealthCheckRegistry:
             return ComponentHealth(
                 name=name,
                 status=HealthStatus.UNHEALTHY,
-                latency_ms=(datetime.utcnow() - start_time).total_seconds() * 1000,
+                latency_ms=(datetime.now(timezone.utc) - start_time).total_seconds() * 1000,
                 message=str(e)
             )
     

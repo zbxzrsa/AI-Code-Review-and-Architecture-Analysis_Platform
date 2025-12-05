@@ -20,7 +20,7 @@ import hashlib
 import re
 import json
 import os
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from fastapi import FastAPI, HTTPException, status, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -164,7 +164,7 @@ def create_user(email: str, password: str, name: str, role: str = "user") -> Dic
         "name": name,
         "role": role,
         "avatar": None,
-        "created_at": datetime.utcnow()
+        "created_at": datetime.now(timezone.utc)
     }
     users_db[email] = user
     save_users(users_db)  # Persist to file

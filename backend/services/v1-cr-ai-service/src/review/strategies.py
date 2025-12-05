@@ -128,7 +128,7 @@ class FewShotStrategy(ReviewStrategy):
         context: Optional[str] = None,
     ) -> List[Any]:
         """Execute few-shot review"""
-        examples = self.select_examples(code)
+        _ = self.select_examples(code)  # noqa: F841 - examples reserved for future
         # Would use model with examples in context
         return []
 

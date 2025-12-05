@@ -247,7 +247,7 @@ class MixtureOfExperts(nn.Module):
             output: (batch, seq_len, hidden_size)
             router_logits: Optional routing probabilities
         """
-        batch_size, seq_len, hidden_size = hidden_states.shape
+        _, _, hidden_size = hidden_states.shape  # batch_size, seq_len unused
         
         # Get routing decisions
         router_probs, expert_indices, expert_weights = self.router(hidden_states)

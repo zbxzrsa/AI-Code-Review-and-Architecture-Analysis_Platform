@@ -199,7 +199,7 @@ return api_key in [k.strip() for k in valid_keys if k.strip()]
     VulnerabilityPattern(
         pattern_id="REL-001",
         name="Deprecated datetime.utcnow",
-        description="Using deprecated datetime.utcnow() instead of timezone-aware datetime",
+        description="Using deprecated datetime.now(timezone.utc) instead of timezone-aware datetime",
         regex_pattern=r'datetime\.utcnow\(\)',
         category=BugCategory.RELIABILITY,
         severity=Severity.MEDIUM,
@@ -392,7 +392,7 @@ class BugFixerEngine:
         
         return files
     
-    async def _scan_file(
+    def _scan_file(
         self,
         file_path: Path,
         categories: Optional[List[BugCategory]],
@@ -405,7 +405,7 @@ class BugFixerEngine:
             content = file_path.read_text(encoding="utf-8")
             lines = content.splitlines()
         except Exception as e:
-            logger.warning(f"Could not read {file_path}: {e}")
+            logger.warning(f"Could not read {file_path}: {e}")  # noqa: LOG001
             return []
         
         # Get applicable patterns
@@ -561,8 +561,8 @@ class BugFixerEngine:
         
         # Simple replacements for common patterns
         if pattern.pattern_id == "REL-001":
-            # datetime.utcnow() -> datetime.now(timezone.utc)
-            return original_code.replace("datetime.utcnow()", "datetime.now(timezone.utc)")
+            # datetime.now(timezone.utc) -> datetime.now(timezone.utc)
+            return original_code.replace("datetime.now(timezone.utc)", "datetime.now(timezone.utc)")
         
         elif pattern.pattern_id == "REL-002":
             # asyncio.get_event_loop() -> asyncio.get_running_loop()
@@ -731,7 +731,7 @@ class BugFixerEngine:
             logger.error(f"Verification failed for fix {fix_id}: {e}")
             return FixResult(fix_id=fix_id, success=False, error=str(e))
     
-    async def rollback_fix(self, fix_id: str, reason: str) -> bool:
+    def rollback_fix(self, fix_id: str, reason: str) -> bool:
         """Rollback an applied fix."""
         fix = self._fixes.get(fix_id)
         if not fix or fix.status != FixStatus.APPLIED:
@@ -873,7 +873,7 @@ class AutoFixCycle:
             try:
                 await self._cycle_task
             except asyncio.CancelledError:
-                pass
+                raise  # Re-raise CancelledError after cleanup
         logger.info("Automated bug fix cycle stopped")
     
     async def _run_cycle(self):

@@ -136,8 +136,8 @@ class ReviewResponse(BaseModel):
     status: str = Field(default="completed", description="Review status")
     
     # Timing
-    requested_at: datetime = Field(default_factory=datetime.utcnow)
-    completed_at: datetime = Field(default_factory=datetime.utcnow)
+    requested_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     total_time_ms: int = Field(default=0, ge=0)
     
     # Models used

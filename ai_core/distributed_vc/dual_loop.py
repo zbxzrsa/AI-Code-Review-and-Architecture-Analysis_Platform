@@ -232,9 +232,7 @@ class ProjectLoop:
         # 4. Validate configuration
         
         # Success based on risk and test coverage
-        success_probability = 0.95 - (0.1 if update.risk_level == "high" else 0)
-        success_probability += update.test_coverage * 0.1
-        
+        # High risk updates require good test coverage
         return update.risk_level != "high" or update.test_coverage > 0.8
     
     def _increment_version(self, version: str, minor: bool = False) -> str:
@@ -535,8 +533,8 @@ class DualLoopUpdater:
         self.project_loop.on_iteration_complete = self._on_project_iteration
         self.ai_loop.on_performance_change = self._on_ai_performance_change
     
-    async def _on_project_iteration(self, result: IterationResult) -> None:
-        """Handle project iteration completion"""
+    def _on_project_iteration(self, result: IterationResult) -> None:
+        """Handle project iteration completion."""
         # Generate AI improvement candidates based on project changes
         if result.is_successful():
             for improvement in result.improvements:
@@ -552,11 +550,11 @@ class DualLoopUpdater:
                 )
                 self.ai_loop.add_improvement(ai_update)
     
-    async def _on_ai_performance_change(
+    def _on_ai_performance_change(
         self,
         performance: Dict[str, float]
     ) -> None:
-        """Handle AI performance changes"""
+        """Handle AI performance changes."""
         # Create project updates based on AI improvements
         if performance.get("accuracy", 0) > 0.9:
             project_update = UpdateCandidate(
@@ -570,7 +568,7 @@ class DualLoopUpdater:
             )
             self.project_loop.add_update(project_update)
     
-    async def start(self) -> None:
+    def start(self) -> None:
         """Start the dual-loop system"""
         logger.info("Starting Dual-Loop Update System...")
         
@@ -581,7 +579,7 @@ class DualLoopUpdater:
         
         logger.info(f"Dual-loop started, iteration cycle: {self.iteration_cycle}")
     
-    async def stop(self) -> None:
+    def stop(self) -> None:
         """Stop the dual-loop system"""
         logger.info("Stopping Dual-Loop Update System...")
         

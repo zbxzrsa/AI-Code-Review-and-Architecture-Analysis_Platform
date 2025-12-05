@@ -87,7 +87,7 @@ async def list_experiments(status: Optional[str] = None, page: int = 1, limit: i
                 status=ExperimentStatus.COMPLETED,
                 config={"model": "gpt-4-turbo", "temperature": 0.7},
                 dataset_id="dataset_1",
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 metrics={"accuracy": 0.92, "latency_p95": 2500, "error_rate": 0.01},
             )
         ],
@@ -104,7 +104,7 @@ async def create_experiment(experiment: ExperimentCreate):
         status=ExperimentStatus.PENDING,
         config=experiment.config,
         dataset_id=experiment.dataset_id,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
 
@@ -117,7 +117,7 @@ async def get_experiment(experiment_id: str):
         status=ExperimentStatus.COMPLETED,
         config={"model": "gpt-4", "temperature": 0.7},
         dataset_id="dataset_1",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         metrics={"accuracy": 0.91, "latency_p95": 2800},
     )
 
@@ -201,7 +201,7 @@ async def get_current_version():
     return {
         "version": "v2",
         "model": "gpt-4",
-        "deployed_at": datetime.utcnow().isoformat(),
+        "deployed_at": datetime.now(timezone.utc).isoformat(),
         "metrics": {"accuracy": 0.94, "latency_p95": 2200},
     }
 

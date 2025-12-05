@@ -146,7 +146,7 @@ class CodeCommitTokenizer:
         )
         
         # Pattern for diff lines
-        self.diff_line_pattern = re.compile(r'^([+-]|\s)', re.MULTILINE)
+        self.diff_line_pattern = re.compile(r'^([+\-\s])', re.MULTILINE)
         
         # Pattern for file paths
         self.file_path_pattern = re.compile(r'[a-zA-Z_][a-zA-Z0-9_/.-]*\.[a-zA-Z]+')

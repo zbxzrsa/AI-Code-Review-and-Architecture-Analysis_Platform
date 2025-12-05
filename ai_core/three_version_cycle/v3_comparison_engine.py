@@ -185,7 +185,7 @@ class V3ComparisonEngine:
         
         return profile
     
-    async def _compare_with_v2(self, metrics: Dict[str, float]) -> Dict[str, float]:
+    def _compare_with_v2(self, metrics: Dict[str, float]) -> Dict[str, float]:
         """Compare metrics with V2 reference."""
         comparison = {}
         
@@ -203,7 +203,7 @@ class V3ComparisonEngine:
         
         return comparison
     
-    async def _make_exclusion_decision(self, profile: TechnologyProfile):
+    def _make_exclusion_decision(self, profile: TechnologyProfile):
         """Make exclusion decision based on metrics and reason."""
         reason = profile.exclusion_reason
         
@@ -329,15 +329,15 @@ class V3ComparisonEngine:
         
         return result
     
-    async def _find_similar_quarantined(
+    def _find_similar_quarantined(
         self,
-        tech_id: str,
+        tech_id: str,  # noqa: ARG002 - reserved for similarity matching
     ) -> List[TechnologyProfile]:
         """Find similar quarantined technologies for comparison."""
         # In production, would use embedding similarity
         return list(self._profiles.values())[:3]
     
-    async def _compare_with_v2_baseline(
+    def _compare_with_v2_baseline(
         self,
         tech_id: str,
         tech_metrics: Dict[str, float],
@@ -370,7 +370,7 @@ class V3ComparisonEngine:
     # Exclusion Checking
     # =========================================================================
     
-    async def is_excluded(self, tech_id: str) -> bool:
+    def is_excluded(self, tech_id: str) -> bool:
         """Check if a technology is excluded from experimentation."""
         if tech_id in self._permanent_exclusions:
             return True
@@ -462,11 +462,11 @@ class V3ComparisonEngine:
     # Re-evaluation
     # =========================================================================
     
-    async def request_re_evaluation(
+    def request_re_evaluation(
         self,
         tech_id: str,
-        reason: str,
-        new_evidence: Optional[List[Dict[str, Any]]] = None,
+        reason: str,  # noqa: ARG002 - reserved for audit logging
+        new_evidence: Optional[List[Dict[str, Any]]] = None,  # noqa: ARG002 - reserved for evidence tracking
     ) -> Dict[str, Any]:
         """Request re-evaluation of a quarantined technology."""
         profile = self._profiles.get(tech_id)
@@ -562,7 +562,7 @@ class V3ComparisonEngine:
                 insights.append({
                     "category": cat,
                     "failure_count": len(patterns),
-                    "common_reasons": list(set(p["reason"] for p in patterns)),
+                    "common_reasons": list({p["reason"] for p in patterns}),
                     "avg_accuracy": sum(p["metrics"]["accuracy"] for p in patterns) / len(patterns),
                     "insight": f"Category {cat} has recurring failures - review approach",
                 })

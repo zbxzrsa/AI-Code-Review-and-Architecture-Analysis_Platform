@@ -116,7 +116,7 @@ class RedisRateLimiter:
         self.redis_url = redis_url or settings.REDIS_URL
         self._redis: Optional[redis.Redis] = None
     
-    async def get_redis(self) -> redis.Redis:
+    def get_redis(self) -> redis.Redis:
         """Get or create Redis connection"""
         if self._redis is None:
             self._redis = redis.from_url(
@@ -330,7 +330,7 @@ def rate_limit(
         async def wrapper(request: Request, *args, **kwargs):
             user_id = getattr(request.state, "user_id", None)
             
-            is_allowed, remaining, reset_time = await rate_limiter.check_rate_limit(
+            is_allowed, _, reset_time = await rate_limiter.check_rate_limit(
                 request, config, user_id
             )
             

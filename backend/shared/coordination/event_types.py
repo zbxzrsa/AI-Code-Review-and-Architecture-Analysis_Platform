@@ -81,7 +81,7 @@ class VersionEvent:
     
     event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     event_type: EventType = EventType.HEALTH_CHECK
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     version: Version = Version.V1_EXPERIMENTATION
     payload: Dict[str, Any] = field(default_factory=dict)
     correlation_id: Optional[str] = None
@@ -126,7 +126,7 @@ class ExperimentProposal:
     rollback_plan: str = ""
     estimated_cost_usd: float = 0.0
     source: str = "manual"  # manual, industry_research, user_feedback, competitor
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     status: str = "proposed"  # proposed, approved, running, completed, rejected
 
 
@@ -141,7 +141,7 @@ class PromotionRequest:
     confidence_score: float = 0.0
     metrics: Dict[str, Any] = field(default_factory=dict)
     evaluation_summary: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     approved_at: Optional[datetime] = None
     approved_by: Optional[str] = None
     current_phase: PromotionPhase = PromotionPhase.VALIDATION
@@ -160,7 +160,7 @@ class QuarantineRecord:
     impact_assessment: Dict[str, Any] = field(default_factory=dict)
     remediation_steps: list = field(default_factory=list)
     blacklist_entry: Optional[str] = None
-    quarantined_at: datetime = field(default_factory=datetime.utcnow)
+    quarantined_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     review_scheduled_at: Optional[datetime] = None
     reviewed_at: Optional[datetime] = None
     retry_approved: bool = False

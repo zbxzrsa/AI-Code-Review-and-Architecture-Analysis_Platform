@@ -149,7 +149,7 @@ class EvolutionTracker:
         version = ModelVersion(
             version_id=version_id,
             parent_version_id=None,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             model_name=model_name,
             architecture_config=architecture_config,
             training_config=training_config,
@@ -204,7 +204,7 @@ class EvolutionTracker:
         version = ModelVersion(
             version_id=version_id,
             parent_version_id=self.current_version_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             model_name=parent_version.model_name,
             architecture_config=architecture_config,
             training_config=training_config,
@@ -238,7 +238,7 @@ class EvolutionTracker:
         
         self.experiments[experiment_id].metric_history.append({
             "step": step,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             **metrics,
         })
     
@@ -267,7 +267,7 @@ class EvolutionTracker:
         record = ExperimentRecord(
             experiment_id=experiment_id,
             version_id=self.current_version_id,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
             experiment_name=experiment_name,
             hypothesis=hypothesis,
             variables_tested=variables_tested,
@@ -301,7 +301,7 @@ class EvolutionTracker:
             raise ValueError(f"Experiment {experiment_id} not found")
         
         record = self.experiments[experiment_id]
-        record.completed_at = datetime.utcnow()
+        record.completed_at = datetime.now(timezone.utc)
         record.status = status
         record.final_metrics = final_metrics
         record.key_findings = key_findings

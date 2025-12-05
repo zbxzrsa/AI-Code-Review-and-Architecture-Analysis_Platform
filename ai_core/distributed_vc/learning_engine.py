@@ -95,7 +95,7 @@ class LearningChannel(ABC):
         self.source = source
         self.session: Optional[aiohttp.ClientSession] = None
     
-    async def initialize(self) -> None:
+    def initialize(self) -> None:
         """Initialize the channel"""
         self.session = aiohttp.ClientSession()
     

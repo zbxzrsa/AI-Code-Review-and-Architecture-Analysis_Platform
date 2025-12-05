@@ -155,7 +155,7 @@ class DatabaseManager:
             result = await conn.execute(text("SELECT 1"))
             assert result.scalar() == 1
             self._stats.is_healthy = True
-            self._stats.last_health_check = datetime.utcnow()
+            self._stats.last_health_check = datetime.now(timezone.utc)
     
     async def _handle_connection_error(self, error: Exception) -> None:
         """Handle connection errors with exponential backoff."""
@@ -229,9 +229,9 @@ class DatabaseManager:
     async def health_check(self) -> Dict[str, Any]:
         """Perform health check and return status."""
         try:
-            start = datetime.utcnow()
+            start = datetime.now(timezone.utc)
             await self._test_connection()
-            latency_ms = (datetime.utcnow() - start).total_seconds() * 1000
+            latency_ms = (datetime.now(timezone.utc) - start).total_seconds() * 1000
             
             # Update stats
             if self._engine:

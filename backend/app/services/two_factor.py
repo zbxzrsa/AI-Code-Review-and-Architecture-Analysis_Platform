@@ -14,7 +14,7 @@ import base64
 import secrets
 import hashlib
 from typing import Optional, List, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.core.config import settings
 
@@ -310,7 +310,7 @@ class TwoFactorRateLimiter:
             return
         
         # Record failed attempt
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         if user_id not in self._attempts:
             self._attempts[user_id] = []
         
@@ -337,7 +337,7 @@ class TwoFactorRateLimiter:
             return False, None
         
         lockout_until = self._lockouts[user_id]
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         if now >= lockout_until:
             # Lockout expired

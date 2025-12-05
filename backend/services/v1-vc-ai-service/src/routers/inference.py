@@ -211,7 +211,7 @@ async def generate_commit_message(request: GenerateMessageRequest):
     """
     # Placeholder implementation - would use the actual model
     # Analyze the diff to understand what changed
-    analyzer = get_analyzer()
+    _ = get_analyzer()  # noqa: F841 - analyzer reserved for future model integration
     
     # Simple extraction of changes for message generation
     lines = request.diff.split('\n')

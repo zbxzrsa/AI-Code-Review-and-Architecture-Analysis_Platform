@@ -308,4 +308,67 @@ cd frontend && npm run dev
 
 # Check service health
 curl http://localhost:8000/health
+
+# Start modular backend
+cd backend && uvicorn app.main:app --reload --port 8000
+
+# Run backend tests
+cd backend && pytest app/tests/ -v
 ```
+
+---
+
+## Phase 3: Modular Backend Refactoring (December 5, 2025)
+
+### Backend Modularization
+
+Created new modular backend structure under `backend/app/`:
+
+| Component    | Files | Description                                     |
+| ------------ | ----- | ----------------------------------------------- |
+| **Routes**   | 6     | health, projects, admin, oauth, analysis, user  |
+| **Services** | 3     | analysis_service, project_service, user_service |
+| **Models**   | 1     | base.py with all Pydantic models                |
+| **Tests**    | 3     | test_services.py, test_api.py, conftest.py      |
+
+### New API Endpoints (35+)
+
+```
+/api/projects         - Project CRUD
+/api/admin/users      - User management
+/api/admin/providers  - AI provider management
+/api/oauth/*          - OAuth operations
+/api/ai/analyze       - Code analysis
+/api/user/*           - User profile, settings, API keys
+/api/security/*       - Vulnerability scanning
+```
+
+### Test Coverage
+
+| Test File        | Test Cases |
+| ---------------- | ---------- |
+| test_services.py | 25+        |
+| test_api.py      | 25+        |
+| **Total**        | 50+        |
+
+### Documentation Reorganization
+
+- Moved 22 `*_SUMMARY.md` files to `docs/summaries/`
+- Moved 6 report files to `docs/`
+- Root directory reduced from 36 to 9 markdown files
+
+### New Scripts
+
+- `scripts/start-local.ps1` - Local development without Docker
+- Enhanced `scripts/start-dev.ps1` with quick commands
+
+### Phase 3 Statistics
+
+| Metric              | Value |
+| ------------------- | ----- |
+| New route modules   | 6     |
+| New service modules | 3     |
+| New test files      | 3     |
+| API endpoints       | 35+   |
+| Test cases          | 50+   |
+| Code lines added    | ~2500 |

@@ -172,7 +172,7 @@ class SpiralEvolutionManager:
     # Lifecycle
     # =========================================================================
     
-    async def start(self):
+    def start(self):
         """Start the spiral evolution cycle."""
         if self._running:
             return
@@ -197,7 +197,7 @@ class SpiralEvolutionManager:
             try:
                 await self._cycle_task
             except asyncio.CancelledError:
-                pass
+                raise  # Re-raise CancelledError after cleanup
         
         logger.info("Spiral evolution cycle stopped")
     
@@ -279,8 +279,8 @@ class SpiralEvolutionManager:
         
         logger.info("Phase 1: V1 Experimentation")
         
-        # Get V1 VC-AI to manage experiments
-        v1_vc = self.dual_ai.get_ai("v1", AIType.VERSION_CONTROL)
+        # Get V1 VC-AI to manage experiments (reserved for future use)
+        _ = self.dual_ai.get_ai("v1", AIType.VERSION_CONTROL)
         
         # Check V3 for exclusions before experimenting
         for tech_id in self._pending_promotions:
@@ -412,14 +412,14 @@ class SpiralEvolutionManager:
     # Phase 5: Stabilization
     # =========================================================================
     
-    async def _phase_stabilization(self, cycle: EvolutionCycleState):
+    def _phase_stabilization(self, cycle: EvolutionCycleState):
         """Phase 5: V2 stabilizes newly promoted technologies."""
         cycle.phase = CyclePhase.STABILIZATION
         
         logger.info("Phase 5: V2 Stabilization")
         
-        # V2 VC-AI monitors and stabilizes
-        v2_vc = self.dual_ai.get_ai("v2", AIType.VERSION_CONTROL)
+        # V2 VC-AI monitors and stabilizes (reserved for future use)
+        _ = self.dual_ai.get_ai("v2", AIType.VERSION_CONTROL)
         
         # Check for any stability issues
         # In production, would wait for stabilization_duration_hours
@@ -549,29 +549,36 @@ class SpiralEvolutionManager:
         cycle.last_activity = datetime.now(timezone.utc)
         
         if self.event_bus:
-            asyncio.create_task(
+            # Store task reference to prevent GC
+            task = asyncio.create_task(
                 self.event_bus.publish(f"evolution_{event.value}", event_record)
             )
+            # Add callback to handle exceptions
+            task.add_done_callback(lambda t: t.exception() if t.done() and not t.cancelled() else None)
     
     # =========================================================================
     # Manual Operations
     # =========================================================================
     
-    async def trigger_promotion(self, tech_id: str) -> Dict[str, Any]:
+    def trigger_promotion(self, tech_id: str) -> Dict[str, Any]:
         """Manually trigger promotion of a technology."""
         if tech_id not in self._pending_promotions:
             self._pending_promotions.append(tech_id)
         
         return {"success": True, "tech_id": tech_id, "status": "queued_for_promotion"}
     
-    async def trigger_degradation(self, tech_id: str, reason: str) -> Dict[str, Any]:
+    def trigger_degradation(
+        self,
+        tech_id: str,
+        reason: str = ""  # noqa: ARG002 - reserved for audit logging
+    ) -> Dict[str, Any]:
         """Manually trigger degradation of a technology."""
         if tech_id not in self._pending_degradations:
             self._pending_degradations.append(tech_id)
         
         return {"success": True, "tech_id": tech_id, "status": "queued_for_degradation"}
     
-    async def request_reevaluation(self, tech_id: str) -> Dict[str, Any]:
+    def request_reevaluation(self, tech_id: str) -> Dict[str, Any]:
         """Manually request re-evaluation of a quarantined technology."""
         if tech_id not in self._pending_reevaluations:
             self._pending_reevaluations.append(tech_id)

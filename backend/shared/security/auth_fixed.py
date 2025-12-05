@@ -3,7 +3,7 @@ Authentication and authorization utilities - FIXED VERSION.
 
 Addresses all issues identified in granular code audit:
 - Line 19: Removed hardcoded default secret
-- Line 41: Fixed deprecated datetime.utcnow()
+- Line 41: Fixed deprecated datetime.now(timezone.utc)
 - Line 47: Added JTI claim for token revocation
 - Line 97: Added proper JWT validation options
 - Line 363: Fixed weak token truncation for session key

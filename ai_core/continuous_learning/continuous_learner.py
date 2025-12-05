@@ -299,8 +299,9 @@ class ContinuousLearner:
         if len(self.replay_buffer) < self.replay_batch_size:
             return
         
-        # Sample from buffer
-        indices = np.random.choice(
+        # Sample from buffer using modern numpy random generator
+        rng = np.random.default_rng()
+        indices = rng.choice(
             len(self.replay_buffer),
             self.replay_batch_size,
             replace=False
@@ -345,7 +346,7 @@ class ContinuousLearner:
         self.model.eval()
         fisher = {name: torch.zeros_like(param) for name, param in self.model.named_parameters()}
         
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=0)
         
         for inputs, targets in dataloader:
             inputs = inputs.to(self.device)
@@ -378,7 +379,7 @@ class ContinuousLearner:
     ) -> Dict[str, float]:
         """Evaluate model on a dataset"""
         self.model.eval()
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=0)
         
         total_loss = 0.0
         total_correct = 0
@@ -447,7 +448,8 @@ class OnlineLearner:
         self.optimizer = optim.SGD(
             model.parameters(),
             lr=initial_lr,
-            momentum=momentum
+            momentum=momentum,
+            weight_decay=1e-4
         )
         
         self.drift_threshold = drift_threshold
@@ -467,14 +469,14 @@ class OnlineLearner:
     
     def update(
         self,
-        input: torch.Tensor,
+        input_data: torch.Tensor,
         target: torch.Tensor
     ) -> Dict[str, float]:
         """
         Update model with a single sample
         
         Args:
-            input: Single input tensor
+            input_data: Single input tensor
             target: Single target tensor
             
         Returns:
@@ -483,16 +485,16 @@ class OnlineLearner:
         self.model.train()
         
         # Ensure proper shape
-        if input.dim() == 1:
-            input = input.unsqueeze(0)
+        if input_data.dim() == 1:
+            input_data = input_data.unsqueeze(0)
         if target.dim() == 0:
             target = target.unsqueeze(0)
         
-        input = input.to(self.device)
+        input_data = input_data.to(self.device)
         target = target.to(self.device)
         
         # Forward pass
-        output = self.model(input)
+        output = self.model(input_data)
         loss = nn.functional.cross_entropy(output, target)
         
         # Backward pass

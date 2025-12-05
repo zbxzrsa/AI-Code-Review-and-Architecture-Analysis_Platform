@@ -32,8 +32,8 @@ class FeatureFlag:
     rollout_percentage: float = 0.0  # 0-100
     allowed_users: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_enabled_for_user(self, user_id: str) -> bool:
         """Check if flag is enabled for specific user."""
@@ -53,7 +53,7 @@ class FeatureFlag:
 
         if self.rollout_strategy == RolloutStrategy.GRADUAL:
             # Gradual rollout based on time
-            elapsed_hours = (datetime.utcnow() - self.created_at).total_seconds() / 3600
+            elapsed_hours = (datetime.now(timezone.utc) - self.created_at).total_seconds() / 3600
             current_percentage = min(100, elapsed_hours * 10)  # 10% per hour
             user_hash = hash(user_id) % 100
             return user_hash < current_percentage
@@ -226,7 +226,7 @@ class FeatureFlagService:
         if allowed_users is not None:
             flag.allowed_users = allowed_users
 
-        flag.updated_at = datetime.utcnow()
+        flag.updated_at = datetime.now(timezone.utc)
 
         logger.info(
             "Feature flag updated",

@@ -41,7 +41,7 @@ class ProviderHealthTracker:
             key = f"provider:{provider}:health_status"
             health_data = {
                 "status": HealthStatus.HEALTHY.value,
-                "last_check": datetime.utcnow().isoformat(),
+                "last_check": datetime.now(timezone.utc).isoformat(),
                 "consecutive_failures": 0,
                 "response_time_ms": response_time_ms
             }
@@ -64,7 +64,7 @@ class ProviderHealthTracker:
             key = f"provider:{provider}:health_status"
             health_data = {
                 "status": HealthStatus.DEGRADED.value,
-                "last_check": datetime.utcnow().isoformat(),
+                "last_check": datetime.now(timezone.utc).isoformat(),
                 "reason": reason,
                 "consecutive_failures": self._get_consecutive_failures(provider) + 1
             }
@@ -87,10 +87,10 @@ class ProviderHealthTracker:
             key = f"provider:{provider}:health_status"
             health_data = {
                 "status": HealthStatus.UNHEALTHY.value,
-                "last_check": datetime.utcnow().isoformat(),
+                "last_check": datetime.now(timezone.utc).isoformat(),
                 "reason": reason,
                 "consecutive_failures": self._get_consecutive_failures(provider) + 1,
-                "unhealthy_until": (datetime.utcnow() + timedelta(seconds=duration)).isoformat()
+                "unhealthy_until": (datetime.now(timezone.utc) + timedelta(seconds=duration)).isoformat()
             }
 
             self.redis.set_global_cache(key, health_data, duration)
@@ -102,7 +102,7 @@ class ProviderHealthTracker:
                 message={
                     "provider": provider,
                     "reason": reason,
-                    "timestamp": datetime.utcnow().isoformat()
+                    "timestamp": datetime.now(timezone.utc).isoformat()
                 }
             )
 
@@ -235,12 +235,12 @@ class ProviderHealthTracker:
     ) -> bool:
         """Perform health check on provider."""
         try:
-            start_time = datetime.utcnow()
+            start_time = datetime.now(timezone.utc)
 
             # Execute health check
             result = await check_func()
 
-            response_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
 
             if result:
                 self.record_provider_success(provider, response_time)
@@ -249,7 +249,7 @@ class ProviderHealthTracker:
                 self.record_provider_failure(provider, "Health check failed", response_time)
                 return False
         except Exception as e:
-            response_time = (datetime.utcnow() - start_time).total_seconds() * 1000
+            response_time = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
             self.record_provider_failure(provider, str(e), response_time)
             return False
 
@@ -302,7 +302,7 @@ class ProviderHealthTracker:
 
             return {
                 "providers": stats,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "healthy_count": sum(
                     1 for p in stats.values()
                     if p.get("status") == HealthStatus.HEALTHY.value

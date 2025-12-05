@@ -149,7 +149,7 @@ async def update_version(version_id: str, request: VersionUpdate) -> Version:
     if request.tags is not None:
         version.metadata.tags = request.tags
     
-    version.metadata.updated_at = datetime.utcnow()
+    version.metadata.updated_at = datetime.now(timezone.utc)
     
     return version
 
@@ -166,7 +166,7 @@ async def delete_version(version_id: str) -> None:
     
     # Archive instead of delete
     _versions[version_id].metadata.status = VersionStatus.ARCHIVED
-    _versions[version_id].metadata.updated_at = datetime.utcnow()
+    _versions[version_id].metadata.updated_at = datetime.now(timezone.utc)
 
 
 # =============================================================================
@@ -188,7 +188,7 @@ async def create_release(request: ReleaseRequest) -> ReleaseResponse:
         name=request.version_name,
         description=request.release_notes[:200] if request.release_notes else None,
         status=VersionStatus.DRAFT if request.draft else VersionStatus.ACTIVE,
-        release_date=None if request.draft else datetime.utcnow(),
+        release_date=None if request.draft else datetime.now(timezone.utc),
         created_by="system",
     )
     
@@ -204,7 +204,7 @@ async def create_release(request: ReleaseRequest) -> ReleaseResponse:
         version_id=version_id,
         release_url=f"/releases/{version_id}",
         tag_name=f"v{request.version_name}",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         release_notes=request.release_notes,
         status="draft" if request.draft else "published",
     )
@@ -230,8 +230,8 @@ async def compare_versions(from_version: str, to_version: str) -> VersionCompari
     v2 = _versions[to_version]
     
     # Simple comparison logic
-    v1_changes = set(c.commit_hash for c in v1.changes)
-    v2_changes = set(c.commit_hash for c in v2.changes)
+    v1_changes = {c.commit_hash for c in v1.changes}
+    v2_changes = {c.commit_hash for c in v2.changes}
     
     added = len(v2_changes - v1_changes)
     removed = len(v1_changes - v2_changes)
@@ -290,7 +290,7 @@ async def get_version_timeline(
             date=v.metadata.release_date,
             type=v_type,
             highlights=[c.description[:50] for c in v.changes[:3]],
-            contributors=list(set(c.author for c in v.changes)),
+            contributors=list({c.author for c in v.changes}),
         ))
     
     return timeline

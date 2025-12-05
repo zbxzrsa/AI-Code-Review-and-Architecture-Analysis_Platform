@@ -13,7 +13,7 @@ async def health_status():
     return {
         "status": "healthy",
         "version": "v2-production",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "checks": {
             "database": "ok",
             "ai_models": "ok",

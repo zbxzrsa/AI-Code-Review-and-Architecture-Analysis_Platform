@@ -10,11 +10,6 @@ Experimental code review module with advanced analysis techniques:
 """
 
 __version__ = "1.0.0"
-__all__ = [
-    "config",
-    "models",
-    "review",
-    "analysis",
-    "hallucination",
-    "evaluation",
-]
+
+# Note: These are subpackage names that should be imported explicitly
+# e.g., from v1_cr_ai_service.review import engine

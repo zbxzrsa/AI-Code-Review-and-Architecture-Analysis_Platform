@@ -23,10 +23,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     ninja-build \
     && rm -rf /var/lib/apt/lists/* \
-    && ln -sf /usr/bin/python3.10 /usr/bin/python
-
-# Create non-root user
-RUN groupadd --gid 1000 appgroup \
+    && ln -sf /usr/bin/python3.10 /usr/bin/python \
+    && groupadd --gid 1000 appgroup \
     && useradd --uid 1000 --gid appgroup --shell /bin/bash --create-home appuser
 
 

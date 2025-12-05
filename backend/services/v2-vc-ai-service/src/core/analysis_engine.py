@@ -320,7 +320,7 @@ Be precise and consistent. The same commit should always produce the same analys
         cache_key = f"{request.repo}:{request.commit_hash}"
         self._analysis_cache.pop(cache_key, None)
         
-        for i in range(runs):
+        for _ in range(runs):  # i unused
             # Clear cache between runs
             self._analysis_cache.pop(cache_key, None)
             

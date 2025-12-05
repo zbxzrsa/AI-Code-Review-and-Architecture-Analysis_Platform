@@ -67,7 +67,7 @@ class Comparison(Base):
     confidence = Column(Float, nullable=False)
     reasoning = Column(Text, nullable=True)
     
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -124,7 +124,7 @@ class StatisticalTest(Base):
     is_significant = Column(String(50), nullable=False)  # yes, no, borderline
     effect_size = Column(Float, nullable=True)
     confidence_level = Column(Float, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""

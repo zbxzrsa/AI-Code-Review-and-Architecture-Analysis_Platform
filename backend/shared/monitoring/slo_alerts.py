@@ -90,13 +90,13 @@ class MetricWindow:
     
     def add(self, value: float, timestamp: Optional[datetime] = None):
         """Add data point."""
-        ts = timestamp or datetime.utcnow()
+        ts = timestamp or datetime.now(timezone.utc)
         self._data.append((ts, value))
         self._cleanup()
     
     def _cleanup(self):
         """Remove expired data points."""
-        cutoff = datetime.utcnow() - timedelta(minutes=self.window_minutes)
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=self.window_minutes)
         while self._data and self._data[0][0] < cutoff:
             self._data.popleft()
     
@@ -255,7 +255,7 @@ class SLOAlertManager:
         
         # Check cooldown
         last = self._last_alert.get(alert_id)
-        if last and datetime.utcnow() - last < self.alert_cooldown:
+        if last and datetime.now(timezone.utc) - last < self.alert_cooldown:
             return
         
         # Create or update alert
@@ -277,11 +277,11 @@ class SLOAlertManager:
             description=f"{slo.description} is below target. Current: {current_value:.4f}, Target: {slo.target:.4f}",
             current_value=current_value,
             target_value=slo.target,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         
         self._alerts[alert_id] = alert
-        self._last_alert[alert_id] = datetime.utcnow()
+        self._last_alert[alert_id] = datetime.now(timezone.utc)
         
         logger.warning(f"Alert fired: {alert.title}")
         
@@ -302,7 +302,7 @@ class SLOAlertManager:
         
         if alert and alert.state == AlertState.FIRING:
             alert.state = AlertState.RESOLVED
-            alert.resolved_at = datetime.utcnow()
+            alert.resolved_at = datetime.now(timezone.utc)
             
             self._alert_history.append(alert)
             del self._alerts[alert_id]
@@ -432,7 +432,7 @@ class SLOAlertManager:
         projected = None
         if burn_rate > 0 and remaining > 0:
             days_until_exhaustion = remaining / (burn_rate * 24 * 60)
-            projected = datetime.utcnow() + timedelta(days=days_until_exhaustion)
+            projected = datetime.now(timezone.utc) + timedelta(days=days_until_exhaustion)
         
         budget = ErrorBudget(
             slo_name=slo_name,
@@ -457,7 +457,7 @@ class SLOAlertManager:
         if alert:
             alert.state = AlertState.ACKNOWLEDGED
             alert.acknowledged_by = user
-            alert.acknowledged_at = datetime.utcnow()
+            alert.acknowledged_at = datetime.now(timezone.utc)
             return True
         return False
     

@@ -208,8 +208,8 @@ def user_factory():
             "email": email,
             "name": name,
             "role": role,
-            "created_at": datetime.utcnow().isoformat(),
-            "updated_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
             **kwargs
         }
     return _create_user
@@ -231,7 +231,7 @@ def project_factory():
             "description": "Test project description",
             "language": "python",
             "status": "active",
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             **kwargs
         }
     return _create_project
@@ -251,7 +251,7 @@ def analysis_factory():
             "status": "completed",
             "issues_count": 5,
             "duration_ms": 1500,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat(),
             **kwargs
         }
     return _create_analysis

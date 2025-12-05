@@ -372,10 +372,13 @@ class SafeRollbackManager:
         
         logger.info(f"Applied rollback to {snapshot.version}")
     
-    async def _verify_rollback(self, snapshot: VersionSnapshot) -> bool:
+    async def _verify_rollback(
+        self,
+        snapshot: VersionSnapshot  # noqa: ARG002 - used for identification in production
+    ) -> bool:
         """Verify rollback was successful"""
         # In production, this would:
-        # 1. Run health checks
+        # 1. Run health checks against snapshot.version
         # 2. Verify model responses
         # 3. Check metrics
         
@@ -413,7 +416,7 @@ class SafeRollbackManager:
         
         return None
     
-    async def start_monitoring(self, interval_seconds: int = 5) -> None:
+    def start_monitoring(self, interval_seconds: int = 5) -> None:
         """Start health monitoring with auto-rollback"""
         async def monitor_loop():
             while True:
@@ -423,7 +426,7 @@ class SafeRollbackManager:
         self._monitoring_task = asyncio.create_task(monitor_loop())
         logger.info("Rollback monitoring started")
     
-    async def stop_monitoring(self) -> None:
+    def stop_monitoring(self) -> None:
         """Stop health monitoring"""
         if self._monitoring_task:
             self._monitoring_task.cancel()

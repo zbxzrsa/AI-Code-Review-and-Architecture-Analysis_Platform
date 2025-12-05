@@ -298,7 +298,7 @@ DATABASE_URL = os.environ['DATABASE_URL']
         Returns:
             Complete evaluation report
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         # Determine target URL based on version
         version_prefix = version_id.split("-")[0] if "-" in version_id else "v1"
@@ -324,7 +324,7 @@ DATABASE_URL = os.environ['DATABASE_URL']
         
         # Calculate scores
         report = self._calculate_report(version_id, evaluation_type, all_results)
-        report.total_duration_ms = (datetime.utcnow() - start_time).total_seconds() * 1000
+        report.total_duration_ms = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         
         # Determine pass/fail
         report.passed = self._check_passed(report, evaluation_type)
@@ -345,7 +345,7 @@ DATABASE_URL = os.environ['DATABASE_URL']
     ) -> TestResult:
         """Run a single test case"""
         try:
-            start = datetime.utcnow()
+            start = datetime.now(timezone.utc)
             
             # Call VCAI for analysis
             response = await self._http_client.post(
@@ -358,7 +358,7 @@ DATABASE_URL = os.environ['DATABASE_URL']
                 timeout=test_case.timeout_ms / 1000
             )
             
-            latency = (datetime.utcnow() - start).total_seconds() * 1000
+            latency = (datetime.now(timezone.utc) - start).total_seconds() * 1000
             
             if response.status_code != 200:
                 return TestResult(
@@ -477,7 +477,7 @@ DATABASE_URL = os.environ['DATABASE_URL']
         return EvaluationReport(
             version_id=version_id,
             evaluation_type=evaluation_type,
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             success=True,
             score=overall_score,
             security_score=security_score,

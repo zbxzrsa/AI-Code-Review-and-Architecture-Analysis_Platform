@@ -36,8 +36,8 @@ class VersionMetadata(BaseModel):
     description: Optional[str] = Field(None, description="Version description")
     status: VersionStatus = Field(default=VersionStatus.ACTIVE)
     release_date: Optional[datetime] = Field(None, description="Release date")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     created_by: str = Field(..., description="User who created the version")
     tags: List[str] = Field(default_factory=list)
 

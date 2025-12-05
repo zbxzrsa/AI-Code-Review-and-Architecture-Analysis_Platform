@@ -78,10 +78,11 @@ class TextCleaner(DataCleaner):
         
         # Regex patterns
         self.html_pattern = re.compile(r'<[^>]+>')
+        # Simplified URL pattern following RFC 3986
         self.url_pattern = re.compile(
-            r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+            r'https?://[a-zA-Z\d\-._~:/?#\[\]@!$&\'()*+,;=%]+'
         )
-        self.email_pattern = re.compile(r'[\w\.-]+@[\w\.-]+\.\w+')
+        self.email_pattern = re.compile(r'[\w.-]+@[\w.-]+\.\w+')
         self.whitespace_pattern = re.compile(r'\s+')
     
     def clean_text(self, text: str) -> str:

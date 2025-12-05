@@ -35,7 +35,7 @@ class AlertSeverity(str, Enum):
 
 class SLOMetrics(BaseModel):
     """Current SLO metrics snapshot"""
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Availability
     availability: float = Field(..., ge=0, le=1, description="Current availability (0-1)")
@@ -93,7 +93,7 @@ class ErrorBudget(BaseModel):
 class SLOStatus(BaseModel):
     """Complete SLO status report"""
     service_name: str = Field(default="v2-vc-ai-service")
-    report_time: datetime = Field(default_factory=datetime.utcnow)
+    report_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Current metrics
     metrics: SLOMetrics
@@ -196,5 +196,5 @@ class HealthCheck(BaseModel):
     healthy: bool
     components: Dict[str, bool] = Field(default_factory=dict)
     checks: List[Dict[str, Any]] = Field(default_factory=list)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     latency_ms: float = Field(default=0, ge=0)

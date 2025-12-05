@@ -12,7 +12,7 @@ import os
 import secrets
 import logging
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, status, Response, Query, Depends
 from fastapi.responses import RedirectResponse
@@ -68,7 +68,7 @@ def store_state(state: str, data: dict, ttl_seconds: int = 600) -> None:
     """Store OAuth state (use Redis in production)."""
     _oauth_states[state] = {
         "data": data,
-        "expires_at": datetime.utcnow() + timedelta(seconds=ttl_seconds),
+        "expires_at": datetime.now(timezone.utc) + timedelta(seconds=ttl_seconds),
     }
 
 
@@ -78,7 +78,7 @@ def get_state(state: str) -> Optional[dict]:
     if not stored:
         return None
     
-    if datetime.utcnow() > stored["expires_at"]:
+    if datetime.now(timezone.utc) > stored["expires_at"]:
         del _oauth_states[state]
         return None
     
@@ -243,7 +243,7 @@ async def oauth_callback(
         # Update tokens
         oauth_connection.access_token_encrypted = tokens.access_token  # TODO: encrypt
         oauth_connection.token_expires_at = tokens.expires_at
-        oauth_connection.updated_at = datetime.utcnow()
+        oauth_connection.updated_at = datetime.now(timezone.utc)
         
     else:
         # New connection
@@ -295,7 +295,7 @@ async def oauth_callback(
         db.add(oauth_connection)
     
     # Update user login info
-    user.last_login_at = datetime.utcnow()
+    user.last_login_at = datetime.now(timezone.utc)
     user.login_count += 1
     
     await db.commit()
@@ -438,7 +438,7 @@ async def list_oauth_repositories(
         )
     
     # Check token expiration
-    if connection.token_expires_at and connection.token_expires_at < datetime.utcnow():
+    if connection.token_expires_at and connection.token_expires_at < datetime.now(timezone.utc):
         # TODO: Implement token refresh
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -43,7 +43,7 @@ class GitHubReviewResponse(BaseModel):
     status: str  # APPROVE, REQUEST_CHANGES, COMMENT
     body: str
     comments: List[InlineComment] = Field(default_factory=list)
-    submitted_at: datetime = Field(default_factory=datetime.utcnow)
+    submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class GitLabMRRequest(BaseModel):

@@ -229,7 +229,7 @@ class PlatformStartup:
         return {
             "initialized": self._initialized,
             "running": self._running,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "versions": self.version_orchestrator.get_version_status() if self.version_orchestrator else {},
             "evolution": self.evolution_engine.get_cycle_status() if self.evolution_engine else {},
             "access_control": {

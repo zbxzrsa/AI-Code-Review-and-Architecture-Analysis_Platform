@@ -138,7 +138,7 @@ async def health_check():
             "recovery_manager": "healthy",
             "cycle_orchestrator": "healthy",
         },
-        timestamp=datetime.utcnow().isoformat()
+        timestamp=datetime.now(timezone.utc).isoformat()
     )
 
 

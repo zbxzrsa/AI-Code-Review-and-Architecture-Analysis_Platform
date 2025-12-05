@@ -14,7 +14,7 @@ API Endpoints:
 import os
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -30,6 +30,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# API prefix constant
+API_V1_VC_AI_PREFIX = "/api/v1/vc-ai"
 
 
 # =============================================================================
@@ -141,7 +144,7 @@ async def health_check():
         "status": "healthy",
         "service": "v1-vc-ai-service",
         "version": "1.0.0",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -176,9 +179,9 @@ async def get_metrics():
 
 
 # Include routers
-app.include_router(experiments_router, prefix="/api/v1/vc-ai")
-app.include_router(inference_router, prefix="/api/v1/vc-ai")
-app.include_router(evaluation_router, prefix="/api/v1/vc-ai")
+app.include_router(experiments_router, prefix=API_V1_VC_AI_PREFIX)
+app.include_router(inference_router, prefix=API_V1_VC_AI_PREFIX)
+app.include_router(evaluation_router, prefix=API_V1_VC_AI_PREFIX)
 
 
 # =============================================================================
@@ -196,7 +199,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "error": "Internal server error",
             "message": str(exc) if os.getenv("DEBUG") else "An unexpected error occurred",
             "path": str(request.url),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         },
     )
 

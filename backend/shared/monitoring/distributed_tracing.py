@@ -206,17 +206,21 @@ class DistributedTracer:
 class MockSpan:
     """Mock span for when tracing is disabled."""
     
-    def set_attribute(self, key: str, value: Any):
-        pass
+    def set_attribute(self, key: str, value: Any):  # noqa: ARG002
+        """No-op: tracing disabled."""
+        pass  # Intentionally empty - mock implementation
     
-    def set_status(self, status):
-        pass
+    def set_status(self, status):  # noqa: ARG002
+        """No-op: tracing disabled."""
+        pass  # Intentionally empty - mock implementation
     
-    def record_exception(self, exception):
-        pass
+    def record_exception(self, exception):  # noqa: ARG002
+        """No-op: tracing disabled."""
+        pass  # Intentionally empty - mock implementation
     
-    def add_event(self, name: str, attributes: Dict[str, Any] = None):
-        pass
+    def add_event(self, name: str, attributes: Dict[str, Any] = None):  # noqa: ARG002
+        """No-op: tracing disabled."""
+        pass  # Intentionally empty - mock implementation
 
 
 def trace_function(name: Optional[str] = None, attributes: Optional[Dict[str, Any]] = None):

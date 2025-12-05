@@ -122,7 +122,7 @@ class TaskOrchestrator:
         self.config = config
         self.task_history = {}
 
-    async def estimate_complexity(
+    def estimate_complexity(
         self,
         code: str,
         language: str,
@@ -136,7 +136,7 @@ class TaskOrchestrator:
         """
         # Simple heuristic-based estimation
         code_length = len(code)
-        lines = len(code.split('\n'))
+        _ = len(code.split('\n'))  # Reserved for future line-based analysis
 
         # Complexity score based on code size and language
         base_score = min(code_length / 10000, 1.0)
@@ -328,8 +328,8 @@ class ExpertCoordinator:
     async def _execute_expert(
         self,
         expert: ExpertType,
-        code: str,
-        language: str,
+        code: str,  # noqa: ARG002 - reserved for actual expert execution
+        language: str,  # noqa: ARG002 - reserved for actual expert execution
     ) -> Optional[ExpertResult]:
         """Execute a single expert."""
         # Mock implementation
@@ -457,7 +457,7 @@ class ProviderRouter:
 
         return available_providers[0]
 
-    async def _route_by_complexity(
+    def _route_by_complexity(
         self,
         complexity: TaskComplexity,
         providers: List[str],
@@ -465,16 +465,18 @@ class ProviderRouter:
         """Route based on task complexity."""
         # Simple tasks to cheap models, complex to powerful models
         if complexity.score < 0.3:
-            # Prefer cheap models
-            return providers[0] if "gpt-3.5" in providers[0] else providers[0]
+            # Prefer cheap models - find gpt-3.5 if available
+            cheap = [p for p in providers if "gpt-3.5" in p]
+            return cheap[0] if cheap else providers[0]
         elif complexity.score > 0.7:
-            # Prefer powerful models
-            return providers[0] if "gpt-4" in providers[0] else providers[0]
+            # Prefer powerful models - find gpt-4 if available
+            powerful = [p for p in providers if "gpt-4" in p]
+            return powerful[0] if powerful else providers[0]
         return providers[0]
 
-    async def _route_by_health(
+    def _route_by_health(
         self,
-        complexity: TaskComplexity,
+        complexity: TaskComplexity,  # noqa: ARG002 - reserved for health-based routing
         providers: List[str],
     ) -> str:
         """Route based on provider health."""
@@ -482,34 +484,34 @@ class ProviderRouter:
         healthy = [p for p in providers if self.provider_health.get(p, {}).get("healthy", True)]
         return healthy[0] if healthy else providers[0]
 
-    async def _route_by_cost(
+    def _route_by_cost(
         self,
-        complexity: TaskComplexity,
+        complexity: TaskComplexity,  # noqa: ARG002 - reserved for cost estimation
         providers: List[str],
     ) -> str:
         """Route to minimize cost."""
         # Select cheapest provider
         return min(providers, key=lambda p: self.provider_health.get(p, {}).get("cost", 0.1))
 
-    async def _route_by_latency(
+    def _route_by_latency(
         self,
-        complexity: TaskComplexity,
+        complexity: TaskComplexity,  # noqa: ARG002 - reserved for latency estimation
         providers: List[str],
     ) -> str:
         """Route to minimize latency."""
         # Select fastest provider
         return min(providers, key=lambda p: self.provider_health.get(p, {}).get("latency_ms", 5000))
 
-    async def _route_by_success_rate(
+    def _route_by_success_rate(
         self,
-        complexity: TaskComplexity,
+        complexity: TaskComplexity,  # noqa: ARG002 - reserved for success rate estimation
         providers: List[str],
     ) -> str:
         """Route to most reliable provider."""
         # Select provider with highest success rate
         return max(providers, key=lambda p: self.provider_health.get(p, {}).get("success_rate", 0.9))
 
-    async def get_fallback_chain(self, primary: str) -> List[str]:
+    def get_fallback_chain(self, primary: str) -> List[str]:
         """Get fallback chain for a provider."""
         # Example fallback chain
         chains = {

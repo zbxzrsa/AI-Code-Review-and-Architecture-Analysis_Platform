@@ -203,7 +203,7 @@ class CycleOrchestrator:
             prompt_version=prompt_version,
             routing_policy_version="default",
             current_state=VersionState.EXPERIMENT,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
             metadata=metadata or {}
         )
         
@@ -256,7 +256,7 @@ class CycleOrchestrator:
             # Update lifecycle state
             config.current_state = VersionState.QUARANTINE
             config.metadata["quarantine_reason"] = reason
-            config.metadata["quarantine_time"] = datetime.utcnow().isoformat()
+            config.metadata["quarantine_time"] = datetime.now(timezone.utc).isoformat()
             
             # Register with recovery manager
             self.recovery.register_quarantine(
@@ -294,7 +294,7 @@ class CycleOrchestrator:
                 prompt_version=recovery_record.metadata.get("prompt_version", "unknown"),
                 routing_policy_version="default",
                 current_state=VersionState.SHADOW,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
                 metadata={
                     "recovered_from_quarantine": True,
                     "original_quarantine_reason": recovery_record.quarantine_reason,
@@ -328,7 +328,7 @@ class CycleOrchestrator:
     
     async def _check_stalled_experiments(self):
         """Check for experiments that have stalled"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         for version_id, config in self.lifecycle.active_versions.items():
             if config.current_state == VersionState.EXPERIMENT:
@@ -402,7 +402,7 @@ class CycleOrchestrator:
     ):
         """Log a cycle event"""
         event = CycleEvent(
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
             version_id=version_id,
             from_phase=from_phase,
             to_phase=to_phase,

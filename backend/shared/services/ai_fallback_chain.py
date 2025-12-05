@@ -181,7 +181,7 @@ class AIFallbackChain:
         """Check response cache."""
         if key in self._cache:
             response, expiry = self._cache[key]
-            if datetime.utcnow() < expiry:
+            if datetime.now(timezone.utc) < expiry:
                 response.from_cache = True
                 return response
             else:
@@ -190,7 +190,7 @@ class AIFallbackChain:
     
     def _update_cache(self, key: str, response: ModelResponse):
         """Update response cache."""
-        expiry = datetime.utcnow() + timedelta(seconds=self.cache_ttl)
+        expiry = datetime.now(timezone.utc) + timedelta(seconds=self.cache_ttl)
         self._cache[key] = (response, expiry)
     
     def _is_model_available(self, model: str) -> bool:
@@ -206,7 +206,7 @@ class AIFallbackChain:
             # Check if recovery timeout has passed
             if health.last_failure:
                 recovery_time = health.last_failure + timedelta(seconds=self.recovery_timeout)
-                if datetime.utcnow() >= recovery_time:
+                if datetime.now(timezone.utc) >= recovery_time:
                     # Allow a test request
                     return True
             return False
@@ -219,7 +219,7 @@ class AIFallbackChain:
         health = self._health[model]
         health.consecutive_successes += 1
         health.consecutive_failures = 0
-        health.last_success = datetime.utcnow()
+        health.last_success = datetime.now(timezone.utc)
         
         # Update average latency
         if health.avg_latency_ms == 0:
@@ -231,12 +231,12 @@ class AIFallbackChain:
         if health.consecutive_successes >= 3:
             health.status = ModelStatus.HEALTHY
     
-    def _record_failure(self, model: str, error: str):
+    def _record_failure(self, model: str, error: str):  # noqa: ARG002 - error for future logging
         """Record failed request."""
         health = self._health[model]
         health.consecutive_failures += 1
         health.consecutive_successes = 0
-        health.last_failure = datetime.utcnow()
+        health.last_failure = datetime.now(timezone.utc)
         
         # Update status based on failures
         if health.consecutive_failures >= self.failure_threshold:
@@ -274,7 +274,7 @@ class AIFallbackChain:
             cache_key = self._get_cache_key(prompt, system_prompt)
             cached = self._check_cache(cache_key)
             if cached:
-                logger.debug(f"Cache hit for prompt")
+                logger.debug("Cache hit for prompt")
                 return cached
         
         errors = []

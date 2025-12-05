@@ -169,67 +169,96 @@ class DistributedTrainer:
             Training metrics
         """
         self.model.train()
-        
-        total_loss = 0.0
-        num_batches = 0
-        
-        # Set epoch for distributed sampler
-        if hasattr(train_loader, 'sampler') and isinstance(train_loader.sampler, DistributedSampler):
-            train_loader.sampler.set_epoch(self.epoch)
-        
+        self._set_distributed_sampler_epoch(train_loader)
         optimizer.zero_grad()
         
-        for batch_idx, (inputs, targets) in enumerate(train_loader):
-            inputs = inputs.to(self.device)
-            targets = targets.to(self.device)
-            
-            # Forward pass with AMP
-            if self.use_amp:
-                with torch.cuda.amp.autocast():
-                    outputs = self.model(inputs)
-                    loss = loss_fn(outputs, targets)
-                    loss = loss / self.gradient_accumulation_steps
-                
-                self.scaler.scale(loss).backward()
-            else:
-                outputs = self.model(inputs)
-                loss = loss_fn(outputs, targets)
-                loss = loss / self.gradient_accumulation_steps
-                loss.backward()
-            
-            # Gradient accumulation
-            if (batch_idx + 1) % self.gradient_accumulation_steps == 0:
-                if self.use_amp:
-                    self.scaler.step(optimizer)
-                    self.scaler.update()
-                else:
-                    optimizer.step()
-                
-                optimizer.zero_grad()
-                
-                if scheduler:
-                    scheduler.step()
-                
-                self.global_step += 1
-            
-            total_loss += loss.item() * self.gradient_accumulation_steps
-            num_batches += 1
+        total_loss, num_batches = self._run_training_loop(
+            train_loader, optimizer, loss_fn, scheduler
+        )
         
         self.epoch += 1
-        
-        avg_loss = total_loss / num_batches
-        
-        # Reduce loss across all processes
-        if self.is_distributed:
-            loss_tensor = torch.tensor(avg_loss).to(self.device)
-            dist.all_reduce(loss_tensor, op=dist.ReduceOp.AVG)
-            avg_loss = loss_tensor.item()
+        avg_loss = self._compute_distributed_avg_loss(total_loss / num_batches)
         
         return {
             'loss': avg_loss,
             'epoch': self.epoch,
             'global_step': self.global_step
         }
+    
+    def _set_distributed_sampler_epoch(self, train_loader: DataLoader) -> None:
+        """Set epoch for distributed sampler"""
+        if hasattr(train_loader, 'sampler') and isinstance(train_loader.sampler, DistributedSampler):
+            train_loader.sampler.set_epoch(self.epoch)
+    
+    def _run_training_loop(
+        self,
+        train_loader: DataLoader,
+        optimizer: torch.optim.Optimizer,
+        loss_fn: Callable,
+        scheduler: Optional[Any]
+    ) -> Tuple[float, int]:
+        """Execute the main training loop"""
+        total_loss = 0.0
+        num_batches = 0
+        
+        for batch_idx, (inputs, targets) in enumerate(train_loader):
+            loss = self._process_batch(inputs, targets, loss_fn)
+            self._handle_gradient_accumulation(batch_idx, optimizer, scheduler)
+            total_loss += loss.item() * self.gradient_accumulation_steps
+            num_batches += 1
+        
+        return total_loss, num_batches
+    
+    def _process_batch(
+        self,
+        inputs: torch.Tensor,
+        targets: torch.Tensor,
+        loss_fn: Callable
+    ) -> torch.Tensor:
+        """Process a single batch with optional AMP"""
+        inputs = inputs.to(self.device)
+        targets = targets.to(self.device)
+        
+        if self.use_amp:
+            with torch.cuda.amp.autocast():
+                outputs = self.model(inputs)
+                loss = loss_fn(outputs, targets) / self.gradient_accumulation_steps
+            self.scaler.scale(loss).backward()
+        else:
+            outputs = self.model(inputs)
+            loss = loss_fn(outputs, targets) / self.gradient_accumulation_steps
+            loss.backward()
+        
+        return loss
+    
+    def _handle_gradient_accumulation(
+        self,
+        batch_idx: int,
+        optimizer: torch.optim.Optimizer,
+        scheduler: Optional[Any]
+    ) -> None:
+        """Handle gradient accumulation step"""
+        if (batch_idx + 1) % self.gradient_accumulation_steps != 0:
+            return
+        
+        if self.use_amp:
+            self.scaler.step(optimizer)
+            self.scaler.update()
+        else:
+            optimizer.step()
+        
+        optimizer.zero_grad()
+        if scheduler:
+            scheduler.step()
+        self.global_step += 1
+    
+    def _compute_distributed_avg_loss(self, avg_loss: float) -> float:
+        """Reduce loss across all distributed processes"""
+        if not self.is_distributed:
+            return avg_loss
+        loss_tensor = torch.tensor(avg_loss).to(self.device)
+        dist.all_reduce(loss_tensor, op=dist.ReduceOp.AVG)
+        return loss_tensor.item()
     
     def evaluate(
         self,

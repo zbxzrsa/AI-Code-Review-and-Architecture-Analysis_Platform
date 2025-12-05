@@ -188,7 +188,7 @@ class ShadowComparator:
         time_window_hours: int = 24
     ) -> ComparisonMetrics:
         """Compute comparison metrics for a version"""
-        cutoff = datetime.utcnow() - timedelta(hours=time_window_hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=time_window_hours)
         
         # Filter pairs for this version and time window
         relevant_pairs = [
@@ -363,7 +363,7 @@ class ShadowComparator:
         # Check evaluation duration
         start_time = self.version_evaluations.get(version_id)
         if start_time:
-            elapsed_hours = (datetime.utcnow() - start_time).total_seconds() / 3600
+            elapsed_hours = (datetime.now(timezone.utc) - start_time).total_seconds() / 3600
             if elapsed_hours < self.min_hours:
                 blockers.append(
                     f"Minimum evaluation time not met: {elapsed_hours:.1f}/{self.min_hours}h"
@@ -426,7 +426,7 @@ class ShadowComparator:
     def start_evaluation(self, version_id: str):
         """Start evaluation tracking for a version"""
         if version_id not in self.version_evaluations:
-            self.version_evaluations[version_id] = datetime.utcnow()
+            self.version_evaluations[version_id] = datetime.now(timezone.utc)
             logger.info(f"Started evaluation tracking for {version_id}")
     
     # ==================== Maintenance ====================
@@ -435,7 +435,7 @@ class ShadowComparator:
         """Cleanup old pending pairs"""
         while self._running:
             try:
-                cutoff = datetime.utcnow() - timedelta(hours=1)
+                cutoff = datetime.now(timezone.utc) - timedelta(hours=1)
                 
                 # Remove old pending pairs
                 to_remove = []

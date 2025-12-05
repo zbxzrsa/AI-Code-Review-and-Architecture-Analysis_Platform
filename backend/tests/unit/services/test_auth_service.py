@@ -33,7 +33,7 @@ class TestAuthService:
             name="Test User",
             role="user",
             is_active=True,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
 
@@ -184,7 +184,7 @@ class TestTokenManagement(TestAuthService):
         expired_token = jwt.encode(
             {
                 "sub": "user-123",
-                "exp": datetime.utcnow() - timedelta(hours=1)
+                "exp": datetime.now(timezone.utc) - timedelta(hours=1)
             },
             "secret",
             algorithm="HS256"

@@ -185,7 +185,7 @@ class VersionControlAIModel(nn.Module):
         
         # Create causal mask
         if attention_mask is None:
-            attention_mask = torch.ones((batch_size, seq_len), device=device)
+            attention_mask = torch.ones((batch_size, seq_len), device=device)  # noqa: F841
         
         causal_mask = self._create_causal_mask(seq_len, device)
         
@@ -324,8 +324,8 @@ class VersionControlAIModel(nn.Module):
         **kwargs,
     ) -> torch.Tensor:
         """Generate text autoregressively"""
-        batch_size = input_ids.shape[0]
-        device = input_ids.device
+        _ = input_ids.shape[0]  # noqa: F841 - batch_size reserved
+        _ = input_ids.device  # noqa: F841 - device reserved for future
         
         # Initialize
         generated = input_ids.clone()

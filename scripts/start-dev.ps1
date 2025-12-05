@@ -60,3 +60,11 @@ Write-Host "=================================================" -ForegroundColor 
 
 Write-Host "`nTo stop all services: docker-compose down" -ForegroundColor Yellow
 Write-Host "To view logs: docker-compose logs -f [service-name]" -ForegroundColor Yellow
+
+Write-Host "`n=================================================" -ForegroundColor Cyan
+Write-Host "Quick Start Commands:" -ForegroundColor Green
+Write-Host "  Start modular backend:  cd backend && uvicorn app.main:app --reload --port 8000" -ForegroundColor White
+Write-Host "  Start frontend dev:     cd frontend && npm run dev" -ForegroundColor White
+Write-Host "  Run backend tests:      cd backend && pytest app/tests/ -v" -ForegroundColor White
+Write-Host "  Run frontend tests:     cd frontend && npm test" -ForegroundColor White
+Write-Host "=================================================" -ForegroundColor Cyan

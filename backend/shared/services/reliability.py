@@ -52,7 +52,7 @@ class CircuitBreakerMetrics:
     failure_count: int = 0
     success_count: int = 0
     last_failure_time: Optional[datetime] = None
-    last_state_change: datetime = field(default_factory=datetime.utcnow)
+    last_state_change: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     total_requests: int = 0
     total_failures: int = 0
     total_rejected: int = 0
@@ -101,7 +101,7 @@ class CircuitBreaker:
         if self.metrics.state == CircuitState.OPEN:
             # Check if recovery timeout has passed
             if self.metrics.last_failure_time:
-                elapsed = (datetime.utcnow() - self.metrics.last_failure_time).total_seconds()
+                elapsed = (datetime.now(timezone.utc) - self.metrics.last_failure_time).total_seconds()
                 if elapsed >= self.config.recovery_timeout:
                     await self._transition_to(CircuitState.HALF_OPEN)
                     return True
@@ -116,7 +116,7 @@ class CircuitBreaker:
         """Transition to new state."""
         old_state = self.metrics.state
         self.metrics.state = new_state
-        self.metrics.last_state_change = datetime.utcnow()
+        self.metrics.last_state_change = datetime.now(timezone.utc)
         
         if new_state == CircuitState.CLOSED:
             self.metrics.failure_count = 0
@@ -138,7 +138,7 @@ class CircuitBreaker:
         """Record failed request."""
         self.metrics.failure_count += 1
         self.metrics.total_failures += 1
-        self.metrics.last_failure_time = datetime.utcnow()
+        self.metrics.last_failure_time = datetime.now(timezone.utc)
         
         if self.metrics.state == CircuitState.HALF_OPEN:
             await self._transition_to(CircuitState.OPEN)
@@ -373,7 +373,7 @@ class RequestDeduplicator:
             # Check cache
             if request_hash in self._cache:
                 entry = self._cache[request_hash]
-                if datetime.utcnow() < entry.expires_at:
+                if datetime.now(timezone.utc) < entry.expires_at:
                     logger.debug(f"Dedup cache hit: {request_hash[:16]}...")
                     return entry.result
                 else:
@@ -398,8 +398,8 @@ class RequestDeduplicator:
                 self._cache[request_hash] = DeduplicationEntry(
                     request_hash=request_hash,
                     result=result,
-                    created_at=datetime.utcnow(),
-                    expires_at=datetime.utcnow() + timedelta(seconds=self.ttl),
+                    created_at=datetime.now(timezone.utc),
+                    expires_at=datetime.now(timezone.utc) + timedelta(seconds=self.ttl),
                 )
                 
                 # Evict if needed
@@ -479,7 +479,7 @@ class DynamicBatcher:
             self._queue.append(BatchItem(
                 request=request,
                 future=future,
-                added_at=datetime.utcnow(),
+                added_at=datetime.now(timezone.utc),
             ))
             
             # Start processing if not already running

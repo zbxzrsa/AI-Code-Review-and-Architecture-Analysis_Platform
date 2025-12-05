@@ -37,7 +37,7 @@ class ExperimentMetrics:
     user_satisfaction: float = 0.0  # 0-5 star rating
     false_positives: int = 0
     false_negatives: int = 0
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def meets_v2_threshold(self) -> bool:
         """Check if metrics meet V2 production thresholds."""
@@ -76,7 +76,7 @@ class CodeReviewAnalysis:
     confidence_score: float = 0.0
     analysis_time_ms: float = 0.0
     model_used: str = ""
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -112,7 +112,7 @@ class Experiment:
     routing_strategy: str = ""  # "primary", "secondary", "ensemble", "adaptive"
     
     # Execution
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     
@@ -164,7 +164,7 @@ class QuarantineRecord:
     reason: str = ""
     failure_analysis: Dict[str, Any] = field(default_factory=dict)
     metrics_at_failure: Optional[ExperimentMetrics] = None
-    quarantined_at: datetime = field(default_factory=datetime.utcnow)
+    quarantined_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     quarantined_by: str = ""
     
     # Re-evaluation

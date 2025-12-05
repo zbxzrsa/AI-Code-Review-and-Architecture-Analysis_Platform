@@ -88,16 +88,19 @@ class SelfEvolutionCycle:
         self._running = False
         self._metrics = EvolutionMetrics()
         self._history: List[CycleResult] = []
+        self._loop_task: Optional[asyncio.Task] = None
     
-    async def start(self):
+    def start(self):
         """Start the evolution cycle."""
         self._running = True
-        asyncio.create_task(self._run_loop())
+        self._loop_task = asyncio.create_task(self._run_loop())
         logger.info("Self-evolution cycle started")
     
-    async def stop(self):
+    def stop(self):
         """Stop the evolution cycle."""
         self._running = False
+        if self._loop_task:
+            self._loop_task.cancel()
         logger.info("Self-evolution cycle stopped")
     
     async def _run_loop(self):
@@ -188,7 +191,7 @@ class SelfEvolutionCycle:
                 except Exception as e:
                     logger.error(f"Promotion error: {e}")
     
-    async def _check_degradations(self, result: CycleResult):
+    def _check_degradations(self, result: CycleResult):
         """Degrade failing technologies to V3."""
         v2_metrics = self.v2_ai.get_metrics()
         if v2_metrics["error_rate"] > 0.10:

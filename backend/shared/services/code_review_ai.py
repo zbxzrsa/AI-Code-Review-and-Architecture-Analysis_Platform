@@ -195,7 +195,7 @@ class PatchSuggestion:
 class CodeReviewResult:
     """Complete code review result."""
     id: str = field(default_factory=lambda: str(uuid4()))
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     code_language: str = ""
     code_length: int = 0
     
@@ -316,7 +316,7 @@ class CodeReviewAI:
             # Create result
             result = CodeReviewResult(
                 id=result_id,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 code_language=language,
                 code_length=len(code),
                 security_vulnerabilities=security_vulns,
@@ -356,27 +356,27 @@ class CodeReviewAI:
         # If user provided keys, try them first
         if user_api_keys:
             for provider, key in user_api_keys.items():
-                if await self._test_model_availability(provider, key):
+                if self._test_model_availability(provider, key):
                     return provider
 
         # Fall back to default chain
         for model in self.model_routing_chain:
-            if await self._test_model_availability(model):
+            if self._test_model_availability(model):
                 return model
 
         raise RuntimeError("No available models in routing chain")
 
-    async def _test_model_availability(
+    def _test_model_availability(
         self,
         model: str,
-        api_key: Optional[str] = None,
+        api_key: Optional[str] = None,  # noqa: ARG002 - Reserved for auth
     ) -> bool:
         """Test if model is available."""
         # In production: actually test the model
         logger.debug(f"Testing model availability: {model}")
         return True
 
-    async def _apply_feature_flags(self, flags: List[str]) -> List[str]:
+    def _apply_feature_flags(self, flags: List[str]) -> List[str]:
         """Apply feature flags for gradual rollouts."""
         applied = []
         for flag in flags:
@@ -462,10 +462,10 @@ class CodeReviewAI:
 
         return issues
 
-    async def _analyze_performance(
+    def _analyze_performance(
         self,
-        code: str,
-        language: str,
+        code: str,  # noqa: ARG002 - Reserved for analysis
+        language: str,  # noqa: ARG002 - Reserved for language-specific
     ) -> PerformanceAnalysis:
         """Analyze performance bottlenecks."""
         return PerformanceAnalysis(
@@ -479,10 +479,10 @@ class CodeReviewAI:
             memory_concerns=["Large data structure allocation"],
         )
 
-    async def _analyze_architecture(
+    def _analyze_architecture(
         self,
-        code: str,
-        language: str,
+        code: str,  # noqa: ARG002 - Reserved for analysis
+        language: str,  # noqa: ARG002 - Reserved for language-specific
     ) -> ArchitectureAnalysis:
         """Analyze architecture and dependencies."""
         return ArchitectureAnalysis(
@@ -494,10 +494,10 @@ class CodeReviewAI:
             coupling_score=35.0,
         )
 
-    async def _generate_test_recommendations(
+    def _generate_test_recommendations(
         self,
-        code: str,
-        language: str,
+        code: str,  # noqa: ARG002 - Reserved for analysis
+        language: str,  # noqa: ARG002 - Reserved for language-specific
     ) -> TestRecommendation:
         """Generate test recommendations."""
         return TestRecommendation(
@@ -537,10 +537,10 @@ class CodeReviewAI:
 
         return patches
 
-    async def _generate_documentation(
+    def _generate_documentation(
         self,
-        code: str,
-        language: str,
+        code: str,  # noqa: ARG002 - Reserved for analysis
+        language: str,  # noqa: ARG002 - Reserved for language-specific
     ) -> List[str]:
         """Generate documentation suggestions."""
         return [
@@ -549,10 +549,10 @@ class CodeReviewAI:
             "Add examples in docstrings",
         ]
 
-    async def _generate_comments(
+    def _generate_comments(
         self,
-        code: str,
-        language: str,
+        code: str,  # noqa: ARG002 - Reserved for analysis
+        language: str,  # noqa: ARG002 - Reserved for language-specific
     ) -> List[str]:
         """Generate comment suggestions."""
         return [
@@ -560,12 +560,12 @@ class CodeReviewAI:
             "Document the purpose of this utility function",
         ]
 
-    async def _calculate_overall_score(
+    def _calculate_overall_score(
         self,
         vulnerabilities: List[SecurityVulnerability],
         issues: List[CodeIssue],
         performance: PerformanceAnalysis,
-        architecture: ArchitectureAnalysis,
+        architecture: ArchitectureAnalysis,  # noqa: ARG002 - Reserved
         tests: TestRecommendation,
     ) -> float:
         """Calculate overall code quality score."""

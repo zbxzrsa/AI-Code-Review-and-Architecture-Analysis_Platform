@@ -204,7 +204,7 @@ class PerformanceMonitor:
     }
     
     def __init__(self):
-        self.metric_definitions = dict(self.METRIC_DEFINITIONS)
+        self.custom_metrics = dict(self.METRIC_DEFINITIONS)  # Renamed to avoid confusion
         self.metric_history: Dict[str, List[MetricValue]] = {}
         self.alerts: List[Alert] = []
         self.active_alerts: Dict[str, Alert] = {}
@@ -217,7 +217,7 @@ class PerformanceMonitor:
     
     def register_metric(self, definition: MetricDefinition) -> None:
         """Register a new metric"""
-        self.metric_definitions[definition.name] = definition
+        self.custom_metrics[definition.name] = definition
         logger.info(f"Registered metric: {definition.name}")
     
     def record_metric(
@@ -248,10 +248,10 @@ class PerformanceMonitor:
     
     def _check_thresholds(self, name: str, value: float) -> None:
         """Check if value exceeds thresholds"""
-        if name not in self.metric_definitions:
+        if name not in self.custom_metrics:
             return
         
-        definition = self.metric_definitions[name]
+        definition = self.custom_metrics[name]
         
         # Determine if threshold is exceeded
         # For some metrics, lower is better (latency, error_rate)
@@ -301,7 +301,11 @@ class PerformanceMonitor:
         logger.warning(f"Alert triggered: {alert.message}")
         
         if self.on_alert:
-            asyncio.create_task(self._async_callback(self.on_alert, alert))
+            task = asyncio.create_task(self._async_callback(self.on_alert, alert))
+            # Store task reference to prevent premature garbage collection
+            self._pending_tasks = getattr(self, '_pending_tasks', set())
+            self._pending_tasks.add(task)
+            task.add_done_callback(self._pending_tasks.discard)
     
     def _resolve_alert(self, metric_name: str) -> None:
         """Resolve an active alert"""
@@ -363,7 +367,7 @@ class PerformanceMonitor:
         """Get SLA compliance status"""
         compliance = {}
         
-        for name, definition in self.metric_definitions.items():
+        for name, definition in self.custom_metrics.items():
             if definition.target_value is None:
                 continue
             
@@ -411,7 +415,7 @@ class PerformanceMonitor:
             "timestamp": datetime.now().isoformat(),
             "metrics": {
                 name: self.get_metric_statistics(name)
-                for name in self.metric_definitions
+                for name in self.custom_metrics
             },
             "sla_compliance": self.get_sla_compliance(),
             "active_alerts": [

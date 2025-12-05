@@ -337,7 +337,7 @@ class DualAICoordinator:
             return {"success": False, "error": "AI not available"}
         
         # Process request
-        result = await self._process_request(ai, request_data)
+        result = self._process_request(ai, request_data)
         
         # Update metrics
         async with self._lock:
@@ -349,10 +349,10 @@ class DualAICoordinator:
         
         return result
     
-    async def _process_request(
+    def _process_request(
         self,
         ai: AIInstance,
-        request_data: Dict[str, Any],
+        request_data: Dict[str, Any],  # noqa: ARG002 - reserved for request processing
     ) -> Dict[str, Any]:
         """Process a request through an AI instance."""
         start_time = datetime.now(timezone.utc)
@@ -397,7 +397,7 @@ class DualAICoordinator:
         analysis = await self._v2_analyze_error(error_data)
         
         # Generate fix
-        fix = await self._v2_generate_fix(analysis)
+        fix = self._v2_generate_fix(analysis)
         
         logger.info(f"V2 VC-AI generated fix for V1 error: {error_data.get('error_id')}")
         
@@ -418,7 +418,10 @@ class DualAICoordinator:
             "fixable": True,
         }
     
-    async def _v2_generate_fix(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
+    def _v2_generate_fix(
+        self,
+        analysis: Dict[str, Any]  # noqa: ARG002 - reserved for analysis-driven fix
+    ) -> Dict[str, Any]:
         """V2 VC-AI generates fix for error."""
         return {
             "fix_type": "compatibility_patch",
@@ -429,7 +432,7 @@ class DualAICoordinator:
             "estimated_success_rate": 0.95,
         }
     
-    async def v3_compare_technology(
+    def v3_compare_technology(
         self,
         tech_data: Dict[str, Any],
     ) -> Dict[str, Any]:
@@ -558,7 +561,7 @@ class DualAICoordinator:
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
     
-    async def update_ai_capabilities(
+    def update_ai_capabilities(
         self,
         version: str,
         ai_type: AIType,

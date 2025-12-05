@@ -45,7 +45,7 @@ async def get_slo_status(request: Request) -> SLOStatus:
         return slo_monitor.get_status()
     
     # Mock response if monitor not initialized
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     return SLOStatus(
         service_name="v2-vc-ai-service",
@@ -125,7 +125,7 @@ async def get_error_budget(request: Request) -> ErrorBudget:
     if slo_monitor:
         return slo_monitor.get_error_budget()
     
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     return ErrorBudget(
         window_days=30,
@@ -162,7 +162,7 @@ async def get_dashboard_data(request: Request) -> SLODashboardData:
         alerts = []
     
     # Generate chart data
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     availability_chart = []
     latency_chart = []
     error_rate_chart = []
@@ -225,7 +225,7 @@ async def acknowledge_alert(
         "alert_id": alert_id,
         "acknowledged": True,
         "acknowledged_by": acknowledged_by,
-        "acknowledged_at": datetime.utcnow().isoformat(),
+        "acknowledged_at": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -246,7 +246,7 @@ async def resolve_alert(
     return {
         "alert_id": alert_id,
         "resolved": True,
-        "resolved_at": datetime.utcnow().isoformat(),
+        "resolved_at": datetime.now(timezone.utc).isoformat(),
         "resolution": resolution,
     }
 

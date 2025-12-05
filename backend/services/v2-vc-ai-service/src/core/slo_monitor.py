@@ -42,10 +42,10 @@ class MetricWindow:
     window_seconds: float = 300.0  # 5-minute default window
     
     def add(self, value: float) -> None:
-        self.samples.append(MetricSample(datetime.utcnow(), value))
+        self.samples.append(MetricSample(datetime.now(timezone.utc), value))
     
     def get_values_in_window(self) -> List[float]:
-        cutoff = datetime.utcnow() - timedelta(seconds=self.window_seconds)
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=self.window_seconds)
         return [s.value for s in self.samples if s.timestamp >= cutoff]
     
     def mean(self) -> Optional[float]:
@@ -91,7 +91,7 @@ class SLOMonitor:
         self._error_requests = 0
         
         # Error budget tracking
-        self._budget_window_start = datetime.utcnow()
+        self._budget_window_start = datetime.now(timezone.utc)
         self._budget_consumed_minutes = 0.0
         
         # Active alerts
@@ -138,7 +138,7 @@ class SLOMonitor:
         
         # Check availability
         if not metrics.availability_compliant:
-            await self._trigger_alert(
+            self._trigger_alert(
                 "availability_violation",
                 f"Availability {metrics.availability:.4%} below target {metrics.availability_target:.4%}",
                 AlertSeverity.CRITICAL,
@@ -147,7 +147,7 @@ class SLOMonitor:
         
         # Check latency
         if not metrics.latency_compliant:
-            await self._trigger_alert(
+            self._trigger_alert(
                 "latency_violation",
                 f"P99 latency {metrics.latency_p99_ms:.0f}ms exceeds target {metrics.latency_target_p99_ms:.0f}ms",
                 AlertSeverity.CRITICAL,
@@ -156,7 +156,7 @@ class SLOMonitor:
         
         # Check error rate
         if not metrics.error_rate_compliant:
-            await self._trigger_alert(
+            self._trigger_alert(
                 "error_rate_violation",
                 f"Error rate {metrics.error_rate:.4%} exceeds target {metrics.error_rate_target:.4%}",
                 AlertSeverity.CRITICAL,
@@ -165,14 +165,14 @@ class SLOMonitor:
         
         # Check accuracy
         if not metrics.accuracy_compliant:
-            await self._trigger_alert(
+            self._trigger_alert(
                 "accuracy_violation",
                 f"Accuracy {metrics.accuracy:.4%} below target {metrics.accuracy_target:.4%}",
                 AlertSeverity.WARNING,
                 metrics.accuracy,
             )
     
-    async def _trigger_alert(
+    def _trigger_alert(
         self,
         alert_id: str,
         message: str,
@@ -193,7 +193,7 @@ class SLOMonitor:
                 threshold=0,
                 severity=severity,
             ),
-            triggered_at=datetime.utcnow(),
+            triggered_at=datetime.now(timezone.utc),
             metric_value=metric_value,
             message=message,
         )
@@ -207,14 +207,14 @@ class SLOMonitor:
             except Exception as e:
                 logger.error(f"Error in alert callback: {e}")
     
-    async def resolve_alert(self, alert_id: str) -> bool:
+    def resolve_alert(self, alert_id: str) -> bool:
         """Resolve an active alert"""
         if alert_id not in self._active_alerts:
             return False
         
         alert = self._active_alerts[alert_id]
         alert.resolved = True
-        alert.resolved_at = datetime.utcnow()
+        alert.resolved_at = datetime.now(timezone.utc)
         alert.duration_minutes = (alert.resolved_at - alert.triggered_at).total_seconds() / 60
         
         del self._active_alerts[alert_id]
@@ -294,7 +294,7 @@ class SLOMonitor:
         # Calculate consumed budget
         # For 99.99% SLO over 30 days = 4.32 minutes budget
         error_ratio = self._error_requests / max(1, self._total_requests)
-        elapsed_days = (datetime.utcnow() - self._budget_window_start).days + 1
+        elapsed_days = (datetime.now(timezone.utc) - self._budget_window_start).days + 1
         consumed_minutes = elapsed_days * 24 * 60 * error_ratio
         
         remaining_minutes = max(0, total_budget_minutes - consumed_minutes)
@@ -306,7 +306,7 @@ class SLOMonitor:
         # Projection
         if burn_rate_per_day > 0 and remaining_minutes > 0:
             days_until_exhaustion = remaining_minutes / burn_rate_per_day
-            projected_exhaustion = datetime.utcnow() + timedelta(days=days_until_exhaustion)
+            projected_exhaustion = datetime.now(timezone.utc) + timedelta(days=days_until_exhaustion)
         else:
             days_until_exhaustion = None
             projected_exhaustion = None
@@ -356,7 +356,7 @@ class SLOMonitor:
     
     def _count_recent_violations(self, hours: int) -> int:
         """Count violations in recent history"""
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         return sum(
             1 for h in self._history
             if h.get("timestamp", datetime.min) >= cutoff and h.get("violation", False)
@@ -385,11 +385,11 @@ class SLOMonitor:
         """Get all active alerts"""
         return list(self._active_alerts.values())
     
-    async def snapshot_history(self) -> None:
+    def snapshot_history(self) -> None:
         """Take a snapshot for history tracking"""
         metrics = self.get_current_metrics()
         self._history.append({
-            "timestamp": datetime.utcnow(),
+            "timestamp": datetime.now(timezone.utc),
             "availability": metrics.availability,
             "latency_p99": metrics.latency_p99_ms,
             "error_rate": metrics.error_rate,
@@ -399,7 +399,7 @@ class SLOMonitor:
     
     def reset_budget_window(self) -> None:
         """Reset error budget window"""
-        self._budget_window_start = datetime.utcnow()
+        self._budget_window_start = datetime.now(timezone.utc)
         self._total_requests = 0
         self._successful_requests = 0
         self._error_requests = 0

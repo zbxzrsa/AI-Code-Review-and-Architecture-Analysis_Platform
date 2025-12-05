@@ -7,12 +7,6 @@ and experimental features for version control analysis.
 """
 
 __version__ = "1.0.0"
-__all__ = [
-    "config",
-    "models", 
-    "training",
-    "inference",
-    "tracking",
-    "evaluation",
-    "failure",
-]
+
+# Note: Submodules should be imported explicitly
+# e.g., from v1_vc_ai_service.tracking import evolution_tracker

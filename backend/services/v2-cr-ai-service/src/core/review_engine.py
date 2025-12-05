@@ -157,8 +157,8 @@ class ReviewEngine:
             response = ReviewResponse(
                 id=review_id,
                 status="completed",
-                requested_at=datetime.utcnow(),
-                completed_at=datetime.utcnow(),
+                requested_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(timezone.utc),
                 total_time_ms=total_time,
                 primary_model="claude-3-sonnet",
                 secondary_model="gpt-4-turbo" if request.consensus_enabled else None,
@@ -345,7 +345,7 @@ Be precise, actionable, and minimize false positives."""
     def _generate_mock_findings(
         self,
         file_path: str,
-        content: str,
+        content: str,  # noqa: ARG002 - Reserved for content analysis
         dimensions: List[FindingCategory],
     ) -> List[ReviewFinding]:
         """Generate mock findings for testing."""

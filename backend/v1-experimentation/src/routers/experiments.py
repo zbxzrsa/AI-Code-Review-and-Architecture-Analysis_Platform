@@ -111,7 +111,7 @@ async def run_experiment(
 
     experiment = experiments_store[experiment_id]
     experiment.status = ExperimentStatus.RUNNING
-    experiment.started_at = datetime.utcnow()
+    experiment.started_at = datetime.now(timezone.utc)
 
     try:
         # Simulate analysis
@@ -130,7 +130,7 @@ async def run_experiment(
         )
 
         experiment.metrics = metrics
-        experiment.completed_at = datetime.utcnow()
+        experiment.completed_at = datetime.now(timezone.utc)
         experiment.status = ExperimentStatus.COMPLETED
 
         # Auto-evaluate for promotion

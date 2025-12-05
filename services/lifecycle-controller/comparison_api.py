@@ -185,7 +185,7 @@ async def initiate_rollback(request: RollbackRequest):
             "versionId": request.versionId,
             "reason": request.reason,
             "notes": request.notes,
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "status": "initiated"
         }
         rollback_history.append(rollback_event)
@@ -245,7 +245,7 @@ async def log_opa_decision(
         "reason": reason,
         "github_run_id": github_run_id,
         "triggered_by": triggered_by,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
     
     # In production, store in database
@@ -268,7 +268,7 @@ async def log_rollback_event(
         "reason": reason,
         "notes": notes,
         "triggered_by": triggered_by,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
     
     logger.info(f"Rollback logged: {event}")
@@ -341,7 +341,7 @@ async def get_rollback_stats():
         by_reason[reason] = by_reason.get(reason, 0) + 1
     
     # Recent rollbacks (last 7 days)
-    week_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
     recent = sum(1 for r in rollback_history if r["timestamp"] > week_ago)
     
     return {

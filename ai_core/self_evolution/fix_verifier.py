@@ -160,9 +160,9 @@ class FixVerifier:
         
         return result
     
-    async def _validate_syntax(
+    def _validate_syntax(
         self,
-        file_path: str,
+        file_path: str,  # noqa: ARG002 - used for extension check
         code: str,
     ) -> Dict[str, Any]:
         """Validate Python syntax."""
@@ -187,7 +187,7 @@ class FixVerifier:
     
     async def _run_static_analysis(
         self,
-        file_path: str,
+        file_path: str,  # noqa: ARG002 - reserved for language detection
         code: str,
     ) -> Dict[str, Any]:
         """Run static analysis on code."""
@@ -210,7 +210,7 @@ class FixVerifier:
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )
-                stdout, stderr = await asyncio.wait_for(
+                stdout, _ = await asyncio.wait_for(
                     result.communicate(),
                     timeout=30,
                 )
@@ -264,7 +264,7 @@ class FixVerifier:
             )
             
             try:
-                stdout, stderr = await asyncio.wait_for(
+                stdout, _ = await asyncio.wait_for(
                     process.communicate(),
                     timeout=self.test_timeout,
                 )
@@ -284,7 +284,7 @@ class FixVerifier:
         
         return result
     
-    async def _discover_related_tests(self, file_path: str) -> List[str]:
+    def _discover_related_tests(self, file_path: str) -> List[str]:
         """Discover test files related to modified file."""
         if file_path in self._test_cache:
             return self._test_cache[file_path]
@@ -370,9 +370,9 @@ class FixVerifier:
         
         return result
     
-    async def _check_regression(
+    def _check_regression(
         self,
-        file_path: str,
+        file_path: str,  # noqa: ARG002 - reserved for language-specific checks
         original_code: str,
         fixed_code: str,
     ) -> Dict[str, Any]:

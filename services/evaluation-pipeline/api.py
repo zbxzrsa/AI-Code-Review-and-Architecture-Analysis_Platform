@@ -119,7 +119,7 @@ async def health_check():
         "status": "healthy",
         "comparator": comparator is not None,
         "gold_evaluator": gold_evaluator is not None,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 
@@ -143,7 +143,7 @@ async def record_v1_output(request: AnalysisOutputRequest):
         issues=request.issues,
         latency_ms=request.latency_ms,
         cost=request.cost,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         confidence=request.confidence,
         metadata=request.metadata
     )
@@ -171,7 +171,7 @@ async def record_v2_output(request: AnalysisOutputRequest):
         issues=request.issues,
         latency_ms=request.latency_ms,
         cost=request.cost,
-        timestamp=datetime.utcnow(),
+        timestamp=datetime.now(timezone.utc),
         confidence=request.confidence,
         metadata=request.metadata
     )

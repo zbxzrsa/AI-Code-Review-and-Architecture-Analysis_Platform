@@ -158,7 +158,7 @@ async def analyze_code(request: CodeReviewRequest) -> CodeReviewResponse:
 
         return CodeReviewResponse(
             review_id=review_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             language=request.language,
             issues=[],
             suggestions=request.code.split("\n")[:5],  # Placeholder

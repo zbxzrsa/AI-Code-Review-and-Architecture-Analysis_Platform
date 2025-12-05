@@ -239,7 +239,7 @@ class ImpactPredictor:
         
         return dependencies
     
-    async def predict_impact(
+    def predict_impact(
         self,
         changed_files: List[str],
         diff_content: str,

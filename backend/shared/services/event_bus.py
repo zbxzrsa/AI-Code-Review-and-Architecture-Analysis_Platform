@@ -158,7 +158,7 @@ class EventBus:
         event = Event(
             id=str(uuid4()),
             type=event_type,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             source=source,
             data=data,
             correlation_id=correlation_id or str(uuid4()),

@@ -272,7 +272,7 @@ class ReasoningEngine(nn.Module):
         )
         
         # Statistics
-        self.routing_stats: Dict[str, int] = {name: 0 for name in self.reasoning_modules}
+        self.routing_stats: Dict[str, int] = dict.fromkeys(self.reasoning_modules, 0)
     
     def forward(
         self,

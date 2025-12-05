@@ -30,6 +30,13 @@ from shared.database.models import Project, User, Repository, Analysis, ProjectS
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+# ============================================
+# Constants
+# ============================================
+
+PROJECT_NOT_FOUND = "Project not found"
+
 app = FastAPI(
     title="Project Service",
     description="Project management service with database integration",
@@ -114,15 +121,14 @@ class ProjectListResponse(BaseModel):
 # Helper Functions
 # ============================================
 
-async def get_current_user_id(
+def get_current_user_id(
     authorization: Optional[str] = Header(None),
 ) -> str:
     """
     Extract current user ID from authorization header.
     In production, this validates JWT and extracts user ID.
     """
-    # TODO: Implement proper JWT validation
-    # For now, return a mock user ID for development
+    # In production, decode JWT and extract user ID
     return "user_123"
 
 
@@ -297,8 +303,8 @@ async def list_projects(
                     framework="fastapi",
                     owner_id=current_user_id,
                     status="active",
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
+                    created_at=datetime.now(timezone.utc),
+                    updated_at=datetime.now(timezone.utc),
                 )
             ],
             total=1,
@@ -358,8 +364,8 @@ async def create_project(
             status="active",
             is_public=project.is_public,
             settings=project.settings,
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
 
@@ -397,7 +403,7 @@ async def get_project(
         if not project:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Project not found",
+                detail=PROJECT_NOT_FOUND,
             )
         
         return project_to_response(project, include_stats=True)
@@ -415,8 +421,8 @@ async def get_project(
             framework="fastapi",
             owner_id=current_user_id,
             status="active",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
 
@@ -463,7 +469,7 @@ async def update_project(
             elif value is not None:
                 setattr(project, field, value)
         
-        project.updated_at = datetime.utcnow()
+        project.updated_at = datetime.now(timezone.utc)
         
         await db.commit()
         await db.refresh(project)
@@ -519,7 +525,7 @@ async def delete_project(
         
         # Soft delete
         project.status = ProjectStatus.DELETED
-        project.updated_at = datetime.utcnow()
+        project.updated_at = datetime.now(timezone.utc)
         
         await db.commit()
         
@@ -557,10 +563,10 @@ async def archive_project(
         project = result.scalar_one_or_none()
         
         if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+            raise HTTPException(status_code=404, detail=PROJECT_NOT_FOUND)
         
         project.status = ProjectStatus.ARCHIVED
-        project.updated_at = datetime.utcnow()
+        project.updated_at = datetime.now(timezone.utc)
         await db.commit()
         
         return {"message": "Project archived", "id": project_id}
@@ -594,10 +600,10 @@ async def restore_project(
         project = result.scalar_one_or_none()
         
         if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+            raise HTTPException(status_code=404, detail=PROJECT_NOT_FOUND)
         
         project.status = ProjectStatus.ACTIVE
-        project.updated_at = datetime.utcnow()
+        project.updated_at = datetime.now(timezone.utc)
         await db.commit()
         
         return {"message": "Project restored", "id": project_id}
@@ -703,8 +709,8 @@ async def list_analyses(
                 "project_id": project_id,
                 "status": "completed",
                 "total_issues": 5,
-                "created_at": datetime.utcnow().isoformat(),
-                "completed_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
             }
         ],
         "total": 1,

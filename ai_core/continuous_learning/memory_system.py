@@ -78,8 +78,8 @@ class ExperienceReplay:
     ) -> None:
         """Add experience to buffer"""
         item = MemoryItem(
-            input=input.cpu().clone(),
-            target=target.cpu().clone() if isinstance(target, torch.Tensor) else torch.tensor(target),
+            input=input.detach().cpu().clone(),
+            target=target.detach().cpu().clone() if isinstance(target, torch.Tensor) else torch.tensor(target),
             task_id=task_id,
             importance=importance,
             timestamp=self.timestamp,
@@ -131,7 +131,8 @@ class ExperienceReplay:
         elif self.prioritized:
             indices, weights = self._prioritized_sample(batch_size)
         else:
-            indices = np.random.choice(len(self.buffer), batch_size, replace=False)
+            rng = np.random.default_rng()
+            indices = rng.choice(len(self.buffer), batch_size, replace=False)
             weights = torch.ones(batch_size)
         
         inputs = torch.stack([self.buffer[i].input for i in indices])
@@ -155,7 +156,8 @@ class ExperienceReplay:
         probs = probs / probs.sum()
         
         # Sample indices
-        indices = np.random.choice(buffer_len, batch_size, p=probs, replace=False)
+        rng = np.random.default_rng()
+        indices = rng.choice(buffer_len, batch_size, p=probs, replace=False)
         
         # Calculate importance sampling weights
         min_prob = probs.min()
@@ -224,8 +226,8 @@ class ExperienceReplay:
         if random.random() < prob:
             idx = random.randint(0, self.capacity - 1)
             self.buffer[idx] = MemoryItem(
-                input=input.cpu().clone(),
-                target=target.cpu().clone() if isinstance(target, torch.Tensor) else torch.tensor(target),
+                input=input.detach().cpu().clone(),
+                target=target.detach().cpu().clone() if isinstance(target, torch.Tensor) else torch.tensor(target),
                 task_id=task_id,
                 importance=1.0,
                 timestamp=self.timestamp
@@ -400,8 +402,8 @@ class LongTermMemory:
         model.eval()
         
         with torch.no_grad():
-            input = item.input.unsqueeze(0).to(self.device)
-            output = model(input)
+            input_tensor = item.input.unsqueeze(0).to(self.device)
+            output = model(input_tensor)
             
             # Use prediction entropy as importance
             probs = F.softmax(output, dim=1)
@@ -416,7 +418,7 @@ class LongTermMemory:
         self,
         batch_size: int,
         memory_type: str = 'both',
-        task_id: Optional[int] = None
+        task_id: Optional[int] = None  # noqa: ARG002 - reserved for future task filtering
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Recall memories
@@ -424,7 +426,7 @@ class LongTermMemory:
         Args:
             batch_size: Number of memories to recall
             memory_type: 'short', 'long', or 'both'
-            task_id: Optional task filter
+            task_id: Optional task filter (reserved for future use)
             
         Returns:
             inputs, targets

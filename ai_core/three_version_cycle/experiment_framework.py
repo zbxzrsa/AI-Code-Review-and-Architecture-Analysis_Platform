@@ -181,7 +181,7 @@ class ExperimentFramework:
         self._active_experiments: List[str] = []
         self._lock = asyncio.Lock()
     
-    async def create_experiment(
+    def create_experiment(
         self,
         technology_type: str,
         name: Optional[str] = None,
@@ -223,7 +223,7 @@ class ExperimentFramework:
             logger.info(f"Started experiment: {exp.config.name}")
             return True
     
-    async def record_result(
+    def record_result(
         self,
         experiment_id: str,
         success: bool,
@@ -288,11 +288,11 @@ class ExperimentFramework:
         logger.info(f"Evaluated {exp.config.name}: {result.recommendation}")
         return result
     
-    async def get_experiment(self, experiment_id: str) -> Optional[TechnologyExperiment]:
+    def get_experiment(self, experiment_id: str) -> Optional[TechnologyExperiment]:
         """Get experiment by ID."""
         return self._experiments.get(experiment_id)
     
-    async def list_experiments(
+    def list_experiments(
         self,
         status: Optional[ExperimentStatus] = None,
     ) -> List[TechnologyExperiment]:
@@ -302,7 +302,7 @@ class ExperimentFramework:
             experiments = [e for e in experiments if e.status == status]
         return experiments
     
-    async def get_active_experiments(self) -> List[TechnologyExperiment]:
+    def get_active_experiments(self) -> List[TechnologyExperiment]:
         """Get currently running experiments."""
         return [
             self._experiments[eid]

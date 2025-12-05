@@ -185,7 +185,7 @@ const EvolutionCycleDashboard: React.FC = () => {
         return;
       } catch (apiError) {
         // API not available, use mock data
-        console.log('Using mock data - API not available');
+        // Development fallback - no console output in production
       }
 
       // Fallback mock data for development

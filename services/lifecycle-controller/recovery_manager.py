@@ -128,7 +128,7 @@ class RecoveryManager:
     
     async def _process_recovery_candidates(self):
         """Process all versions eligible for recovery"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         for version_id, record in self.recovery_records.items():
             # Skip if not eligible yet
@@ -149,7 +149,7 @@ class RecoveryManager:
         
         logger.info(f"Starting recovery attempt {record.recovery_attempts + 1} for {version_id}")
         record.recovery_status = RecoveryStatus.IN_PROGRESS
-        record.last_attempt_time = datetime.utcnow()
+        record.last_attempt_time = datetime.now(timezone.utc)
         
         # Run gold-set evaluation
         result = await self._run_gold_set_evaluation(version_id)
@@ -182,7 +182,7 @@ class RecoveryManager:
             # Schedule next attempt with exponential backoff
             record.recovery_status = RecoveryStatus.PENDING
             cooldown = self._calculate_cooldown(record.recovery_attempts)
-            record.next_eligible_time = datetime.utcnow() + timedelta(hours=cooldown)
+            record.next_eligible_time = datetime.now(timezone.utc) + timedelta(hours=cooldown)
             logger.info(f"Version {version_id} scheduled for retry in {cooldown}h")
             
         else:
@@ -256,7 +256,7 @@ class RecoveryManager:
         metadata: Optional[Dict[str, Any]] = None
     ) -> RecoveryRecord:
         """Register a version entering quarantine (V3)"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         record = RecoveryRecord(
             version_id=version_id,
@@ -290,9 +290,9 @@ class RecoveryManager:
         """Mark a version as promoted back to V1"""
         if version_id in self.recovery_records:
             record = self.recovery_records[version_id]
-            record.metadata["promoted_to_v1_at"] = datetime.utcnow().isoformat()
+            record.metadata["promoted_to_v1_at"] = datetime.now(timezone.utc).isoformat()
             record.metadata["total_quarantine_time"] = str(
-                datetime.utcnow() - record.quarantine_time
+                datetime.now(timezone.utc) - record.quarantine_time
             )
             
             # Archive but don't delete - keep for analytics

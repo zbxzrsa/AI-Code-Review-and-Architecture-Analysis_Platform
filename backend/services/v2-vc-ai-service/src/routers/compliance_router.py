@@ -125,7 +125,7 @@ async def export_audit_log(request: AuditExportRequest) -> AuditExportResponse:
         export_id=export_id,
         format=request.format,
         download_url=f"/api/v2/compliance/exports/{export_id}",
-        expires_at=datetime.utcnow() + timedelta(hours=24),
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
         entry_count=entry_count,
         file_size_bytes=file_size,
         checksum=checksum,
@@ -166,7 +166,7 @@ async def get_compliance_report(
     import uuid
     
     standard_list = [ComplianceStandard(s.strip()) for s in standards.split(",") if s.strip()]
-    period_end = datetime.utcnow()
+    period_end = datetime.now(timezone.utc)
     period_start = period_end - timedelta(days=period_days)
     
     # Generate compliance checks
@@ -244,7 +244,13 @@ async def get_compliance_report(
     failed = sum(1 for c in checks if c.status == "failed")
     warning = sum(1 for c in checks if c.status == "warning")
     
-    overall_status = "compliant" if failed == 0 else "non_compliant" if failed > 2 else "partial"
+    # Determine overall compliance status
+    if failed == 0:
+        overall_status = "compliant"
+    elif failed > 2:
+        overall_status = "non_compliant"
+    else:
+        overall_status = "partial"
     compliance_score = (passed / len(checks) * 100) if checks else 100
     
     return ComplianceReport(
@@ -301,7 +307,7 @@ async def create_gdpr_request(
         request_type=request_type,
         subject_id=f"user_{request_id[:8]}",
         subject_email=subject_email,
-        due_date=datetime.utcnow() + timedelta(days=30),  # GDPR: 1 month
+        due_date=datetime.now(timezone.utc) + timedelta(days=30),  # GDPR: 1 month
         status="pending",
     )
     

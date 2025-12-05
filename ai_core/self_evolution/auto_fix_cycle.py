@@ -172,7 +172,7 @@ class AutoFixCycle:
             try:
                 await self._cycle_task
             except asyncio.CancelledError:
-                pass
+                raise  # Re-raise CancelledError after cleanup
         
         self._phase = FixCyclePhase.IDLE
         logger.info("Auto-fix cycle stopped")
@@ -312,15 +312,12 @@ class AutoFixCycle:
             "by_severity": scan.by_severity,
         }
     
-    async def _analyze_vulnerabilities(self) -> Dict[str, Any]:
+    def _analyze_vulnerabilities(self) -> Dict[str, Any]:
         """Analyze and prioritize vulnerabilities."""
         if not self._current_scan:
             return {"analyzed": 0}
         
-        # Priority order: critical > high > medium > low > info
-        priority_order = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
-        
-        # Sort by severity
+        # Sort by severity (priority: critical > high > medium > low > info)
         analyzed = sum(self._current_scan.by_severity.values())
         
         return {
@@ -542,7 +539,7 @@ class AutoFixCycle:
             for fix in self._pending_fixes
         ]
     
-    async def approve_fix(self, attempt_id: str) -> Dict[str, Any]:
+    def approve_fix(self, attempt_id: str) -> Dict[str, Any]:
         """Approve a pending fix for application."""
         for fix in self._pending_fixes:
             if fix.attempt_id == attempt_id:
@@ -553,7 +550,7 @@ class AutoFixCycle:
         
         return {"success": False, "message": "Fix not found"}
     
-    async def reject_fix(self, attempt_id: str) -> Dict[str, Any]:
+    def reject_fix(self, attempt_id: str) -> Dict[str, Any]:
         """Reject a pending fix."""
         for fix in self._pending_fixes:
             if fix.attempt_id == attempt_id:

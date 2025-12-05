@@ -58,12 +58,12 @@ settings = Settings()
 async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     logger.info("Starting V3 Code Review AI Service (Quarantine)...")
-    logger.info(f"Mode: READ-ONLY (Archive)")
-    logger.info(f"Purpose: Deprecated technology archive and analysis")
+    logger.info("Mode: READ-ONLY (Archive)")
+    logger.info("Purpose: Deprecated technology archive and analysis")
     
     # Load archived models and configurations
-    app.state.archived_models = await load_archived_models()
-    app.state.elimination_records = await load_elimination_records()
+    app.state.archived_models = load_archived_models()
+    app.state.elimination_records = load_elimination_records()
     
     logger.info(f"Loaded {len(app.state.archived_models)} archived models")
     logger.info(f"Loaded {len(app.state.elimination_records)} elimination records")
@@ -73,7 +73,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down V3 CR-AI Service...")
 
 
-async def load_archived_models() -> dict:
+def load_archived_models() -> dict:
     """Load archived model configurations."""
     # In production, load from database
     return {
@@ -92,7 +92,7 @@ async def load_archived_models() -> dict:
     }
 
 
-async def load_elimination_records() -> list:
+def load_elimination_records() -> list:
     """Load elimination records."""
     return [
         {
@@ -208,7 +208,7 @@ async def health_check():
         "version": settings.version,
         "mode": "read-only",
         "purpose": "quarantine",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 

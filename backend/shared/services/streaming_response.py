@@ -89,7 +89,7 @@ class AIStreamingClient:
                 content=result,
                 chunk_index=0,
                 is_final=True,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             )
     
     async def _stream_openai(
@@ -125,7 +125,7 @@ class AIStreamingClient:
                         content=chunk.choices[0].delta.content,
                         chunk_index=0,
                         is_final=chunk.choices[0].finish_reason is not None,
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         metadata={"model": model, "provider": "openai"},
                     )
                     
@@ -159,7 +159,7 @@ class AIStreamingClient:
                         content=text,
                         chunk_index=0,
                         is_final=False,
-                        timestamp=datetime.utcnow(),
+                        timestamp=datetime.now(timezone.utc),
                         metadata={"model": model, "provider": "anthropic"},
                     )
                 
@@ -168,7 +168,7 @@ class AIStreamingClient:
                     content="",
                     chunk_index=0,
                     is_final=True,
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                 )
                 
         except ImportError:
@@ -187,7 +187,7 @@ class AIStreamingClient:
                 content=word + " ",
                 chunk_index=i,
                 is_final=(i == len(words) - 1),
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
             )
     
     async def _call_non_streaming(

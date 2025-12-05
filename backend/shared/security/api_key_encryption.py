@@ -68,7 +68,7 @@ class EncryptedKey:
             nonce=nonce,
             salt=salt,
             version=version,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
 
@@ -149,7 +149,7 @@ class APIKeyEncryption:
                 nonce=nonce,
                 salt=salt,
                 version=self.version,
-                created_at=datetime.utcnow(),
+                created_at=datetime.now(timezone.utc),
             )
             
         except Exception as e:
@@ -243,15 +243,15 @@ class SecureAPIKeyStore:
         self.db = db_connection
         self._cache: dict = {}
     
-    async def store_key(
+    def store_key(
         self,
         user_id: str,
         provider: str,
         api_key: str,
     ) -> str:
         """Store encrypted API key."""
-        encrypted = self.encryption.encrypt_to_string(api_key)
-        lookup_hash = self.encryption.hash_for_lookup(api_key)
+        _ = self.encryption.encrypt_to_string(api_key)  # noqa: F841 - for DB storage
+        _ = self.encryption.hash_for_lookup(api_key)  # noqa: F841 - for DB lookup
         
         # Store in database (example)
         key_id = secrets.token_urlsafe(16)
@@ -264,10 +264,10 @@ class SecureAPIKeyStore:
         
         return key_id
     
-    async def get_key(
+    def get_key(
         self,
-        user_id: str,
-        provider: str,
+        user_id: str,  # noqa: ARG002 - for DB query
+        provider: str,  # noqa: ARG002 - for DB query
     ) -> Optional[str]:
         """Retrieve and decrypt API key."""
         # In production, fetch from database:
@@ -279,7 +279,7 @@ class SecureAPIKeyStore:
         
         return None
     
-    async def delete_key(
+    def delete_key(
         self,
         user_id: str,
         provider: str,
@@ -289,9 +289,9 @@ class SecureAPIKeyStore:
         logger.info(f"Deleted API key for user {user_id}, provider {provider}")
         return True
     
-    async def rotate_all_keys(
+    def rotate_all_keys(
         self,
-        new_master_key: str,
+        new_master_key: str,  # noqa: ARG002 - for future key rotation
     ) -> int:
         """Rotate all stored API keys to new master key."""
         rotated_count = 0

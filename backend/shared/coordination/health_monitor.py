@@ -205,7 +205,7 @@ class HealthMonitor:
         
         # Mock metrics for demo
         return HealthMetrics(
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             latency_p50_ms=150,
             latency_p95_ms=800,
             latency_p99_ms=1500,
@@ -273,7 +273,7 @@ class HealthMonitor:
         threshold: AlertThreshold,
         value: float,
         severity: AlertSeverity,
-        metrics: HealthMetrics,
+        metrics: HealthMetrics,  # noqa: ARG002 - Reserved for alert context
     ):
         """Handle threshold violation."""
         alert_key = f"{threshold.metric_name}:{severity.value}"
@@ -290,7 +290,7 @@ class HealthMonitor:
             current_value=value,
             threshold_value=threshold.warning_threshold,
             message=f"{threshold.metric_name} is {value:.2f}, threshold is {threshold.warning_threshold:.2f}",
-            triggered_at=datetime.utcnow(),
+            triggered_at=datetime.now(timezone.utc),
         )
         
         self._active_alerts[alert_key] = alert
@@ -371,7 +371,7 @@ class HealthMonitor:
             still_violated = self._check_violation(value, threshold)
             
             if not still_violated:
-                alert.resolved_at = datetime.utcnow()
+                alert.resolved_at = datetime.now(timezone.utc)
                 resolved.append(key)
                 
                 logger.info(f"Alert resolved: {alert.metric_name}")
@@ -424,7 +424,7 @@ class HealthMonitor:
         hours: int = 1,
     ) -> List[tuple]:
         """Get metric trend over time."""
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
         
         return [
             (m.timestamp, getattr(m, metric_name, 0))

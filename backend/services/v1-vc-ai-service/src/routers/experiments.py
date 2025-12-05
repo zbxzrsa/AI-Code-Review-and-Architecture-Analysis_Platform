@@ -147,7 +147,7 @@ async def create_experiment(request: CreateExperimentRequest):
         "data_sources": request.data_sources,
         "tags": request.tags,
         "status": "pending",
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
         "started_at": None,
         "completed_at": None,
         "metrics": {},
@@ -219,14 +219,14 @@ async def run_experiment(
         "parameters": request.execution_parameters.dict(),
         "resume_from": request.resume_from_checkpoint,
         "status": "starting",
-        "started_at": datetime.utcnow(),
+        "started_at": datetime.now(timezone.utc),
     }
     
     executions_db[execution_id] = execution
     
     # Update experiment status
     exp["status"] = "running"
-    exp["started_at"] = datetime.utcnow()
+    exp["started_at"] = datetime.now(timezone.utc)
     
     # Estimate duration based on config
     training_config = exp["training_config"]
@@ -300,7 +300,7 @@ async def cancel_experiment(experiment_id: str):
         raise HTTPException(status_code=400, detail="Experiment is not running")
     
     exp["status"] = "cancelled"
-    exp["completed_at"] = datetime.utcnow()
+    exp["completed_at"] = datetime.now(timezone.utc)
     
     return {"message": f"Experiment {experiment_id} cancelled"}
 
@@ -351,7 +351,7 @@ async def execute_experiment_task(experiment_id: str, execution_id: str):
         
         if exp["status"] != "cancelled":
             exp["status"] = "completed"
-            exp["completed_at"] = datetime.utcnow()
+            exp["completed_at"] = datetime.now(timezone.utc)
             exp["metrics"]["accuracy"] = 0.92
             exp["metrics"]["latency_p99_ms"] = 400
         
@@ -360,5 +360,5 @@ async def execute_experiment_task(experiment_id: str, execution_id: str):
     except Exception as e:
         exp["status"] = "failed"
         exp["error_message"] = str(e)
-        exp["completed_at"] = datetime.utcnow()
+        exp["completed_at"] = datetime.now(timezone.utc)
         execution["status"] = "failed"

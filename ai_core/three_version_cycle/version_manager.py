@@ -228,7 +228,7 @@ class VersionManager:
     # State Management
     # =========================================================================
     
-    async def get_state(self, version: Version) -> VersionState:
+    def get_state(self, version: Version) -> VersionState:
         """Get current state of a version."""
         return self._states[version]
     
@@ -254,7 +254,7 @@ class VersionManager:
     # Metrics Management
     # =========================================================================
     
-    async def record_request(
+    def record_request(
         self,
         version: Version,
         success: bool,
@@ -279,11 +279,11 @@ class VersionManager:
         metrics.cost_total += cost
         metrics.last_updated = datetime.now(timezone.utc)
     
-    async def get_metrics(self, version: Version) -> VersionMetrics:
+    def get_metrics(self, version: Version) -> VersionMetrics:
         """Get metrics for a version."""
         return self._metrics[version]
     
-    async def get_all_metrics(self) -> Dict[Version, VersionMetrics]:
+    def get_all_metrics(self) -> Dict[Version, VersionMetrics]:
         """Get metrics for all versions."""
         return self._metrics.copy()
     
@@ -476,7 +476,7 @@ class VersionManager:
             
             return record
     
-    async def re_evaluate_quarantined(
+    def re_evaluate_quarantined(
         self,
         tech_id: str,
     ) -> Dict[str, Any]:
@@ -517,7 +517,7 @@ class VersionManager:
     # Reporting
     # =========================================================================
     
-    async def get_status_report(self) -> Dict[str, Any]:
+    def get_status_report(self) -> Dict[str, Any]:
         """Get comprehensive status report."""
         return {
             "versions": {

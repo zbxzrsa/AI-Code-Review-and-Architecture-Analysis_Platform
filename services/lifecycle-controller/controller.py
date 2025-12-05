@@ -75,7 +75,7 @@ class EvaluationMetrics:
     latency_p_value: float = 1.0
     cost_p_value: float = 1.0
     
-    evaluation_start: datetime = field(default_factory=datetime.utcnow)
+    evaluation_start: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     evaluation_end: Optional[datetime] = None
 
 
@@ -189,7 +189,7 @@ class LifecycleController:
             return
         
         # Check if shadow duration requirement met
-        shadow_duration = datetime.utcnow() - version.created_at
+        shadow_duration = datetime.now(timezone.utc) - version.created_at
         if shadow_duration < timedelta(hours=self.thresholds.min_shadow_duration_hours):
             logger.info(f"Version {version.version_id}: Shadow duration not met")
             return
@@ -205,7 +205,7 @@ class LifecycleController:
             await self._downgrade_to_v3(version, decision.get("reason", "Evaluation failed"))
         else:
             logger.info(f"Version {version.version_id}: Continuing shadow evaluation")
-            version.last_evaluation = datetime.utcnow()
+            version.last_evaluation = datetime.now(timezone.utc)
     
     async def _evaluate_gray_version(self, version: VersionConfig):
         """Evaluate a version in gray-scale rollout"""
@@ -400,7 +400,7 @@ class LifecycleController:
         """Initiate gray-scale rollout to V2"""
         # Update version state
         version.current_state = VersionState.GRAY_1
-        version.last_evaluation = datetime.utcnow()
+        version.last_evaluation = datetime.now(timezone.utc)
         
         # Configure gateway for 1% traffic
         await self._update_traffic_split(version.version_id, 1)
@@ -423,7 +423,7 @@ class LifecycleController:
         if version.current_state in phase_progression:
             next_state, percentage = phase_progression[version.current_state]
             version.current_state = next_state
-            version.last_evaluation = datetime.utcnow()
+            version.last_evaluation = datetime.now(timezone.utc)
             
             await self._update_traffic_split(version.version_id, percentage)
             await self._trigger_argo_rollout(version.version_id, next_state.value)
@@ -448,9 +448,9 @@ class LifecycleController:
     async def _downgrade_to_v3(self, version: VersionConfig, reason: str):
         """Downgrade version to V3 quarantine"""
         version.current_state = VersionState.QUARANTINE
-        version.last_evaluation = datetime.utcnow()
+        version.last_evaluation = datetime.now(timezone.utc)
         version.metadata["quarantine_reason"] = reason
-        version.metadata["quarantine_time"] = datetime.utcnow().isoformat()
+        version.metadata["quarantine_time"] = datetime.now(timezone.utc).isoformat()
         
         # Remove from traffic
         await self._update_traffic_split(version.version_id, 0)
@@ -461,8 +461,8 @@ class LifecycleController:
         """Promote recovered version back to V1 shadow"""
         version.current_state = VersionState.SHADOW
         version.consecutive_failures = 0
-        version.last_evaluation = datetime.utcnow()
-        version.metadata["recovery_time"] = datetime.utcnow().isoformat()
+        version.last_evaluation = datetime.now(timezone.utc)
+        version.metadata["recovery_time"] = datetime.now(timezone.utc).isoformat()
         
         self._log_lifecycle_event(version, "recovered_to_v1", {})
     
@@ -561,7 +561,7 @@ class LifecycleController:
     ):
         """Log lifecycle event for audit"""
         event = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "version_id": version.version_id,
             "event_type": event_type,
             "current_state": version.current_state.value,

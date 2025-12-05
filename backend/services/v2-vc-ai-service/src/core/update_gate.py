@@ -30,7 +30,7 @@ class ValidationResult:
     passed: bool
     message: str
     details: Dict[str, Any] = field(default_factory=dict)
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -53,7 +53,7 @@ class GateResult:
     final_decision: GateDecision
     current_stage: ValidationStage
     stages: List[StageResult] = field(default_factory=list)
-    started_at: datetime = field(default_factory=datetime.utcnow)
+    started_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     ready_for_production: bool = False
 
@@ -99,30 +99,30 @@ class UpdateGate:
         self._active_gates[experiment_id] = gate
         
         # Start Stage 1: V1 Qualification
-        stage_result = await self._run_v1_qualification(experiment_id, v1_metrics)
+        stage_result = self._run_v1_qualification(experiment_id, v1_metrics)
         gate.stages.append(stage_result)
         
         if stage_result.decision == GateDecision.REJECT:
             gate.final_decision = GateDecision.REJECT
-            gate.completed_at = datetime.utcnow()
+            gate.completed_at = datetime.now(timezone.utc)
             return gate
         
         gate.current_stage = ValidationStage.STAGING_DEPLOYMENT
         return gate
     
-    async def _run_v1_qualification(
+    def _run_v1_qualification(
         self,
-        experiment_id: str,
+        experiment_id: str,  # noqa: ARG002 - Reserved for experiment tracking
         v1_metrics: Dict[str, Any],
     ) -> StageResult:
         """Run Stage 1: V1 Qualification"""
         stage = StageResult(
             stage=ValidationStage.V1_QUALIFICATION,
             decision=GateDecision.CONDITIONAL,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         
-        config = self._pipeline_config["stage_1_v1_qualification"]
+        _ = self._pipeline_config["stage_1_v1_qualification"]  # noqa: F841 - config reserved
         
         # Check entry requirements
         validations = []
@@ -226,7 +226,7 @@ class UpdateGate:
         else:
             stage.decision = GateDecision.PASS
         
-        stage.completed_at = datetime.utcnow()
+        stage.completed_at = datetime.now(timezone.utc)
         stage.duration_minutes = (stage.completed_at - stage.started_at).total_seconds() / 60
         
         logger.info(f"Stage 1 completed for {experiment_id}: {stage.decision}")
@@ -246,7 +246,7 @@ class UpdateGate:
         stage = StageResult(
             stage=ValidationStage.STAGING_DEPLOYMENT,
             decision=GateDecision.CONDITIONAL,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         
         validations = []
@@ -310,7 +310,7 @@ class UpdateGate:
         else:
             stage.decision = GateDecision.NEEDS_FIX
         
-        stage.completed_at = datetime.utcnow()
+        stage.completed_at = datetime.now(timezone.utc)
         stage.duration_minutes = (stage.completed_at - stage.started_at).total_seconds() / 60
         
         gate.stages.append(stage)
@@ -319,7 +319,7 @@ class UpdateGate:
             gate.current_stage = ValidationStage.CANARY_DEPLOYMENT
         elif stage.decision == GateDecision.REJECT:
             gate.final_decision = GateDecision.REJECT
-            gate.completed_at = datetime.utcnow()
+            gate.completed_at = datetime.now(timezone.utc)
         
         logger.info(f"Stage 2 completed for {experiment_id}: {stage.decision}")
         return stage
@@ -339,7 +339,7 @@ class UpdateGate:
         stage = StageResult(
             stage=ValidationStage.CANARY_DEPLOYMENT,
             decision=GateDecision.CONDITIONAL,
-            started_at=datetime.utcnow(),
+            started_at=datetime.now(timezone.utc),
         )
         
         config = self._pipeline_config["stage_3_canary_deployment"]
@@ -381,7 +381,7 @@ class UpdateGate:
         all_passed = all(v.passed for v in validations)
         stage.decision = GateDecision.PROCEED if all_passed else GateDecision.ROLLBACK
         
-        stage.completed_at = datetime.utcnow()
+        stage.completed_at = datetime.now(timezone.utc)
         stage.duration_minutes = (stage.completed_at - stage.started_at).total_seconds() / 60
         
         gate.stages.append(stage)
@@ -390,7 +390,7 @@ class UpdateGate:
             gate.current_stage = ValidationStage.PROGRESSIVE_ROLLOUT
         else:
             gate.final_decision = GateDecision.ROLLBACK
-            gate.completed_at = datetime.utcnow()
+            gate.completed_at = datetime.now(timezone.utc)
         
         logger.info(f"Stage 3 completed for {experiment_id}: {stage.decision}")
         return stage
@@ -431,7 +431,7 @@ class UpdateGate:
             gate.current_stage = ValidationStage.FULL_PRODUCTION
             gate.final_decision = GateDecision.APPROVED
             gate.ready_for_production = True
-            gate.completed_at = datetime.utcnow()
+            gate.completed_at = datetime.now(timezone.utc)
             return GateDecision.CONTINUE, f"Rollout complete, now at 100%"
         
         return GateDecision.CONTINUE, f"Proceeding to {next_step['traffic_percentage']}%"
@@ -451,7 +451,7 @@ class UpdateGate:
         
         gate = self._active_gates[experiment_id]
         gate.final_decision = GateDecision.REJECT
-        gate.completed_at = datetime.utcnow()
+        gate.completed_at = datetime.now(timezone.utc)
         
         # Add abort note to current stage
         if gate.stages:

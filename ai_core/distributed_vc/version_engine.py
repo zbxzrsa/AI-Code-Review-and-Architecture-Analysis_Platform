@@ -168,7 +168,7 @@ class VersionComparisonEngine:
             "throughput_rps": 100
         }
     
-    async def analyze_improvements(
+    def analyze_improvements(
         self,
         current_metrics: Optional[Dict[str, float]] = None
     ) -> List[ImprovementPoint]:
@@ -246,7 +246,7 @@ class VersionComparisonEngine:
         logger.info(f"Identified {len(improvements)} improvement points")
         return improvements
     
-    async def compare_versions(
+    def compare_versions(
         self,
         version_a: str,
         version_b: str,
@@ -469,7 +469,7 @@ class AutoMerger:
         
         return result
     
-    async def _detect_conflicts(
+    def _detect_conflicts(
         self,
         source: Dict[str, Any],
         target: Dict[str, Any],
@@ -508,7 +508,7 @@ class AutoMerger:
         
         return conflicts
     
-    async def _resolve_conflict(
+    def _resolve_conflict(
         self,
         conflict: MergeConflict
     ) -> Optional[str]:

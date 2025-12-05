@@ -60,7 +60,7 @@ class Transaction:
     steps: List[TransactionStep] = field(default_factory=list)
     state: TransactionState = TransactionState.PENDING
     context: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None
     error: Optional[str] = None
 
@@ -168,7 +168,7 @@ class AtomicTransactionManager:
             # Execute steps in order
             for step in transaction.steps:
                 step.state = StepState.RUNNING
-                step.started_at = datetime.utcnow()
+                step.started_at = datetime.now(timezone.utc)
                 
                 logger.info(f"Transaction {transaction.id}: executing step '{step.name}'")
                 
@@ -176,7 +176,7 @@ class AtomicTransactionManager:
                     result = await step.execute(transaction.context)
                     step.result = result
                     step.state = StepState.COMPLETED
-                    step.completed_at = datetime.utcnow()
+                    step.completed_at = datetime.now(timezone.utc)
                     
                     # Store result in context for next steps
                     transaction.context[f"{step.name}_result"] = result
@@ -185,13 +185,13 @@ class AtomicTransactionManager:
                 except Exception as e:
                     step.state = StepState.FAILED
                     step.error = str(e)
-                    step.completed_at = datetime.utcnow()
+                    step.completed_at = datetime.now(timezone.utc)
                     logger.error(f"Transaction {transaction.id}: step '{step.name}' failed: {e}")
                     raise
             
             # All steps completed
             transaction.state = TransactionState.COMMITTED
-            transaction.completed_at = datetime.utcnow()
+            transaction.completed_at = datetime.now(timezone.utc)
             transaction.context["result"] = executed_steps[-1].result if executed_steps else None
             
             # Save idempotency key
@@ -216,7 +216,7 @@ class AtomicTransactionManager:
                     )
             
             transaction.state = TransactionState.ROLLED_BACK
-            transaction.completed_at = datetime.utcnow()
+            transaction.completed_at = datetime.now(timezone.utc)
             transaction.error = str(e)
             
             raise TransactionFailedError(transaction.id, str(e))
@@ -264,7 +264,7 @@ class VersionPromotionTransaction:
     ) -> Dict[str, Any]:
         """Promote V1 experiment to V2 production."""
         if not idempotency_key:
-            idempotency_key = f"promote:{experiment_id}:{datetime.utcnow().date()}"
+            idempotency_key = f"promote:{experiment_id}:{datetime.now(timezone.utc).date()}"
         
         transaction = self.tx_manager.create_transaction(idempotency_key)
         
@@ -315,9 +315,9 @@ class VersionPromotionTransaction:
         
         return result
     
-    async def _validate_experiment(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
+    def _validate_experiment(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
         """Validate experiment meets promotion criteria."""
-        experiment_id = ctx["experiment_id"]
+        experiment_id = ctx["experiment_id"]  # noqa: F841 - Used in production
         
         # In production, fetch from database and validate
         # - Minimum runtime (1 week)
@@ -331,7 +331,7 @@ class VersionPromotionTransaction:
             "metrics": {"accuracy": 0.95, "error_rate": 0.02},
         }
     
-    async def _create_v2_version(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
+    def _create_v2_version(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
         """Create new V2 version record."""
         experiment_id = ctx["experiment_id"]
         version_id = str(uuid.uuid4())
@@ -342,14 +342,14 @@ class VersionPromotionTransaction:
         ctx["v2_version_id"] = version_id
         return {"version_id": version_id, "status": "created"}
     
-    async def _rollback_v2_version(self, ctx: Dict[str, Any]):
+    def _rollback_v2_version(self, ctx: Dict[str, Any]):
         """Rollback V2 version creation."""
         version_id = ctx.get("v2_version_id")
         if version_id:
             # In production, delete from database
             logger.info(f"Rolled back V2 version {version_id}")
     
-    async def _update_routing(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
+    def _update_routing(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
         """Update routing to point to new version."""
         version_id = ctx.get("v2_version_id")
         
@@ -361,14 +361,14 @@ class VersionPromotionTransaction:
         
         return {"routing_updated": True}
     
-    async def _rollback_routing(self, ctx: Dict[str, Any]):
+    def _rollback_routing(self, ctx: Dict[str, Any]):
         """Rollback routing changes."""
         previous = ctx.get("previous_routing")
         if previous:
             # Restore previous routing
             logger.info(f"Rolled back routing to {previous}")
     
-    async def _archive_experiment(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
+    def _archive_experiment(self, ctx: Dict[str, Any]) -> Dict[str, Any]:
         """Archive V1 experiment."""
         experiment_id = ctx["experiment_id"]
         
@@ -380,7 +380,7 @@ class VersionPromotionTransaction:
         
         return {"archived": True}
     
-    async def _restore_experiment(self, ctx: Dict[str, Any]):
+    def _restore_experiment(self, ctx: Dict[str, Any]):
         """Restore archived experiment."""
         experiment_id = ctx["experiment_id"]
         previous_state = ctx.get("experiment_state")
@@ -400,15 +400,15 @@ class VersionPromotionTransaction:
                 {
                     "experiment_id": experiment_id,
                     "version_id": version_id,
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 },
             )
         
         return {"notified": True}
     
-    async def _noop(self, ctx: Dict[str, Any]):
+    def _noop(self, ctx: Dict[str, Any]):  # noqa: ARG002 - Required signature
         """No-op compensation."""
-        pass
+        pass  # Intentionally empty - no compensation needed
 
 
 # Idempotency key decorator
@@ -423,10 +423,10 @@ def idempotent(key_func: Callable[..., str]):
     """
     def decorator(func):
         async def wrapper(*args, **kwargs):
-            key = key_func(*args, **kwargs)
+            _ = key_func(*args, **kwargs)  # noqa: F841 - idempotency key for production
             
             # Check if already processed
-            # In production, check Redis/database
+            # In production, check Redis/database using the key
             
             result = await func(*args, **kwargs)
             

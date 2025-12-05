@@ -49,7 +49,7 @@ class RateLimitRule:
     requests_per_day: int = 10000
     by_user: bool = True  # Limit per user
     by_ip: bool = True  # Limit per IP
-    methods: List[str] = None  # HTTP methods (None = all)
+    methods: Optional[List[str]] = None  # HTTP methods (None = all)
 
 
 class RateLimitExceeded(HTTPException):
@@ -403,9 +403,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
 # Decorator for route-level rate limiting
 def rate_limit(
-    requests_per_minute: int = 60,
-    requests_per_hour: int = 1000,
-    by_user: bool = True,
+    requests_per_minute: int = 60,  # noqa: ARG001 - for future tier implementation
+    requests_per_hour: int = 1000,  # noqa: ARG001 - for future tier implementation
+    by_user: bool = True,  # noqa: ARG001 - for future per-user limiting
 ):
     """
     Decorator for route-level rate limiting.

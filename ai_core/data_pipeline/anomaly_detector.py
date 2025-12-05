@@ -116,57 +116,79 @@ class AnomalyDetector:
         column: Optional[str] = None
     ) -> List[Anomaly]:
         """Detect anomalies in a numpy array"""
-        anomalies = []
-        
         # Handle 1D data
         if data.ndim == 1:
             data = data.reshape(-1, 1)
         
-        # Remove NaN for detection
+        # Prepare data and get anomaly scores
+        valid_mask, valid_data = self._prepare_data_for_detection(data)
+        if len(valid_data) < 10:
+            return []
+        
+        scores = self._compute_anomaly_scores(valid_data)
+        full_scores = self._map_scores_to_original(scores, valid_mask, len(data))
+        threshold = self._compute_anomaly_threshold(scores)
+        
+        return self._create_anomaly_list(data, full_scores, threshold, column)
+    
+    def _prepare_data_for_detection(
+        self,
+        data: np.ndarray
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """Prepare data by removing NaN values"""
         valid_mask = ~np.isnan(data).any(axis=1)
         valid_data = data[valid_mask]
-        
-        if len(valid_data) < 10:
-            return anomalies
-        
-        if self.method == 'ensemble':
-            scores = self._ensemble_detect(valid_data)
-        elif self.method == 'isolation_forest':
-            scores = self._isolation_forest_detect(valid_data)
-        elif self.method == 'lof':
-            scores = self._lof_detect(valid_data)
-        elif self.method == 'dbscan':
-            scores = self._dbscan_detect(valid_data)
-        else:
-            scores = self._ensemble_detect(valid_data)
-        
-        # Map scores back to original indices
-        full_scores = np.zeros(len(data))
+        return valid_mask, valid_data
+    
+    def _compute_anomaly_scores(self, valid_data: np.ndarray) -> np.ndarray:
+        """Compute anomaly scores using configured method"""
+        method_map = {
+            'isolation_forest': self._isolation_forest_detect,
+            'lof': self._lof_detect,
+            'dbscan': self._dbscan_detect,
+        }
+        detect_fn = method_map.get(self.method, self._ensemble_detect)
+        return detect_fn(valid_data)
+    
+    def _map_scores_to_original(
+        self,
+        scores: np.ndarray,
+        valid_mask: np.ndarray,
+        original_len: int
+    ) -> np.ndarray:
+        """Map scores back to original indices"""
+        full_scores = np.zeros(original_len)
         full_scores[valid_mask] = scores
-        
-        # Identify anomalies based on threshold
-        threshold = np.percentile(
+        return full_scores
+    
+    def _compute_anomaly_threshold(self, scores: np.ndarray) -> float:
+        """Compute threshold for anomaly detection"""
+        return np.percentile(
             scores, 
             100 * (1 - self.contamination * self.sensitivity)
         )
-        
+    
+    def _create_anomaly_list(
+        self,
+        data: np.ndarray,
+        full_scores: np.ndarray,
+        threshold: float,
+        column: Optional[str]
+    ) -> List[Anomaly]:
+        """Create list of anomalies from scores"""
+        anomalies = []
         for idx, score in enumerate(full_scores):
-            if score > threshold or np.isnan(data[idx]).any():
-                anomaly_type = (
-                    AnomalyType.MISSING if np.isnan(data[idx]).any()
-                    else AnomalyType.OUTLIER
-                )
-                
+            is_missing = np.isnan(data[idx]).any()
+            if score > threshold or is_missing:
                 anomalies.append(Anomaly(
                     index=idx,
                     column=column,
-                    anomaly_type=anomaly_type,
+                    anomaly_type=AnomalyType.MISSING if is_missing else AnomalyType.OUTLIER,
                     value=data[idx].tolist() if data.ndim > 1 else data[idx],
                     score=float(score),
                     suggested_fix=None,
                     confidence=min(1.0, score / threshold) if threshold > 0 else 0.5
                 ))
-        
         return anomalies
     
     def _detect_column(
@@ -336,10 +358,8 @@ class AutoRepair:
         """
         repairs = []
         
-        if isinstance(data, pd.DataFrame):
-            repaired = data.copy()
-        else:
-            repaired = data.copy()
+        # Create a copy of the data for repair
+        repaired = data.copy()
         
         # Group anomalies by column
         anomalies_by_column: Dict[str, List[Anomaly]] = {}
@@ -429,48 +449,69 @@ class AutoRepair:
         if anomaly.suggested_fix is not None and strategy == 'auto':
             return anomaly.suggested_fix
         
-        # Get valid values (excluding the anomaly)
-        if isinstance(column_data, pd.Series):
-            valid = column_data.drop(anomaly.index).dropna()
-        else:
-            mask = np.ones(len(column_data), dtype=bool)
-            mask[anomaly.index] = False
-            valid = column_data[mask]
-            valid = valid[~np.isnan(valid)]
-        
+        valid = self._get_valid_values(column_data, anomaly.index)
         if len(valid) == 0:
             return 0 if np.issubdtype(type(anomaly.value), np.number) else ''
         
-        if strategy == 'auto':
-            # Choose based on anomaly type
-            if anomaly.anomaly_type == AnomalyType.MISSING:
-                strategy = 'median'
-            elif anomaly.anomaly_type == AnomalyType.OUTLIER:
-                strategy = 'median'
-            else:
-                strategy = 'mode'
-        
+        strategy = self._resolve_auto_strategy(strategy, anomaly)
+        return self._apply_repair_strategy(strategy, valid, column_data, anomaly.index)
+    
+    def _get_valid_values(
+        self,
+        column_data: Union[np.ndarray, pd.Series],
+        exclude_index: int
+    ) -> Union[np.ndarray, pd.Series]:
+        """Get valid values excluding the anomaly index"""
+        if isinstance(column_data, pd.Series):
+            return column_data.drop(exclude_index).dropna()
+        mask = np.ones(len(column_data), dtype=bool)
+        mask[exclude_index] = False
+        valid = column_data[mask]
+        return valid[~np.isnan(valid)]
+    
+    def _resolve_auto_strategy(self, strategy: str, anomaly: Anomaly) -> str:
+        """Resolve 'auto' strategy based on anomaly type"""
+        if strategy != 'auto':
+            return strategy
+        if anomaly.anomaly_type in (AnomalyType.MISSING, AnomalyType.OUTLIER):
+            return 'median'
+        return 'mode'
+    
+    def _apply_repair_strategy(
+        self,
+        strategy: str,
+        valid: Union[np.ndarray, pd.Series],
+        column_data: Union[np.ndarray, pd.Series],
+        idx: int
+    ) -> Any:
+        """Apply the specified repair strategy"""
         if strategy == 'mean':
             return float(np.mean(valid))
-        elif strategy == 'median':
+        if strategy == 'median':
             return float(np.median(valid))
-        elif strategy == 'mode':
-            if isinstance(valid, pd.Series):
-                return valid.mode().iloc[0] if len(valid.mode()) > 0 else valid.iloc[0]
-            else:
-                values, counts = np.unique(valid, return_counts=True)
-                return values[np.argmax(counts)]
-        elif strategy == 'interpolate':
-            # Linear interpolation
-            idx = anomaly.index
-            if idx > 0 and idx < len(column_data) - 1:
-                return (column_data[idx-1] + column_data[idx+1]) / 2
-            elif idx == 0:
-                return column_data[1]
-            else:
-                return column_data[-2]
-        else:
-            return float(np.median(valid))
+        if strategy == 'mode':
+            return self._compute_mode(valid)
+        if strategy == 'interpolate':
+            return self._interpolate_value(column_data, idx)
+        return float(np.median(valid))
+    
+    def _compute_mode(self, valid: Union[np.ndarray, pd.Series]) -> Any:
+        """Compute mode value"""
+        if isinstance(valid, pd.Series):
+            mode_vals = valid.mode()
+            return mode_vals.iloc[0] if len(mode_vals) > 0 else valid.iloc[0]
+        values, counts = np.unique(valid, return_counts=True)
+        return values[np.argmax(counts)]
+    
+    def _interpolate_value(
+        self,
+        column_data: Union[np.ndarray, pd.Series],
+        idx: int
+    ) -> Any:
+        """Linear interpolation for repair"""
+        if 0 < idx < len(column_data) - 1:
+            return (column_data[idx-1] + column_data[idx+1]) / 2
+        return column_data[1] if idx == 0 else column_data[-2]
     
     def get_repair_summary(self) -> Dict[str, Any]:
         """Get summary of all repairs"""

@@ -6,24 +6,127 @@ Handles all non-auth API endpoints for frontend development.
 
 Run with: python dev-api-server.py
 运行命令: python dev-api-server.py
+
+SECURITY NOTE: This server validates configuration for production safety.
+安全提示: 此服务器会验证生产环境配置的安全性。
 """
 
 import os
 import secrets
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, List
-from fastapi import FastAPI, HTTPException, status, Query
+from fastapi import FastAPI, HTTPException, status, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
 import uvicorn
 import random
+from datetime import timezone
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ============================================
 # Mode Configuration / 模式配置
 # ============================================
-# MOCK_MODE: When true, uses mock AI responses instead of real providers
 MOCK_MODE = os.getenv('MOCK_MODE', 'true').lower() == 'true'
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
+IS_PRODUCTION = ENVIRONMENT == 'production'
+
+
+# ============================================
+# Constants / 常量 (避免字符串重复)
+# ============================================
+class Literals:
+    """String literals to avoid duplication."""
+    # Common services
+    BACKEND_SERVICES = "Backend Services"
+    
+    # Error messages
+    PROJECT_NOT_FOUND = "Project not found"
+    
+    # File names
+    FILE_MAIN_PY = "main.py"
+    FILE_README_MD = "README.md"
+    
+    # Demo users
+    DEMO_EMAIL = "demo@example.com"
+    DEMO_USER = "Demo User"
+    ADMIN_EMAIL = "admin@example.com"
+    ADMIN_USER = "Admin User"
+    USER_EMAIL = "user@example.com"
+    
+    # AI Models
+    GPT4_TURBO = "GPT-4 Turbo"
+    GPT35_TURBO = "gpt-3.5-turbo"
+    GPT35_TURBO_DISPLAY = "GPT-3.5 Turbo"
+    CLAUDE_3_OPUS = "Claude 3 Opus"
+    
+    # Versions
+    VERSION_2_1_0 = "v2.1.0"
+    VERSION_2_1_5 = "v2.1.5"
+    VERSION_1_0_0 = "v1.0.0"
+    
+    # Names
+    JOHN_DOE = "John Doe"
+    JANE_SMITH = "Jane Smith"
+    
+    # Categories
+    CI_CD_PIPELINE = "CI/CD Pipeline"
+    SECURITY_SCAN = "Security Scan"
+    
+    # Security
+    OWASP_INJECTION = "A03:2021 Injection"
+    
+    # Files
+    SRC_AUTH_LOGIN_PY = "src/auth/login.py"
+    SRC_API_USERS_PY = "src/api/users.py"
+    
+    # Branches
+    FEATURE_AUTH = "feature/auth"
+    
+    # Services
+    BACKEND_SERVICE_NAME = "Backend Services"
+    
+    # Emails
+    JOHN_EMAIL = "john@example.com"
+    JANE_EMAIL = "jane@example.com"
+
+# ============================================
+# Security Configuration / 安全配置
+# ============================================
+# Maximum request body size (10MB default)
+MAX_REQUEST_SIZE_MB = int(os.getenv('MAX_REQUEST_SIZE_MB', '10'))
+MAX_REQUEST_SIZE_BYTES = MAX_REQUEST_SIZE_MB * 1024 * 1024
+
+# CORS Configuration - SECURE
+def get_cors_origins() -> List[str]:
+    """Get CORS allowed origins - production safe."""
+    cors_env = os.getenv("CORS_ORIGINS", "")
+    
+    if cors_env:
+        return [origin.strip() for origin in cors_env.split(",") if origin.strip()]
+    
+    # Development only: allow localhost
+    if not IS_PRODUCTION:
+        return [
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5173",
+        ]
+    
+    # Production requires explicit configuration
+    raise ValueError(
+        "CORS_ORIGINS must be set in production. "
+        "Example: CORS_ORIGINS=https://your-domain.com"
+    )
+
+CORS_ORIGINS = get_cors_origins()
+logger.info(f"CORS configured for: {CORS_ORIGINS}")
 
 # ============================================
 # OAuth Configuration / OAuth配置
@@ -32,7 +135,6 @@ GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', '')
 GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', '')
 GITLAB_CLIENT_ID = os.getenv('GITLAB_CLIENT_ID', '')
 GITLAB_CLIENT_SECRET = os.getenv('GITLAB_CLIENT_SECRET', '')
-# Bitbucket uses API Token instead of OAuth (since Sep 2025)
 BITBUCKET_API_TOKEN = os.getenv('BITBUCKET_API_TOKEN', '')
 
 # ============================================
@@ -96,7 +198,7 @@ mock_projects = [
     ),
     Project(
         id="proj_2",
-        name="Backend Services",
+        name=Literals.BACKEND_SERVICES,
         description="FastAPI microservices",
         language="Python",
         framework="FastAPI",
@@ -146,21 +248,49 @@ mock_activities = [
 ]
 
 # ============================================
+# Request Size Limiting Middleware / 请求大小限制中间件
+# ============================================
+
+class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
+    """Middleware to limit request body size."""
+    
+    async def dispatch(self, request: Request, call_next):
+        content_length = request.headers.get("content-length")
+        
+        if content_length:
+            if int(content_length) > MAX_REQUEST_SIZE_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "detail": f"Request body too large. Maximum size is {MAX_REQUEST_SIZE_MB}MB"
+                    }
+                )
+        
+        return await call_next(request)
+
+
+# ============================================
 # FastAPI App / FastAPI 应用
 # ============================================
 
 app = FastAPI(
     title="Dev API Server / 开发API服务器",
     description="Development API server for frontend testing",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs" if not IS_PRODUCTION else None,  # Disable docs in production
+    redoc_url="/redoc" if not IS_PRODUCTION else None,
 )
 
+# Add request size limiting middleware
+app.add_middleware(RequestSizeLimitMiddleware)
+
+# Add CORS middleware with secure configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,  # Use configured origins, not "*"
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-CSRF-Token", "X-Request-ID"],
 )
 
 # ============================================
@@ -234,7 +364,7 @@ async def get_project(project_id: str):
     for project in mock_projects:
         if project.id == project_id:
             return project
-    raise HTTPException(status_code=404, detail="Project not found")
+    raise HTTPException(status_code=404, detail=Literals.PROJECT_NOT_FOUND)
 
 
 class CreateProjectRequest(BaseModel):
@@ -298,7 +428,7 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
                 project.status = request.status
             project.updated_at = datetime.now()
             return project
-    raise HTTPException(status_code=404, detail="Project not found")
+    raise HTTPException(status_code=404, detail=Literals.PROJECT_NOT_FOUND)
 
 
 @app.delete("/api/projects/{project_id}")
@@ -308,7 +438,7 @@ async def delete_project(project_id: str):
         if project.id == project_id:
             mock_projects.pop(i)
             return {"message": "Project deleted", "id": project_id}
-    raise HTTPException(status_code=404, detail="Project not found")
+    raise HTTPException(status_code=404, detail=Literals.PROJECT_NOT_FOUND)
 
 
 # ============================================
@@ -1015,7 +1145,7 @@ async def list_experiments():
             },
             {
                 "id": "exp_2",
-                "name": "Claude 3 Opus",
+                "name": Literals.CLAUDE_3_OPUS,
                 "model": "claude-3-opus",
                 "status": "completed",
                 "accuracy": 0.89,
@@ -1130,7 +1260,7 @@ async def admin_list_projects(page: int = 1, limit: int = 10, search: Optional[s
         },
         {
             "id": "proj_2",
-            "name": "Backend Services",
+            "name": Literals.BACKEND_SERVICES,
             "owner": {"id": "user_2", "name": "Regular User", "email": "user@example.com"},
             "language": "Python",
             "status": "active",
@@ -1359,9 +1489,9 @@ async def list_ai_models():
     """List available AI models / 列出可用AI模型"""
     return {
         "items": [
-            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo", "provider": "OpenAI", "status": "active"},
+            {"id": "gpt-4-turbo", "name": Literals.GPT4_TURBO, "provider": "OpenAI", "status": "active"},
             {"id": "gpt-4", "name": "GPT-4", "provider": "OpenAI", "status": "active"},
-            {"id": "claude-3-opus", "name": "Claude 3 Opus", "provider": "Anthropic", "status": "active"},
+            {"id": "claude-3-opus", "name": Literals.CLAUDE_3_OPUS, "provider": "Anthropic", "status": "active"},
             {"id": "claude-3-sonnet", "name": "Claude 3 Sonnet", "provider": "Anthropic", "status": "active"},
         ]
     }
@@ -1378,7 +1508,7 @@ async def admin_list_ai_models():
         "items": [
             {
                 "id": "model_1",
-                "name": "GPT-4 Turbo",
+                "name": Literals.GPT4_TURBO,
                 "provider": "OpenAI",
                 "model_id": "gpt-4-turbo",
                 "version": "v2.1.0",
@@ -1398,7 +1528,7 @@ async def admin_list_ai_models():
             },
             {
                 "id": "model_2",
-                "name": "Claude 3 Opus",
+                "name": Literals.CLAUDE_3_OPUS,
                 "provider": "Anthropic",
                 "model_id": "claude-3-opus",
                 "version": "v2.0.0",
@@ -1465,7 +1595,7 @@ async def admin_get_ai_model(model_id: str):
     """Get AI model details (Admin) / 获取AI模型详情（管理员）"""
     return {
         "id": model_id,
-        "name": "GPT-4 Turbo",
+        "name": Literals.GPT4_TURBO,
         "provider": "OpenAI",
         "model_id": "gpt-4-turbo",
         "version": "v2.1.0",
@@ -1750,8 +1880,8 @@ async def get_team(team_id: str):
         "memberCount": 8,
         "projectCount": 5,
         "members": [
-            {"id": "user_1", "name": "John Doe", "email": "john@example.com", "role": "owner", "status": "active"},
-            {"id": "user_2", "name": "Jane Smith", "email": "jane@example.com", "role": "admin", "status": "active"}
+            {"id": "user_1", "name": Literals.JOHN_DOE, "email": "john@example.com", "role": "owner", "status": "active"},
+            {"id": "user_2", "name": Literals.JANE_SMITH, "email": "jane@example.com", "role": "admin", "status": "active"}
         ]
     }
 
@@ -1853,7 +1983,7 @@ async def list_vulnerabilities():
                 "severity": "critical",
                 "category": "A03:2021 Injection",
                 "cve": "CVE-2024-1234",
-                "project": "Backend Services",
+                "project": Literals.BACKEND_SERVICES,
                 "file": "src/auth/login.py",
                 "line": 45,
                 "status": "open"
@@ -1941,7 +2071,7 @@ async def list_activities():
                 "type": "review",
                 "action": "approved",
                 "description": "Approved pull request: Add user authentication",
-                "user": {"name": "John Doe"},
+                "user": {"name": Literals.JOHN_DOE},
                 "project": "Backend",
                 "branch": "feature/auth",
                 "timestamp": (datetime.now() - timedelta(minutes=30)).isoformat()
@@ -2042,7 +2172,7 @@ async def list_pull_requests():
                 "id": "pr_1",
                 "number": 142,
                 "title": "Add user authentication with JWT tokens",
-                "author": {"name": "John Doe"},
+                "author": {"name": Literals.JOHN_DOE},
                 "repository": "backend-services",
                 "sourceBranch": "feature/auth",
                 "targetBranch": "main",
@@ -2121,7 +2251,7 @@ async def list_auto_fixes():
                 "file": "src/api/users.py",
                 "line": 45,
                 "status": "review",
-                "aiModel": "GPT-4 Turbo",
+                "aiModel": Literals.GPT4_TURBO,
                 "confidence": 0.95,
                 "fix": {
                     "before": 'query = f"SELECT * FROM users WHERE id = {user_id}"',
@@ -2138,7 +2268,7 @@ async def list_auto_fixes():
                 "file": "src/config/settings.py",
                 "line": 12,
                 "status": "pending",
-                "aiModel": "Claude 3 Opus",
+                "aiModel": Literals.CLAUDE_3_OPUS,
                 "confidence": 0.98,
                 "createdAt": (datetime.now() - timedelta(minutes=45)).isoformat()
             }
@@ -2244,7 +2374,7 @@ async def list_deployments():
                 "branch": "develop",
                 "commit": "e4f5g6h",
                 "commitMessage": "Implement dashboard analytics",
-                "deployedBy": "John Doe",
+                "deployedBy": Literals.JOHN_DOE,
                 "startedAt": (datetime.now() - timedelta(minutes=5)).isoformat(),
                 "stages": [
                     {"name": "Build", "status": "success", "duration": 115},
@@ -2548,7 +2678,7 @@ async def search(q: str = ""):
             {
                 "id": "3",
                 "type": "project",
-                "title": "Backend Services",
+                "title": Literals.BACKEND_SERVICES,
                 "description": "FastAPI backend microservices",
                 "relevance": 0.88
             }
@@ -2842,7 +2972,7 @@ async def list_audit_logs():
                 "timestamp": datetime.now().isoformat(),
                 "entity": "analysis",
                 "action": "create",
-                "actor": {"id": "usr_1", "name": "John Doe", "email": "john@example.com"},
+                "actor": {"id": "usr_1", "name": Literals.JOHN_DOE, "email": "john@example.com"},
                 "resource": "project/backend/analysis/a1b2c3",
                 "status": "success",
                 "ipAddress": "192.168.1.100",
@@ -2853,7 +2983,7 @@ async def list_audit_logs():
                 "timestamp": (datetime.now() - timedelta(minutes=15)).isoformat(),
                 "entity": "user",
                 "action": "login",
-                "actor": {"id": "usr_2", "name": "Jane Smith", "email": "jane@example.com"},
+                "actor": {"id": "usr_2", "name": Literals.JANE_SMITH, "email": "jane@example.com"},
                 "resource": "auth/session/s1d2f3",
                 "status": "success",
                 "ipAddress": "10.0.0.50",
@@ -2924,7 +3054,7 @@ async def stop_evolution():
 async def get_technologies():
     """Get all technologies / 获取所有技术"""
     return [
-        {"id": "tech-gpt4-v2", "name": "GPT-4 Turbo", "version": "v2", "status": "active", "accuracy": 0.92, "errorRate": 0.02, "latency": 450, "samples": 15000, "lastUpdated": datetime.now().isoformat()},
+        {"id": "tech-gpt4-v2", "name": Literals.GPT4_TURBO, "version": "v2", "status": "active", "accuracy": 0.92, "errorRate": 0.02, "latency": 450, "samples": 15000, "lastUpdated": datetime.now().isoformat()},
         {"id": "tech-claude3-v1", "name": "Claude-3 Opus", "version": "v1", "status": "testing", "accuracy": 0.89, "errorRate": 0.04, "latency": 380, "samples": 2500, "lastUpdated": datetime.now().isoformat()},
         {"id": "tech-llama3-v1", "name": "Llama-3 70B", "version": "v1", "status": "testing", "accuracy": 0.85, "errorRate": 0.05, "latency": 320, "samples": 1800, "lastUpdated": datetime.now().isoformat()},
         {"id": "tech-gpt35-v3", "name": "GPT-3.5 Turbo", "version": "v3", "status": "deprecated", "accuracy": 0.78, "errorRate": 0.08, "latency": 280, "samples": 50000, "lastUpdated": datetime.now().isoformat()},
@@ -3005,10 +3135,10 @@ async def ai_feedback(response_id: str = "", helpful: bool = True, comment: str 
 async def get_vulnerabilities(severity: str = None, status: str = None, project: str = None, page: int = 1, limit: int = 20):
     """Get security vulnerabilities / 获取安全漏洞"""
     vulns = [
-        {"id": "vuln_1", "title": "SQL Injection in User Authentication", "severity": "critical", "category": "A03:2021 Injection", "cve": "CVE-2024-1234", "project": "Backend Services", "file": "src/auth/login.py", "line": 45, "status": "open", "discoveredAt": datetime.now().isoformat(), "assignee": "John Doe"},
-        {"id": "vuln_2", "title": "Hardcoded API Key Exposure", "severity": "critical", "category": "A02:2021 Cryptographic Failures", "project": "AI Platform", "file": "src/services/ai.ts", "line": 12, "status": "in_progress", "discoveredAt": datetime.now().isoformat(), "assignee": "Jane Smith"},
+        {"id": "vuln_1", "title": "SQL Injection in User Authentication", "severity": "critical", "category": "A03:2021 Injection", "cve": "CVE-2024-1234", "project": Literals.BACKEND_SERVICES, "file": "src/auth/login.py", "line": 45, "status": "open", "discoveredAt": datetime.now().isoformat(), "assignee": Literals.JOHN_DOE},
+        {"id": "vuln_2", "title": "Hardcoded API Key Exposure", "severity": "critical", "category": "A02:2021 Cryptographic Failures", "project": "AI Platform", "file": "src/services/ai.ts", "line": 12, "status": "in_progress", "discoveredAt": datetime.now().isoformat(), "assignee": Literals.JANE_SMITH},
         {"id": "vuln_3", "title": "Cross-Site Scripting (XSS)", "severity": "high", "category": "A03:2021 Injection", "project": "Frontend", "file": "src/components/Comment.tsx", "line": 78, "status": "open", "discoveredAt": datetime.now().isoformat()},
-        {"id": "vuln_4", "title": "Insecure Direct Object Reference", "severity": "medium", "category": "A01:2021 Broken Access Control", "project": "Backend Services", "file": "src/api/users.py", "line": 156, "status": "resolved", "discoveredAt": datetime.now().isoformat()},
+        {"id": "vuln_4", "title": "Insecure Direct Object Reference", "severity": "medium", "category": "A01:2021 Broken Access Control", "project": Literals.BACKEND_SERVICES, "file": "src/api/users.py", "line": 156, "status": "resolved", "discoveredAt": datetime.now().isoformat()},
         {"id": "vuln_5", "title": "Outdated Dependency with Known CVE", "severity": "low", "category": "A06:2021 Vulnerable Components", "cve": "CVE-2023-9999", "project": "Frontend", "file": "package.json", "line": 1, "status": "open", "discoveredAt": datetime.now().isoformat()},
     ]
     filtered = vulns
@@ -3064,8 +3194,8 @@ async def get_admin_ai_models():
     """Get AI models for admin / 获取AI模型(管理员)"""
     return {
         "items": [
-            {"id": "model_1", "name": "GPT-4 Turbo", "provider": "OpenAI", "model_id": "gpt-4-turbo", "version": "v2.1.0", "zone": "v2-production", "status": "active", "metrics": {"accuracy": 0.94, "latency_p95": 1.8, "error_rate": 0.02, "cost_per_request": 0.03, "requests_today": 15420, "success_rate": 0.98}, "config": {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9}},
-            {"id": "model_2", "name": "Claude 3 Opus", "provider": "Anthropic", "model_id": "claude-3-opus", "version": "v1.0.0", "zone": "v1-experimentation", "status": "testing", "metrics": {"accuracy": 0.91, "latency_p95": 2.2, "error_rate": 0.04, "cost_per_request": 0.05, "requests_today": 850, "success_rate": 0.96}, "config": {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9}},
+            {"id": "model_1", "name": Literals.GPT4_TURBO, "provider": "OpenAI", "model_id": "gpt-4-turbo", "version": "v2.1.0", "zone": "v2-production", "status": "active", "metrics": {"accuracy": 0.94, "latency_p95": 1.8, "error_rate": 0.02, "cost_per_request": 0.03, "requests_today": 15420, "success_rate": 0.98}, "config": {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9}},
+            {"id": "model_2", "name": Literals.CLAUDE_3_OPUS, "provider": "Anthropic", "model_id": "claude-3-opus", "version": "v1.0.0", "zone": "v1-experimentation", "status": "testing", "metrics": {"accuracy": 0.91, "latency_p95": 2.2, "error_rate": 0.04, "cost_per_request": 0.05, "requests_today": 850, "success_rate": 0.96}, "config": {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9}},
             {"id": "model_3", "name": "Llama 3 70B", "provider": "Meta", "model_id": "llama-3-70b", "version": "v1.2.0", "zone": "v1-experimentation", "status": "testing", "metrics": {"accuracy": 0.88, "latency_p95": 1.5, "error_rate": 0.05, "cost_per_request": 0.01, "requests_today": 2100, "success_rate": 0.95}, "config": {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9}},
         ],
         "total": 3
@@ -3082,7 +3212,7 @@ async def get_reports(page: int = 1, limit: int = 20):
     return {
         "items": [
             {"id": "report_1", "name": "Weekly Security Scan", "type": "security", "status": "completed", "format": "pdf", "project": "AI Platform", "createdAt": datetime.now().isoformat(), "completedAt": datetime.now().isoformat(), "size": "2.3 MB"},
-            {"id": "report_2", "name": "Code Quality Report", "type": "code_review", "status": "completed", "format": "pdf", "project": "Backend Services", "createdAt": datetime.now().isoformat(), "completedAt": datetime.now().isoformat(), "size": "1.5 MB"},
+            {"id": "report_2", "name": "Code Quality Report", "type": "code_review", "status": "completed", "format": "pdf", "project": Literals.BACKEND_SERVICES, "createdAt": datetime.now().isoformat(), "completedAt": datetime.now().isoformat(), "size": "1.5 MB"},
             {"id": "report_3", "name": "Compliance Check Q1", "type": "compliance", "status": "generating", "format": "pdf", "createdAt": datetime.now().isoformat()},
             {"id": "report_4", "name": "Performance Analytics", "type": "analytics", "status": "completed", "format": "csv", "createdAt": datetime.now().isoformat(), "completedAt": datetime.now().isoformat(), "size": "856 KB"},
         ],
@@ -3167,12 +3297,12 @@ async def get_provider_models(provider_id: str):
     """Get provider models / 获取提供商模型"""
     models = {
         "openai": [
-            {"id": "gpt-4-turbo", "name": "GPT-4 Turbo", "type": "chat", "enabled": True, "isDefault": True},
+            {"id": "gpt-4-turbo", "name": Literals.GPT4_TURBO, "type": "chat", "enabled": True, "isDefault": True},
             {"id": "gpt-4", "name": "GPT-4", "type": "chat", "enabled": True, "isDefault": False},
             {"id": "gpt-3.5-turbo", "name": "GPT-3.5 Turbo", "type": "chat", "enabled": True, "isDefault": False},
         ],
         "anthropic": [
-            {"id": "claude-3-opus", "name": "Claude 3 Opus", "type": "chat", "enabled": True, "isDefault": True},
+            {"id": "claude-3-opus", "name": Literals.CLAUDE_3_OPUS, "type": "chat", "enabled": True, "isDefault": True},
             {"id": "claude-3-sonnet", "name": "Claude 3 Sonnet", "type": "chat", "enabled": True, "isDefault": False},
         ],
         "huggingface": [
@@ -3382,7 +3512,7 @@ async def get_three_version_status():
         "v2_status": {
             "name": "V2 Production",
             "active_models": 2,
-            "models": ["GPT-4 Turbo", "Claude 3 Opus"],
+            "models": [Literals.GPT4_TURBO, Literals.CLAUDE_3_OPUS],
             "requests_today": 15420,
             "success_rate": 0.982,
             "avg_latency_ms": 1800,
@@ -3395,7 +3525,7 @@ async def get_three_version_status():
             "pending_reevaluation": 1
         },
         "last_promotion": {
-            "model": "GPT-4 Turbo",
+            "model": Literals.GPT4_TURBO,
             "from": "v1",
             "to": "v2",
             "at": (datetime.now() - timedelta(days=3)).isoformat()
@@ -3512,7 +3642,7 @@ async def get_version_history():
             {
                 "id": "hist_001",
                 "action": "promote",
-                "model": "GPT-4 Turbo",
+                "model": Literals.GPT4_TURBO,
                 "from": "v1",
                 "to": "v2",
                 "reason": "Passed all SLO gates",

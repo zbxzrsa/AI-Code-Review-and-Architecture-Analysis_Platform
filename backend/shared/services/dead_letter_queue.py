@@ -20,6 +20,9 @@ from collections import deque
 
 logger = logging.getLogger(__name__)
 
+# Redis key constants
+DLQ_MESSAGES_KEY = "dlq:messages"
+
 
 class MessageState(str, Enum):
     """Message processing state."""
@@ -37,7 +40,7 @@ class Message:
     id: str
     topic: str
     payload: Dict[str, Any]
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     attempts: int = 0
     max_attempts: int = 3
     state: MessageState = MessageState.PENDING
@@ -111,7 +114,7 @@ class DeadLetterQueue:
         """Add failed message to DLQ."""
         message.state = MessageState.DEAD_LETTERED
         message.last_error = error
-        message.last_attempt_at = datetime.utcnow()
+        message.last_attempt_at = datetime.now(timezone.utc)
         
         # Store message
         self._dlq[message.id] = message
@@ -131,7 +134,7 @@ class DeadLetterQueue:
         
         if self.redis:
             await self.redis.hset(
-                "dlq:messages",
+                DLQ_MESSAGES_KEY,
                 message.id,
                 json.dumps(message.to_dict()),
             )
@@ -149,7 +152,7 @@ class DeadLetterQueue:
         
         message.attempts += 1
         message.state = MessageState.RETRYING
-        message.last_attempt_at = datetime.utcnow()
+        message.last_attempt_at = datetime.now(timezone.utc)
         
         try:
             success = await handler(message)
@@ -160,7 +163,7 @@ class DeadLetterQueue:
                 logger.info(f"Message {message_id} successfully retried")
                 
                 if self.redis:
-                    await self.redis.hdel("dlq:messages", message_id)
+                    await self.redis.hdel(DLQ_MESSAGES_KEY, message_id)
                 
                 return True
             else:
@@ -189,7 +192,7 @@ class DeadLetterQueue:
             self.max_retry_delay,
         )
         
-        message.next_retry_at = datetime.utcnow() + timedelta(seconds=delay)
+        message.next_retry_at = datetime.now(timezone.utc) + timedelta(seconds=delay)
         message.state = MessageState.RETRYING
         
         self._retry_queue.append(message)
@@ -204,7 +207,7 @@ class DeadLetterQueue:
         handler: Callable[[Message], Awaitable[bool]],
     ) -> int:
         """Process messages ready for retry."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         processed = 0
         
         ready_messages = [
@@ -273,7 +276,7 @@ class DeadLetterQueue:
         
         # Oldest message
         oldest = min(m.created_at for m in messages)
-        oldest_age = (datetime.utcnow() - oldest).total_seconds() / 3600
+        oldest_age = (datetime.now(timezone.utc) - oldest).total_seconds() / 3600
         
         # Average attempts
         avg_attempts = sum(m.attempts for m in messages) / len(messages)
@@ -294,7 +297,7 @@ class DeadLetterQueue:
             del self._dlq[mid]
         
         if self.redis and to_delete:
-            await self.redis.hdel("dlq:messages", *to_delete)
+            await self.redis.hdel(DLQ_MESSAGES_KEY, *to_delete)
         
         logger.info(f"Purged {len(to_delete)} messages for topic {topic}")
         return len(to_delete)
@@ -392,7 +395,7 @@ class EnhancedEventBus:
         self._message_counter += 1
         
         message = Message(
-            id=idempotency_key or f"msg_{self._message_counter}_{datetime.utcnow().timestamp()}",
+            id=idempotency_key or f"msg_{self._message_counter}_{datetime.now(timezone.utc).timestamp()}",
             topic=topic,
             payload=payload,
             max_attempts=self.max_retries,
@@ -411,7 +414,7 @@ class EnhancedEventBus:
         
         message.state = MessageState.PROCESSING
         message.attempts += 1
-        message.last_attempt_at = datetime.utcnow()
+        message.last_attempt_at = datetime.now(timezone.utc)
         
         for handler in handlers:
             try:

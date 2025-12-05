@@ -74,7 +74,7 @@ class ThreadSafePromotionManager:
             self._promotions[request_id] = {
                 "experiment_id": experiment_id,
                 "metrics": metrics,
-                "created_at": datetime.utcnow(),
+                "created_at": datetime.now(timezone.utc),
                 "status": "pending",
             }
             
@@ -126,7 +126,7 @@ class SecureAccessControl:
         
         if cached:
             role, expiry = cached
-            if datetime.utcnow() < expiry:
+            if datetime.now(timezone.utc) < expiry:
                 return role
         
         try:
@@ -148,7 +148,7 @@ class SecureAccessControl:
                 role = "user"
             
             # Cache the result
-            expiry = datetime.utcnow() + timedelta(minutes=5)
+            expiry = datetime.now(timezone.utc) + timedelta(minutes=5)
             self._role_cache[token_hash] = (role, expiry)
             
             return role
@@ -189,7 +189,7 @@ class PersistentVersionState:
             # Save locally first
             self._local_state[version] = {
                 **state,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }
             
             # Persist to Redis (fast)
@@ -323,8 +323,8 @@ class RobustEvolutionLoop:
             logger.critical(f"Circuit breaker opened for {step_name}")
             self._circuit_open.add(step_name)
             
-            # Schedule circuit breaker reset
-            asyncio.create_task(self._reset_circuit_breaker(step_name, delay=300))
+            # Schedule circuit breaker reset - save task to prevent GC
+            self._reset_task = asyncio.create_task(self._reset_circuit_breaker(step_name, delay=300))
     
     async def _reset_circuit_breaker(self, step_name: str, delay: int):
         """Reset circuit breaker after delay."""
@@ -370,7 +370,7 @@ class PromotionCleanup:
         self._max_age = timedelta(hours=max_age_hours)
         self._cleanup_task: Optional[asyncio.Task] = None
     
-    async def start_cleanup_task(self, promotions: Dict):
+    def start_cleanup_task(self, promotions: Dict):
         """Start background cleanup task."""
         self._cleanup_task = asyncio.create_task(
             self._cleanup_loop(promotions)
@@ -382,7 +382,7 @@ class PromotionCleanup:
             await asyncio.sleep(3600)  # Check every hour
             
             stale = []
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             
             for request_id, promo in promotions.items():
                 created_at = promo.get("created_at")
@@ -426,12 +426,12 @@ class VersionTransitionRateLimiter:
         if not last:
             return True
         
-        return datetime.utcnow() - last >= cooldown
+        return datetime.now(timezone.utc) - last >= cooldown
     
     def record_transition(self, from_version: str, to_version: str):
         """Record a version transition."""
         key = f"{from_version}_to_{to_version}"
-        self._last_transitions[key] = datetime.utcnow()
+        self._last_transitions[key] = datetime.now(timezone.utc)
     
     def get_cooldown_remaining(self, from_version: str, to_version: str) -> Optional[timedelta]:
         """Get remaining cooldown time."""
@@ -442,7 +442,7 @@ class VersionTransitionRateLimiter:
         if not cooldown or not last:
             return None
         
-        remaining = cooldown - (datetime.utcnow() - last)
+        remaining = cooldown - (datetime.now(timezone.utc) - last)
         return remaining if remaining.total_seconds() > 0 else None
 
 
@@ -524,14 +524,14 @@ class CachedAccessControl:
         cached = self._cache.get(cache_key)
         if cached:
             decision, expiry = cached
-            if datetime.utcnow() < expiry:
+            if datetime.now(timezone.utc) < expiry:
                 return decision
         
         # Compute decision
         decision = self._compute_access(path, role)
         
         # Cache result
-        self._cache[cache_key] = (decision, datetime.utcnow() + self._ttl)
+        self._cache[cache_key] = (decision, datetime.now(timezone.utc) + self._ttl)
         
         return decision
     

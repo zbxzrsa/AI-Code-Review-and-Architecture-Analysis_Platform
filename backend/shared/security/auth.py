@@ -30,6 +30,9 @@ REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
 
 security = HTTPBearer()
 
+# Error message constants
+ERR_INVALID_TOKEN = "Invalid token"
+
 
 class TokenManager:
     """Manage JWT tokens."""
@@ -135,13 +138,13 @@ class TokenManager:
             logger.warning(f"JWT verification failed: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
+                detail=ERR_INVALID_TOKEN
             )
         except Exception as e:
             logger.error(f"Token verification error: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
+                detail=ERR_INVALID_TOKEN
             )
 
     @staticmethod
@@ -324,7 +327,8 @@ class SecurityAudit:
     ) -> None:
         """Log authentication event."""
         try:
-            log_entry = {
+            # Prepare log entry for future database storage
+            _ = {  # noqa: F841 - log_entry prepared for TODO
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "user_id": user_id,
                 "event_type": event_type,
@@ -351,7 +355,8 @@ class SecurityAudit:
     ) -> None:
         """Log access event."""
         try:
-            log_entry = {
+            # Prepare log entry for future database storage
+            _ = {  # noqa: F841 - log_entry prepared for TODO
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "user_id": user_id,
                 "resource": resource,

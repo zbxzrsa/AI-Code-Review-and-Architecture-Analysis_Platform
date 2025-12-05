@@ -19,6 +19,15 @@ from app.core.config import settings
 
 
 # ============================================
+# CSP Constants
+# ============================================
+CSP_SELF = "'self'"
+CSP_UNSAFE_INLINE = "'unsafe-inline'"
+CSP_UNSAFE_EVAL = "'unsafe-eval'"
+CSP_NONE = "'none'"
+
+
+# ============================================
 # Content Security Policy Configuration
 # ============================================
 
@@ -54,40 +63,40 @@ def get_csp_policy(is_development: bool = False) -> str:
     csp = CSPDirectives()
     
     # Default source
-    csp.add("default-src", "'self'")
+    csp.add("default-src", CSP_SELF)
     
     # Script sources
     if is_development:
-        csp.add("script-src", "'self'", "'unsafe-inline'", "'unsafe-eval'")
+        csp.add("script-src", CSP_SELF, CSP_UNSAFE_INLINE, CSP_UNSAFE_EVAL)
     else:
-        csp.add("script-src", "'self'", "'unsafe-inline'")  # For Monaco editor
+        csp.add("script-src", CSP_SELF, CSP_UNSAFE_INLINE)  # For Monaco editor
     
     # Style sources (need unsafe-inline for Ant Design)
-    csp.add("style-src", "'self'", "'unsafe-inline'")
+    csp.add("style-src", CSP_SELF, CSP_UNSAFE_INLINE)
     
     # Image sources
-    csp.add("img-src", "'self'", "data:", "blob:", "https:")
+    csp.add("img-src", CSP_SELF, "data:", "blob:", "https:")
     
     # Font sources
-    csp.add("font-src", "'self'", "data:")
+    csp.add("font-src", CSP_SELF, "data:")
     
     # Connect sources (API, WebSocket)
     if is_development:
-        csp.add("connect-src", "'self'", "ws:", "wss:", "http://localhost:*")
+        csp.add("connect-src", CSP_SELF, "ws:", "wss:", "http://localhost:*")
     else:
-        csp.add("connect-src", "'self'", "wss:")
+        csp.add("connect-src", CSP_SELF, "wss:")
     
     # Frame ancestors (prevent clickjacking)
-    csp.add("frame-ancestors", "'self'")
+    csp.add("frame-ancestors", CSP_SELF)
     
     # Form actions
-    csp.add("form-action", "'self'")
+    csp.add("form-action", CSP_SELF)
     
     # Base URI
-    csp.add("base-uri", "'self'")
+    csp.add("base-uri", CSP_SELF)
     
     # Object sources
-    csp.add("object-src", "'none'")
+    csp.add("object-src", CSP_NONE)
     
     # Upgrade insecure requests in production
     if not is_development:

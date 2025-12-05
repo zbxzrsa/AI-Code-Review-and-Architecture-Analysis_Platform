@@ -16,6 +16,12 @@ from cryptography.hazmat.backends import default_backend
 
 logger = logging.getLogger(__name__)
 
+# SQL query constants
+AUDIT_BASE_QUERY = "SELECT * FROM audits.audit_log WHERE 1=1"
+AUDIT_TS_GTE_PARAM = " AND ts >= $"
+AUDIT_TS_LTE_PARAM = " AND ts <= $"
+AUDIT_ENTITY_PARAM = " AND entity = $"
+
 
 class AuditAction(str, Enum):
     """Audit actions."""
@@ -203,19 +209,19 @@ class TamperProofAuditLogger:
         """Verify audit log chain integrity."""
         try:
             # Build query
-            query = "SELECT * FROM audits.audit_log WHERE 1=1"
+            query = AUDIT_BASE_QUERY
             params = []
 
             if from_ts:
-                query += " AND ts >= $" + str(len(params) + 1)
+                query += AUDIT_TS_GTE_PARAM + str(len(params) + 1)
                 params.append(from_ts)
 
             if to_ts:
-                query += " AND ts <= $" + str(len(params) + 1)
+                query += AUDIT_TS_LTE_PARAM + str(len(params) + 1)
                 params.append(to_ts)
 
             if entity:
-                query += " AND entity = $" + str(len(params) + 1)
+                query += AUDIT_ENTITY_PARAM + str(len(params) + 1)
                 params.append(entity)
 
             query += " ORDER BY ts ASC, id ASC"

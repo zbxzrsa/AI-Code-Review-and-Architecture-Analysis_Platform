@@ -375,7 +375,7 @@ class DistributedVCAI:
         if self.version_engine:
             await self.version_engine.analyze_improvements()
     
-    async def _on_version_created(self, event: Dict) -> None:
+    def _on_version_created(self, event: Dict) -> None:
         """Handle new version creation"""
         logger.info(f"New version created: {event['data']}")
     
@@ -452,14 +452,14 @@ class DistributedVCAI:
         cb = self.registry.circuit_breakers[node_id]
         
         if not cb.can_execute():
-            raise Exception(f"Circuit breaker OPEN for {node_id}")
+            raise RuntimeError(f"Circuit breaker OPEN for {node_id}")
         
         try:
             result = await operation() if asyncio.iscoroutinefunction(operation) else operation()
             cb.record_success()
             self.successful_requests += 1
             return result
-        except Exception as e:
+        except Exception:
             cb.record_failure()
             self.failed_requests += 1
             raise

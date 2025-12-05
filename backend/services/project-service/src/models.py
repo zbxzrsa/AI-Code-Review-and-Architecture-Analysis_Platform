@@ -1,12 +1,18 @@
 """
 Database models for project service.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, String, DateTime, Integer, Text, JSON, Enum, ForeignKey, Boolean
 from sqlalchemy.ext.declarative import declarative_base
+
 from sqlalchemy.dialects.postgresql import UUID
 import uuid
 import enum
+
+# Foreign key reference constants
+PROJECTS_ID_FK = "projects.id"
+VERSIONS_ID_FK = "versions.id"
+POLICIES_ID_FK = "policies.id"
 
 Base = declarative_base()
 
@@ -26,8 +32,8 @@ class Project(Base):
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     owner_id = Column(UUID(as_uuid=True), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     settings = Column(JSON, default={}, nullable=False)  # Project settings
     archived = Column(Boolean, default=False)
 
@@ -50,13 +56,13 @@ class Version(Base):
     __tablename__ = "versions"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False, index=True)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(PROJECTS_ID_FK), nullable=False, index=True)
     tag = Column(Enum(VersionTag), nullable=False)  # v1, v2, v3
     model_config = Column(JSON, nullable=False)  # AI model configuration
     changelog = Column(Text, nullable=True)
     promoted_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -77,13 +83,13 @@ class Baseline(Base):
     __tablename__ = "baselines"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False, index=True)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(PROJECTS_ID_FK), nullable=False, index=True)
     metric_key = Column(String(255), nullable=False)  # e.g., "accuracy", "latency_ms"
     threshold = Column(String(255), nullable=False)  # Numeric threshold
     operator = Column(String(10), nullable=False)  # >, <, >=, <=, ==, !=
     snapshot_id = Column(String(255), nullable=True)  # Reference to snapshot
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -107,8 +113,8 @@ class Policy(Base):
     description = Column(Text, nullable=True)
     rego_code = Column(Text, nullable=False)  # Rego policy code
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -126,9 +132,9 @@ class ProjectPolicy(Base):
     __tablename__ = "project_policies"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False, index=True)
-    policy_id = Column(UUID(as_uuid=True), ForeignKey("policies.id"), nullable=False, index=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    project_id = Column(UUID(as_uuid=True), ForeignKey(PROJECTS_ID_FK), nullable=False, index=True)
+    policy_id = Column(UUID(as_uuid=True), ForeignKey(POLICIES_ID_FK), nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -145,13 +151,13 @@ class VersionHistory(Base):
     __tablename__ = "version_history"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    version_id = Column(UUID(as_uuid=True), ForeignKey("versions.id"), nullable=False, index=True)
+    version_id = Column(UUID(as_uuid=True), ForeignKey(VERSIONS_ID_FK), nullable=False, index=True)
     changed_by = Column(UUID(as_uuid=True), nullable=False)
     action = Column(String(50), nullable=False)  # promoted, degraded, updated
     from_tag = Column(Enum(VersionTag), nullable=True)
     to_tag = Column(Enum(VersionTag), nullable=True)
     reason = Column(Text, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""

@@ -39,7 +39,7 @@ async def promote_to_v2(
         "experiment_id": experiment_id,
         "promotion_status": "pending",
         "message": "Promotion to V2 initiated",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -66,7 +66,7 @@ async def quarantine_experiment(
         "experiment_id": experiment_id,
         "quarantine_status": "quarantined",
         "reason": reason,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -108,5 +108,5 @@ async def request_manual_review(
         "experiment_id": experiment_id,
         "review_status": "requested",
         "notes": notes,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

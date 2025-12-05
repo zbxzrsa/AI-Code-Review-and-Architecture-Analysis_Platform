@@ -182,7 +182,7 @@ async def health_check():
         "status": "healthy",
         "service": settings.service_name,
         "version": settings.version,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -247,7 +247,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "error": "Internal server error",
             "message": str(exc) if settings.debug else "An unexpected error occurred",
             "path": str(request.url),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "service": settings.service_name,
         },
     )

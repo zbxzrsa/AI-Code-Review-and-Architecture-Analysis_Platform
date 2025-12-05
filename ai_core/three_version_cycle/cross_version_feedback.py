@@ -209,7 +209,7 @@ class CrossVersionFeedbackSystem:
         error_key = f"{error.error_type.value}:{error.technology_name}"
         return self._fix_templates.get(error_key)
     
-    async def _apply_template(
+    def _apply_template(
         self,
         error: V1Error,
         template: Dict[str, Any],
@@ -332,13 +332,13 @@ class CrossVersionFeedbackSystem:
                 fix.status = FixStatus.FAILED
                 return False
     
-    async def _apply_code_change(self, change: Dict[str, Any]):
+    def _apply_code_change(self, change: Dict[str, Any]):
         """Apply a code change."""
         change_type = change.get("type")
         logger.info(f"Applying code change: {change_type}")
         # In production, would modify actual code/config
     
-    async def _apply_config_change(self, config: Dict[str, Any]):
+    def _apply_config_change(self, config: Dict[str, Any]):
         """Apply configuration changes."""
         logger.info(f"Applying config changes: {list(config.keys())}")
         # In production, would update configuration
@@ -352,7 +352,7 @@ class CrossVersionFeedbackSystem:
         fix.status = FixStatus.TESTING
         
         # Simulate testing
-        test_results = await self._run_fix_tests(fix)
+        test_results = self._run_fix_tests(fix)
         
         if test_results.get("passed", False):
             fix.status = FixStatus.VERIFIED
@@ -360,14 +360,17 @@ class CrossVersionFeedbackSystem:
             fix.success_metrics = test_results.get("metrics", {})
             
             # Learn from successful fix
-            await self._learn_from_fix(fix)
+            self._learn_from_fix(fix)
             
             logger.info(f"Fix {fix.fix_id} verified successfully")
         else:
             fix.status = FixStatus.FAILED
             logger.warning(f"Fix {fix.fix_id} failed testing")
     
-    async def _run_fix_tests(self, fix: V2Fix) -> Dict[str, Any]:
+    def _run_fix_tests(
+        self,
+        fix: V2Fix  # noqa: ARG002 - reserved for fix-specific tests
+    ) -> Dict[str, Any]:
         """Run tests for the fix."""
         # In production, would run actual tests
         return {
@@ -381,7 +384,7 @@ class CrossVersionFeedbackSystem:
             "passed_count": 50,
         }
     
-    async def _learn_from_fix(self, fix: V2Fix):
+    def _learn_from_fix(self, fix: V2Fix):
         """Learn from successful fix and store as template."""
         error = self._errors.get(fix.error_id)
         if not error:
@@ -445,7 +448,7 @@ class CrossVersionFeedbackSystem:
             "estimated_compatibility_score": 0.95,
         }
     
-    async def _get_v2_patterns(self) -> List[Dict[str, Any]]:
+    def _get_v2_patterns(self) -> List[Dict[str, Any]]:
         """Get stable patterns from V2."""
         return [
             {"name": "circuit_breaker", "priority": "high", "improvement": 0.10},

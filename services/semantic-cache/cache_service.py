@@ -221,7 +221,7 @@ class SemanticCacheService:
                 result = json.loads(result_json)
                 
                 # Update access time
-                await self.redis_client.hset(best_key, 'last_accessed', datetime.utcnow().isoformat())
+                await self.redis_client.hset(best_key, 'last_accessed', datetime.now(timezone.utc).isoformat())
                 
                 logger.info(f"Cache hit: similarity={best_similarity:.4f}, key={best_key}")
                 return True, result, best_similarity, best_key
@@ -259,7 +259,7 @@ class SemanticCacheService:
             'analysis_result': json.dumps(analysis_result),
             'model_version': model_version,
             'prompt_version': prompt_version,
-            'created_at': datetime.utcnow().isoformat(),
+            'created_at': datetime.now(timezone.utc).isoformat(),
             'ttl_hours': ttl_hours
         }
         
@@ -318,7 +318,7 @@ class SemanticCacheService:
                         'code_hash': code_hash,
                         'embedding': embedding.tobytes(),
                         'language': self._detect_language(filename),
-                        'warmed_at': datetime.utcnow().isoformat()
+                        'warmed_at': datetime.now(timezone.utc).isoformat()
                     })
                     
                     self.embedding_index[cache_key] = embedding

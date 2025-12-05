@@ -32,7 +32,7 @@ class ModelVerification(BaseModel):
     decision: ConsensusDecision
     confidence: float = Field(..., ge=0, le=1)
     reasoning: str = Field(..., description="Explanation for the decision")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     latency_ms: int = Field(default=0, ge=0)
 
 
@@ -94,7 +94,7 @@ class FindingClassification(BaseModel):
 class ConsensusWorkflow(BaseModel):
     """Workflow state for consensus process"""
     review_id: str
-    started_at: datetime = Field(default_factory=datetime.utcnow)
+    started_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Progress
     findings_to_verify: int = Field(default=0, ge=0)

@@ -238,7 +238,7 @@ class PerformanceTracker:
         self,
         model_name: str,
         version_id: Optional[str] = None,
-        metric_name: Optional[str] = None,
+        metric_name: Optional[str] = None,  # noqa: ARG002 - reserved for metric filtering
         limit: Optional[int] = None
     ) -> List[PerformanceSnapshot]:
         """Get performance history for a model"""

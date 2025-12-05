@@ -144,8 +144,8 @@ class SecureQueryBuilder:
     def order_by(self, column: str, direction: str = "ASC") -> "SecureQueryBuilder":
         """Add ORDER BY clause."""
         col = self._sanitize_identifier(column)
-        dir = "DESC" if direction.upper() == "DESC" else "ASC"
-        self._query_parts.append(f"ORDER BY {col} {dir}")
+        sort_dir = "DESC" if direction.upper() == "DESC" else "ASC"
+        self._query_parts.append(f"ORDER BY {col} {sort_dir}")
         return self
     
     def limit(self, count: int) -> "SecureQueryBuilder":
@@ -257,7 +257,7 @@ class SecureDatabaseConnection:
         user_id: Optional[str] = None,
     ) -> int:
         """Execute query and return rows affected."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         try:
             async with self._pool.acquire() as conn:
@@ -285,7 +285,7 @@ class SecureDatabaseConnection:
         user_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Fetch single row."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         try:
             async with self._pool.acquire() as conn:
@@ -309,7 +309,7 @@ class SecureDatabaseConnection:
         user_id: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """Fetch all rows."""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         try:
             async with self._pool.acquire() as conn:
@@ -345,7 +345,7 @@ class SecureDatabaseConnection:
         error: Optional[str] = None,
     ):
         """Log query for audit."""
-        duration = (datetime.utcnow() - start_time).total_seconds() * 1000
+        duration = (datetime.now(timezone.utc) - start_time).total_seconds() * 1000
         
         # Hash query for grouping
         query_hash = hashlib.sha256(query.encode()).hexdigest()[:16]
@@ -389,28 +389,35 @@ class MockPool:
     """Mock connection pool for testing."""
     
     async def acquire(self):
+        """Return mock connection."""
         return MockConnection()
     
     async def close(self):
-        pass
+        """No-op: mock pool has no resources to release."""
+        pass  # Intentionally empty - mock implementation
 
 
 class MockConnection:
     """Mock database connection."""
     
     async def __aenter__(self):
+        """Context manager entry."""
         return self
     
-    async def __aexit__(self, *args):
-        pass
+    async def __aexit__(self, *args):  # noqa: ARG002
+        """No-op: mock connection has no cleanup."""
+        pass  # Intentionally empty - mock implementation
     
-    async def execute(self, *args):
+    async def execute(self, *args):  # noqa: ARG002
+        """Mock execute returning empty result."""
         return "UPDATE 0"
     
-    async def fetchrow(self, *args):
+    async def fetchrow(self, *args):  # noqa: ARG002
+        """Mock fetchrow returning None."""
         return None
     
-    async def fetch(self, *args):
+    async def fetch(self, *args):  # noqa: ARG002
+        """Mock fetch returning empty list."""
         return []
     
     def transaction(self):
@@ -421,10 +428,12 @@ class MockTransaction:
     """Mock transaction."""
     
     async def __aenter__(self):
+        """Context manager entry."""
         return self
     
-    async def __aexit__(self, *args):
-        pass
+    async def __aexit__(self, *args):  # noqa: ARG002
+        """No-op: mock transaction has no cleanup."""
+        pass  # Intentionally empty - mock implementation
 
 
 # Helper function to create secure queries

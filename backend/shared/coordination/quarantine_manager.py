@@ -114,7 +114,7 @@ class QuarantineManager:
             evidence=evidence,
             impact_assessment=rca_result["impact"],
             remediation_steps=rca_result["remediation"],
-            review_scheduled_at=datetime.utcnow() + timedelta(days=self.review_interval_days),
+            review_scheduled_at=datetime.now(timezone.utc) + timedelta(days=self.review_interval_days),
         )
         
         # Step 4: Update blacklist if recommended
@@ -156,7 +156,7 @@ class QuarantineManager:
         """Capture comprehensive failure evidence."""
         return {
             "experiment_id": experiment_id,
-            "captured_at": datetime.utcnow().isoformat(),
+            "captured_at": datetime.now(timezone.utc).isoformat(),
             "failure_evidence": failure_evidence,
             "error_logs": error_logs,
             "metrics_snapshot": metrics,
@@ -375,7 +375,7 @@ class QuarantineManager:
             experiment_id=experiment_id,
             category=category,
             severity="high",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
         
         self._blacklist[entry.entry_id] = entry
@@ -395,7 +395,7 @@ class QuarantineManager:
         if not record:
             return False
         
-        record.reviewed_at = datetime.utcnow()
+        record.reviewed_at = datetime.now(timezone.utc)
         record.retry_approved = retry_approved
         
         await self._emit_event(
@@ -435,7 +435,7 @@ class QuarantineManager:
         records = list(self._quarantine_records.values())
         
         if pending_review:
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             records = [
                 r for r in records
                 if r.review_scheduled_at and r.review_scheduled_at <= now

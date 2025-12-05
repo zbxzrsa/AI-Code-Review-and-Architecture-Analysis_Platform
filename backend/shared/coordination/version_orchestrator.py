@@ -22,10 +22,18 @@ import asyncio
 import logging
 from typing import Dict, Any, Optional, List, Callable, Awaitable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 logger = logging.getLogger(__name__)
+
+# API endpoint constants
+API_V1_CR_AI = "/api/v1/cr-ai"
+API_V1_VC_AI = "/api/v1/vc-ai"
+API_V2_CR_AI = "/api/v2/cr-ai"
+API_V2_VC_AI = "/api/v2/vc-ai"
+API_V3_CR_AI = "/api/v3/cr-ai"
+API_V3_VC_AI = "/api/v3/vc-ai"
 
 
 class VersionState(str, Enum):
@@ -60,8 +68,8 @@ class VersionConfig:
     cr_ai_accessible_by: List[UserRole]
     vc_ai_accessible_by: List[UserRole]
     description: str
-    deployed_at: datetime = field(default_factory=datetime.utcnow)
-    last_updated: datetime = field(default_factory=datetime.utcnow)
+    deployed_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
@@ -92,8 +100,8 @@ class VersionOrchestrator:
         "v1": VersionConfig(
             version="v1",
             state=VersionState.TESTING,
-            cr_ai_endpoint="/api/v1/cr-ai",
-            vc_ai_endpoint="/api/v1/vc-ai",
+            cr_ai_endpoint=API_V1_CR_AI,
+            vc_ai_endpoint=API_V1_VC_AI,
             cr_ai_accessible_by=[UserRole.ADMIN, UserRole.SYSTEM],  # Testing only
             vc_ai_accessible_by=[UserRole.ADMIN, UserRole.SYSTEM],  # Admin only
             description="Experimentation zone - new technologies and trial/error",
@@ -101,8 +109,8 @@ class VersionOrchestrator:
         "v2": VersionConfig(
             version="v2",
             state=VersionState.ACTIVE,
-            cr_ai_endpoint="/api/v2/cr-ai",
-            vc_ai_endpoint="/api/v2/vc-ai",
+            cr_ai_endpoint=API_V2_CR_AI,
+            vc_ai_endpoint=API_V2_VC_AI,
             cr_ai_accessible_by=[UserRole.USER, UserRole.ADMIN, UserRole.SYSTEM],  # User-facing
             vc_ai_accessible_by=[UserRole.ADMIN, UserRole.SYSTEM],  # Admin only
             description="Production stable - user-facing, reliability focused",
@@ -110,8 +118,8 @@ class VersionOrchestrator:
         "v3": VersionConfig(
             version="v3",
             state=VersionState.DEPRECATED,
-            cr_ai_endpoint="/api/v3/cr-ai",
-            vc_ai_endpoint="/api/v3/vc-ai",
+            cr_ai_endpoint=API_V3_CR_AI,
+            vc_ai_endpoint=API_V3_VC_AI,
             cr_ai_accessible_by=[UserRole.ADMIN, UserRole.SYSTEM],  # Archive only
             vc_ai_accessible_by=[UserRole.ADMIN, UserRole.SYSTEM],  # Admin only
             description="Quarantine zone - deprecated technologies, elimination",
@@ -307,7 +315,7 @@ class VersionOrchestrator:
     
     async def _review_v3_quarantine(self):
         """Review V3 quarantine for potential revival."""
-        v3_config = self._versions["v3"]
+        _ = self._versions["v3"]  # noqa: F841 - v3_config reserved
         
         # Check if any quarantined technology can be re-evaluated
         if self.quarantine:
@@ -337,7 +345,7 @@ class VersionOrchestrator:
         
         if self.promotion:
             await self.promotion.request_promotion(
-                experiment_id=f"{from_version}_tech_{datetime.utcnow().strftime('%Y%m%d')}",
+                experiment_id=f"{from_version}_tech_{datetime.now(timezone.utc).strftime('%Y%m%d')}",
                 evaluation_metrics=self._metrics[from_version].__dict__,
                 confidence_score=0.95,
             )
@@ -364,30 +372,27 @@ class VersionOrchestrator:
             description="New experimentation zone",
         )
     
-    async def _initiate_rollback(self, version: str):
+    def _initiate_rollback(self, version: str):
         """Initiate rollback to previous stable version."""
         logger.warning(f"Initiating rollback for {version}")
-        
         # In production, would restore from V3 archive
         # For now, reset V2 to safe defaults
-    
-    async def _scale_version(self, version: str, scale_factor: int):
+
+    def _scale_version(self, version: str, scale_factor: int):
         """Scale a version's resources."""
         logger.info(f"Scaling {version} by factor {scale_factor}")
         # In production, would trigger Kubernetes HPA
-    
-    async def _move_to_v1(self, record):
+
+    def _move_to_v1(self, record):
         """Move quarantined item back to V1 for retry."""
         logger.info(f"Moving {record.experiment_id} to V1 for retry")
         # Create new experiment in V1
-    
-    async def _context_allows_retry(self, record) -> bool:
+
+    def _context_allows_retry(self, record) -> bool:
         """Check if context allows retrying a quarantined item."""
         # Check if new models, fixes, or context changes allow retry
-        days_since = (datetime.utcnow() - record.quarantined_at).days
+        days_since = (datetime.now(timezone.utc) - record.quarantined_at).days
         return days_since >= 90  # Quarterly review
-    
-    # =========================================================================
     # Status & Information
     # =========================================================================
     
@@ -546,5 +551,5 @@ class SelfEvolutionEngine:
         return {
             "running": self._running,
             "orchestrator": self.orchestrator.get_evolution_status(),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }

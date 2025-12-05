@@ -233,7 +233,7 @@ class TestV3ToV1Recovery:
         )
         
         # With initial_cooldown_hours=0, should be eligible immediately
-        assert record.next_eligible_time <= datetime.utcnow()
+        assert record.next_eligible_time <= datetime.now(timezone.utc)
 
     @pytest.mark.asyncio
     async def test_recovery_success_flow(self, orchestrator):

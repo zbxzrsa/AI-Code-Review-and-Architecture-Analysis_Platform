@@ -38,7 +38,7 @@ class CSRFToken:
     @staticmethod
     def generate_token(session_id: str) -> str:
         """Generate CSRF token bound to session."""
-        timestamp = datetime.utcnow().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
         random_part = secrets.token_urlsafe(CSRF_TOKEN_LENGTH)
         
         # Create signed token
@@ -86,7 +86,7 @@ class CSRFToken:
             
             # Verify expiration
             timestamp = datetime.fromisoformat(timestamp_str)
-            if datetime.utcnow() - timestamp > timedelta(minutes=CSRF_TOKEN_EXPIRE_MINUTES):
+            if datetime.now(timezone.utc) - timestamp > timedelta(minutes=CSRF_TOKEN_EXPIRE_MINUTES):
                 logger.warning("CSRF token expired")
                 return False
             

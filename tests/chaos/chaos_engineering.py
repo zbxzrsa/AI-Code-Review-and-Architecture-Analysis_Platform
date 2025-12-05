@@ -124,7 +124,7 @@ class ChaosMonkey:
         
         try:
             experiment.state = ChaosState.RUNNING
-            experiment.started_at = datetime.utcnow()
+            experiment.started_at = datetime.now(timezone.utc)
             
             # Capture metrics before
             metrics_before = await self._capture_metrics()
@@ -141,15 +141,15 @@ class ChaosMonkey:
                 logger.info(f"[DRY RUN] Would kill {count} pods matching {selector}")
             
             # Monitor recovery
-            recovery_start = datetime.utcnow()
+            recovery_start = datetime.now(timezone.utc)
             recovered = await self._wait_for_recovery(selector, timeout=120)
-            recovery_time = (datetime.utcnow() - recovery_start).total_seconds()
+            recovery_time = (datetime.now(timezone.utc) - recovery_start).total_seconds()
             
             # Capture metrics after
             metrics_after = await self._capture_metrics()
             
             experiment.state = ChaosState.COMPLETED
-            experiment.completed_at = datetime.utcnow()
+            experiment.completed_at = datetime.now(timezone.utc)
             
             # Evaluate hypothesis
             hypothesis_valid = recovery_time < 60 and metrics_after.get("error_rate", 0) < 0.02
@@ -198,7 +198,7 @@ class ChaosMonkey:
         
         try:
             experiment.state = ChaosState.RUNNING
-            experiment.started_at = datetime.utcnow()
+            experiment.started_at = datetime.now(timezone.utc)
             
             metrics_before = await self._capture_metrics()
             
@@ -226,7 +226,7 @@ class ChaosMonkey:
             metrics_after = await self._capture_metrics()
             
             experiment.state = ChaosState.COMPLETED
-            experiment.completed_at = datetime.utcnow()
+            experiment.completed_at = datetime.now(timezone.utc)
             
             return experiment
             
@@ -263,7 +263,7 @@ class ChaosMonkey:
         
         try:
             experiment.state = ChaosState.RUNNING
-            experiment.started_at = datetime.utcnow()
+            experiment.started_at = datetime.now(timezone.utc)
             
             # Apply network chaos (using tc or Chaos Mesh)
             chaos_manifest = self._generate_network_chaos_manifest(
@@ -281,7 +281,7 @@ class ChaosMonkey:
                 await asyncio.sleep(min(duration_seconds, 5))
             
             experiment.state = ChaosState.COMPLETED
-            experiment.completed_at = datetime.utcnow()
+            experiment.completed_at = datetime.now(timezone.utc)
             
             return experiment
             
@@ -313,7 +313,7 @@ class ChaosMonkey:
         
         # Implementation would use NetworkPolicy or Chaos Mesh
         experiment.state = ChaosState.COMPLETED
-        experiment.completed_at = datetime.utcnow()
+        experiment.completed_at = datetime.now(timezone.utc)
         
         return experiment
     
@@ -346,7 +346,7 @@ class ChaosMonkey:
         
         # Would use stress-ng or Chaos Mesh
         experiment.state = ChaosState.COMPLETED
-        experiment.completed_at = datetime.utcnow()
+        experiment.completed_at = datetime.now(timezone.utc)
         
         return experiment
     
@@ -374,7 +374,7 @@ class ChaosMonkey:
         logger.info(f"Stressing memory with {memory_mb}MB allocation")
         
         experiment.state = ChaosState.COMPLETED
-        experiment.completed_at = datetime.utcnow()
+        experiment.completed_at = datetime.now(timezone.utc)
         
         return experiment
     
@@ -407,7 +407,7 @@ class ChaosMonkey:
         
         # Implementation would block traffic or inject faults
         experiment.state = ChaosState.COMPLETED
-        experiment.completed_at = datetime.utcnow()
+        experiment.completed_at = datetime.now(timezone.utc)
         
         return experiment
     
@@ -448,15 +448,15 @@ class ChaosMonkey:
         timeout: int = 120,
     ) -> bool:
         """Wait for pods to recover."""
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
         
-        while (datetime.utcnow() - start).total_seconds() < timeout:
+        while (datetime.now(timezone.utc) - start).total_seconds() < timeout:
             # Check pod health
             await asyncio.sleep(5)
             logger.info("Waiting for recovery...")
             
             # Mock: assume recovery after a few checks
-            if (datetime.utcnow() - start).total_seconds() > 15:
+            if (datetime.now(timezone.utc) - start).total_seconds() > 15:
                 return True
         
         return False

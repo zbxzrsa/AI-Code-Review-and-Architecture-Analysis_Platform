@@ -13,7 +13,7 @@ async def health_status():
     return {
         "status": "healthy",
         "version": "v1-experimentation",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "warning": "This is an experimental version",
         "checks": {
             "database": "ok",

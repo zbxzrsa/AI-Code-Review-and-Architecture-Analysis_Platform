@@ -55,7 +55,7 @@ class ComplianceStandard(str, Enum):
 class AuditEntry(BaseModel):
     """Individual audit log entry"""
     id: str = Field(..., description="Unique audit entry ID")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     
     # Actor information
     user_id: str = Field(..., description="User who performed the action")
@@ -150,7 +150,7 @@ class ComplianceCheck(BaseModel):
 class ComplianceReport(BaseModel):
     """Comprehensive compliance report"""
     id: str
-    generated_at: datetime = Field(default_factory=datetime.utcnow)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     period_start: datetime
     period_end: datetime
     
@@ -197,7 +197,7 @@ class RetentionPolicy(BaseModel):
 class DataAccessLog(BaseModel):
     """Log of data access for compliance"""
     id: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: str
     data_type: str
     data_id: str
@@ -213,7 +213,7 @@ class GDPRRequest(BaseModel):
     request_type: str = Field(description="access, rectification, erasure, portability, restriction, objection")
     subject_id: str
     subject_email: str
-    submitted_at: datetime = Field(default_factory=datetime.utcnow)
+    submitted_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     due_date: datetime
     status: str = Field(description="pending, in_progress, completed, rejected")
     completed_at: Optional[datetime] = None

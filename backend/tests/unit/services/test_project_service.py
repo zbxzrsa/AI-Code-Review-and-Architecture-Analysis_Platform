@@ -32,8 +32,8 @@ class TestProjectService:
             language="python",
             owner_id="user-123",
             status="active",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
         )
 
 
@@ -157,7 +157,7 @@ class TestProjectFiles(TestProjectService):
             path="src/main.py",
             content="print('hello')",
             language="python",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio
@@ -251,7 +251,7 @@ class TestProjectVersioning(TestProjectService):
             project_id=mock_project.id,
             version="1.0.0",
             description="Initial version",
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(timezone.utc),
         )
 
     @pytest.mark.asyncio

@@ -6,7 +6,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 logging.basicConfig(level=logging.INFO)
@@ -95,8 +95,8 @@ async def start_analysis(request: AnalysisRequest):
     return AnalysisResponse(
         id="analysis_123",
         status=AnalysisStatus.COMPLETED,
-        created_at=datetime.utcnow(),
-        completed_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
+        completed_at=datetime.now(timezone.utc),
         issues=[
             Issue(
                 id="issue_1",
@@ -135,7 +135,7 @@ async def get_analysis(session_id: str):
     return AnalysisResponse(
         id=session_id,
         status=AnalysisStatus.COMPLETED,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         issues=[],
         summary="Analysis complete",
         metrics={"complexity": 10, "maintainability": 85},
@@ -188,7 +188,7 @@ async def analyze_project(project_id: str, files: Optional[List[str]] = None):
     return AnalysisResponse(
         id="analysis_proj",
         status=AnalysisStatus.COMPLETED,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
         issues=[],
         summary=f"Analyzed project {project_id}",
         metrics={"files_analyzed": 15, "total_lines": 2500},
@@ -204,7 +204,7 @@ async def get_project_sessions(project_id: str, page: int = 1, limit: int = 20):
                 "id": "session_1",
                 "project_id": project_id,
                 "status": "completed",
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
                 "issues_count": 5,
             }
         ],

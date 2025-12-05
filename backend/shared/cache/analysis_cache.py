@@ -84,7 +84,7 @@ class LRUCache:
                 return len(json.dumps(value).encode('utf-8'))
             else:
                 return sys.getsizeof(value)
-        except (TypeError, ValueError, UnicodeEncodeError) as e:
+        except (TypeError, ValueError, UnicodeEncodeError):
             # Size estimation failed, use default
             return 1024  # Default estimate
     
@@ -98,7 +98,7 @@ class LRUCache:
                 return None
             
             # Check expiration
-            if datetime.utcnow() > entry.expires_at:
+            if datetime.now(timezone.utc) > entry.expires_at:
                 del self._cache[key]
                 self._stats.misses += 1
                 self._stats.size_bytes -= entry.size_bytes
@@ -137,8 +137,8 @@ class LRUCache:
             entry = CacheEntry(
                 key=key,
                 value=value,
-                created_at=datetime.utcnow(),
-                expires_at=datetime.utcnow() + timedelta(seconds=ttl),
+                created_at=datetime.now(timezone.utc),
+                expires_at=datetime.now(timezone.utc) + timedelta(seconds=ttl),
                 size_bytes=size,
                 tags=tags or [],
             )
@@ -157,7 +157,7 @@ class LRUCache:
     def _evict_oldest(self):
         """Evict oldest entry."""
         if self._cache:
-            key, entry = self._cache.popitem(last=False)
+            _, entry = self._cache.popitem(last=False)  # key unused
             self._stats.evictions += 1
             self._stats.size_bytes -= entry.size_bytes
             self._stats.entry_count -= 1

@@ -24,8 +24,8 @@ class Provider(Base):
     cost_per_1k_tokens = Column(Float, nullable=False)
     max_tokens = Column(Integer, nullable=False)
     timeout_seconds = Column(Integer, default=30)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -54,8 +54,8 @@ class UserProvider(Base):
     encrypted_dek = Column(Text, nullable=False)  # Data Encryption Key
     key_last_4_chars = Column(String(4), nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -83,7 +83,7 @@ class ProviderHealth(Base):
     consecutive_failures = Column(Integer, default=0)
     response_time_ms = Column(Float, nullable=True)
     success_rate = Column(Float, default=1.0)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -107,8 +107,8 @@ class UserQuota(Base):
     monthly_limit = Column(Integer, nullable=False)  # Requests per month
     daily_cost_limit = Column(Float, nullable=False)  # USD per day
     monthly_cost_limit = Column(Float, nullable=False)  # USD per month
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -132,8 +132,8 @@ class UsageTracking(Base):
     requests_count = Column(Integer, default=0)
     tokens_used = Column(Integer, default=0)
     cost_usd = Column(Float, default=0.0)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -155,7 +155,7 @@ class CostAlert(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False, index=True)
     alert_type = Column(String(50), nullable=False)  # daily_80, daily_90, daily_100, monthly_80, etc.
     threshold_percentage = Column(Integer, nullable=False)  # 80, 90, 100
-    triggered_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    triggered_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     acknowledged = Column(Boolean, default=False)
     acknowledged_at = Column(DateTime, nullable=True)
 

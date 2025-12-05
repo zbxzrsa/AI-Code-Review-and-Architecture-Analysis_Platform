@@ -116,7 +116,7 @@ async def root():
         "service": "AI Code Review Platform",
         "version": "v2-production",
         "status": "operational",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -158,7 +158,7 @@ async def global_exception_handler(request, exc):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "detail": "Internal server error",
-            "error_id": str(datetime.utcnow().timestamp()),
+            "error_id": str(datetime.now(timezone.utc).timestamp()),
         },
     )
 

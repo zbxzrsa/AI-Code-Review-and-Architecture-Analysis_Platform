@@ -222,8 +222,8 @@ class KnowledgeDistillation:
         Returns:
             Training history
         """
-        optimizer = optim.Adam(self.student.parameters(), lr=lr)
-        dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        optimizer = optim.Adam(self.student.parameters(), lr=lr, weight_decay=1e-4)
+        dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=0)
         
         history = {
             'train_loss': [],
@@ -267,7 +267,7 @@ class KnowledgeDistillation:
     def evaluate(self, dataset: Dataset) -> float:
         """Evaluate student accuracy"""
         self.student.eval()
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=0)
         
         correct = 0
         total = 0
@@ -341,10 +341,10 @@ class KnowledgeDistillation:
         # Simple width scaling
         for name, module in compressed.named_modules():
             if isinstance(module, nn.Linear):
-                in_features = int(module.in_features / compression_ratio)
-                out_features = int(module.out_features / compression_ratio)
-                # Note: This is just a placeholder - real implementation needed
-                pass
+                # Calculate compressed dimensions (placeholder for real implementation)
+                _ = int(module.in_features / compression_ratio)
+                _ = int(module.out_features / compression_ratio)
+                # Note: Real architecture compression would modify the module here
         
         return compressed
 
@@ -448,7 +448,7 @@ class ModelFusion:
     ) -> float:
         """Quick model evaluation"""
         model.eval()
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=0)
         
         correct = 0
         total = 0
@@ -519,8 +519,8 @@ class ModelFusion:
             SWA model
         """
         model = model.to(self.device)
-        optimizer = optim.SGD(model.parameters(), lr=swa_lr)
-        dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+        optimizer = optim.SGD(model.parameters(), lr=swa_lr, momentum=0.9, weight_decay=1e-4)
+        dataloader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
         
         # SWA model
         swa_model = copy.deepcopy(model)

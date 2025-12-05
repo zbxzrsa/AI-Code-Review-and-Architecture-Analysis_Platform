@@ -59,7 +59,7 @@ async def get_user(user_id: str):
         email="user@example.com",
         name="Test User",
         role="user",
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
 
@@ -75,7 +75,7 @@ async def update_user(user_id: str, request: UserUpdateRequest):
         name=request.name or "Test User",
         role="user",
         avatar=request.avatar,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
 
 

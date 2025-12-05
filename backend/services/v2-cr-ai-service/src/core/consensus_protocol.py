@@ -277,7 +277,7 @@ Provide your confidence level (0-1) and reasoning."""
         primary: ModelVerification,
         secondary: Optional[ModelVerification],
         severity_class: str,
-        consensus_type: str,
+        consensus_type: str,  # noqa: ARG002 - Reserved for consensus type handling
     ) -> Dict[str, Any]:
         """Determine consensus outcome."""
         
@@ -385,7 +385,7 @@ Provide your confidence level (0-1) and reasoning."""
         
         workflow.results = results
         workflow.completed = True
-        workflow.completed_at = datetime.utcnow()
+        workflow.completed_at = datetime.now(timezone.utc)
         
         return workflow
     

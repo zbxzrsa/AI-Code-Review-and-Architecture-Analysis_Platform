@@ -21,7 +21,7 @@ API Endpoints:
 import os
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -37,6 +37,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+# API prefix constant
+API_V2_VC_AI_PREFIX = "/api/v2/vc-ai"
 
 
 # =============================================================================
@@ -243,7 +246,7 @@ async def health_check():
         "status": "healthy",
         "service": settings.service_name,
         "version": settings.version,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -304,10 +307,10 @@ async def prometheus_metrics(request: Request):
 # Include Routers
 # =============================================================================
 
-app.include_router(version_router, prefix="/api/v2/vc-ai")
-app.include_router(analysis_router, prefix="/api/v2/vc-ai")
-app.include_router(compliance_router, prefix="/api/v2/vc-ai")
-app.include_router(slo_router, prefix="/api/v2/vc-ai")
+app.include_router(version_router, prefix=API_V2_VC_AI_PREFIX)
+app.include_router(analysis_router, prefix=API_V2_VC_AI_PREFIX)
+app.include_router(compliance_router, prefix=API_V2_VC_AI_PREFIX)
+app.include_router(slo_router, prefix=API_V2_VC_AI_PREFIX)
 
 
 # =============================================================================
@@ -330,7 +333,7 @@ async def global_exception_handler(request: Request, exc: Exception):
             "error": "Internal server error",
             "message": str(exc) if settings.debug else "An unexpected error occurred",
             "path": str(request.url),
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "service": settings.service_name,
         },
     )

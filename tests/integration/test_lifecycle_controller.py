@@ -58,7 +58,7 @@ class TestVersionRegistration:
     @pytest.fixture
     def sample_version_config(self) -> Dict:
         return {
-            "version_id": f"v1-test-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            "version_id": f"v1-test-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
             "model_version": "gpt-4o-2024-08-06",
             "prompt_version": "code-review-v4-exp",
             "current_state": "shadow",
@@ -110,16 +110,16 @@ class TestComparisonRequests:
     @pytest.fixture
     def sample_comparison_request(self) -> Dict:
         return {
-            "requestId": f"req-test-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}",
+            "requestId": f"req-test-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}",
             "code": "def test(): pass",
             "language": "python",
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "v1Output": {
                 "version": "v1",
                 "versionId": "v1-test",
                 "modelVersion": "gpt-4o",
                 "promptVersion": "code-review-v4",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "latencyMs": 2500,
                 "cost": 0.004,
                 "issues": [],
@@ -132,7 +132,7 @@ class TestComparisonRequests:
                 "versionId": "v2-stable",
                 "modelVersion": "gpt-4o",
                 "promptVersion": "code-review-v3",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "latencyMs": 2800,
                 "cost": 0.0038,
                 "issues": [],
@@ -317,7 +317,7 @@ class TestEvaluationTrigger:
     async def test_trigger_evaluation(self, client):
         """Test triggering evaluation for a version"""
         # First register a version
-        version_id = f"v1-eval-test-{datetime.utcnow().strftime('%H%M%S')}"
+        version_id = f"v1-eval-test-{datetime.now(timezone.utc).strftime('%H%M%S')}"
         
         await client.post(
             f"{LIFECYCLE_URL}/versions/{version_id}/register",
@@ -358,7 +358,7 @@ class TestEndToEndLifecycle:
     async def test_full_lifecycle_flow(self):
         """Test complete lifecycle from registration to evaluation"""
         async with httpx.AsyncClient(timeout=60.0) as client:
-            version_id = f"v1-e2e-{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+            version_id = f"v1-e2e-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
             
             # 1. Register version
             register_response = await client.post(
@@ -376,16 +376,16 @@ class TestEndToEndLifecycle:
             
             # 2. Create comparison data
             comparison_request = {
-                "requestId": f"req-e2e-{datetime.utcnow().strftime('%H%M%S')}",
+                "requestId": f"req-e2e-{datetime.now(timezone.utc).strftime('%H%M%S')}",
                 "code": "def safe_func(): return 42",
                 "language": "python",
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "v1Output": {
                     "version": "v1",
                     "versionId": version_id,
                     "modelVersion": "gpt-4o-2024-08-06",
                     "promptVersion": "code-review-v4-exp",
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "latencyMs": 2200,
                     "cost": 0.004,
                     "issues": [],
@@ -398,7 +398,7 @@ class TestEndToEndLifecycle:
                     "versionId": "v2-stable",
                     "modelVersion": "gpt-4o",
                     "promptVersion": "code-review-v3",
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                     "latencyMs": 2800,
                     "cost": 0.0038,
                     "issues": [],

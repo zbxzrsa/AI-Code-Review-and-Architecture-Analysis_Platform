@@ -28,8 +28,8 @@ class User(Base):
     role = Column(Enum(RoleEnum), default=RoleEnum.USER, nullable=False)
     verified = Column(Boolean, default=False, nullable=False)
     totp_secret = Column(String(32), nullable=True)  # For 2FA
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     last_login = Column(DateTime, nullable=True)
     failed_login_attempts = Column(Integer, default=0)
     locked_until = Column(DateTime, nullable=True)
@@ -55,8 +55,8 @@ class Session(Base):
     refresh_token_hash = Column(String(255), nullable=False, unique=True)
     expires_at = Column(DateTime, nullable=False)
     device_info = Column(Text, nullable=True)  # JSON serialized
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    last_used = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    last_used = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -78,7 +78,7 @@ class Invitation(Base):
     max_uses = Column(Integer, default=1, nullable=False)
     uses = Column(Integer, default=0, nullable=False)
     expires_at = Column(DateTime, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -103,7 +103,7 @@ class AuditLog(Base):
     details = Column(Text, nullable=True)  # JSON serialized
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(255), nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False, index=True)
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -126,7 +126,7 @@ class PasswordReset(Base):
     token_hash = Column(String(255), unique=True, nullable=False)
     expires_at = Column(DateTime, nullable=False)
     used = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""

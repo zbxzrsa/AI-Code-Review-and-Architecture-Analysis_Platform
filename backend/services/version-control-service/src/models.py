@@ -42,8 +42,8 @@ class Experiment(Base):
     dataset_id = Column(UUID(as_uuid=True), nullable=False)
     status = Column(Enum(ExperimentStatus), default=ExperimentStatus.CREATED, nullable=False)
     created_by = Column(UUID(as_uuid=True), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
 
@@ -75,8 +75,8 @@ class Evaluation(Base):
     human_override = Column(String(50), nullable=True)  # Human decision override
     override_reason = Column(Text, nullable=True)
     evaluated_by = Column(String(50), nullable=False)  # ai, human
-    evaluated_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    evaluated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -104,8 +104,8 @@ class Promotion(Base):
     reason = Column(Text, nullable=False)
     approver_id = Column(UUID(as_uuid=True), nullable=True)
     promoted_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -129,11 +129,11 @@ class Blacklist(Base):
     config_hash = Column(String(64), unique=True, nullable=False, index=True)
     reason = Column(Text, nullable=False)
     evidence = Column(JSON, nullable=False)  # Evidence of failure
-    quarantined_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    quarantined_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     review_status = Column(String(50), default="pending", nullable=False)  # pending, reviewed, appealed
     reviewed_by = Column(UUID(as_uuid=True), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -160,7 +160,7 @@ class ComparisonReport(Base):
     metrics = Column(JSON, nullable=False)  # Comparison metrics
     recommendation = Column(String(255), nullable=False)
     confidence = Column(String(50), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
 
     def to_dict(self):
         """Convert to dictionary."""

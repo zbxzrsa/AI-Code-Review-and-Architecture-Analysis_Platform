@@ -5,7 +5,7 @@ Automated quality evaluation and reporting
 
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Optional, Any, Union
+from typing import Dict, List, Optional, Any, Union, Tuple
 from dataclasses import dataclass, field
 from enum import Enum
 import logging
@@ -305,59 +305,20 @@ class QualityAssessor:
     def _assess_validity(
         self,
         df: pd.DataFrame,
-        data_type: str
+        data_type: str = "generic"  # noqa: ARG002 - reserved for type-specific validation
     ) -> DimensionScore:
         """Assess data validity"""
         issues = []
-        recommendations = []
         validity_scores = []
         
         for col in df.columns:
-            col_issues = 0
-            total_values = len(df[col].dropna())
-            
-            if total_values == 0:
-                continue
-            
-            # Check against validity rules
-            if col in self.validity_rules:
-                rule = self.validity_rules[col]
-                
-                if 'min' in rule:
-                    invalid = (df[col] < rule['min']).sum()
-                    if invalid > 0:
-                        issues.append(f"{invalid} values in '{col}' below minimum")
-                        col_issues += invalid
-                
-                if 'max' in rule:
-                    invalid = (df[col] > rule['max']).sum()
-                    if invalid > 0:
-                        issues.append(f"{invalid} values in '{col}' above maximum")
-                        col_issues += invalid
-                
-                if 'pattern' in rule:
-                    import re
-                    pattern = re.compile(rule['pattern'])
-                    invalid = (~df[col].astype(str).str.match(pattern)).sum()
-                    if invalid > 0:
-                        issues.append(f"{invalid} values in '{col}' don't match pattern")
-                        col_issues += invalid
-            
-            # Type-specific validation
-            if pd.api.types.is_numeric_dtype(df[col]):
-                # Check for infinity
-                inf_count = np.isinf(df[col].dropna()).sum()
-                if inf_count > 0:
-                    issues.append(f"{inf_count} infinite values in '{col}'")
-                    col_issues += inf_count
-            
-            col_score = 1.0 - (col_issues / total_values) if total_values > 0 else 1.0
-            validity_scores.append(col_score)
+            col_score, col_issues = self._assess_column_validity(df, col)
+            if col_score is not None:
+                validity_scores.append(col_score)
+                issues.extend(col_issues)
         
         score = np.mean(validity_scores) if validity_scores else 1.0
-        
-        if issues:
-            recommendations.append("Review and fix invalid values")
+        recommendations = ["Review and fix invalid values"] if issues else []
         
         return DimensionScore(
             dimension=QualityDimension.VALIDITY,
@@ -365,6 +326,78 @@ class QualityAssessor:
             issues=issues,
             recommendations=recommendations
         )
+    
+    def _assess_column_validity(
+        self,
+        df: pd.DataFrame,
+        col: str
+    ) -> Tuple[Optional[float], List[str]]:
+        """Assess validity of a single column"""
+        issues = []
+        col_issues = 0
+        total_values = len(df[col].dropna())
+        
+        if total_values == 0:
+            return None, []
+        
+        # Check against validity rules
+        col_issues += self._check_validity_rules(df, col, issues)
+        
+        # Type-specific validation
+        col_issues += self._check_numeric_validity(df, col, issues)
+        
+        col_score = 1.0 - (col_issues / total_values)
+        return col_score, issues
+    
+    def _check_validity_rules(
+        self,
+        df: pd.DataFrame,
+        col: str,
+        issues: List[str]
+    ) -> int:
+        """Check column against validity rules"""
+        col_issues = 0
+        if col not in self.validity_rules:
+            return 0
+        
+        rule = self.validity_rules[col]
+        
+        if 'min' in rule:
+            invalid = (df[col] < rule['min']).sum()
+            if invalid > 0:
+                issues.append(f"{invalid} values in '{col}' below minimum")
+                col_issues += invalid
+        
+        if 'max' in rule:
+            invalid = (df[col] > rule['max']).sum()
+            if invalid > 0:
+                issues.append(f"{invalid} values in '{col}' above maximum")
+                col_issues += invalid
+        
+        if 'pattern' in rule:
+            import re
+            pattern = re.compile(rule['pattern'])
+            invalid = (~df[col].astype(str).str.match(pattern)).sum()
+            if invalid > 0:
+                issues.append(f"{invalid} values in '{col}' don't match pattern")
+                col_issues += invalid
+        
+        return col_issues
+    
+    def _check_numeric_validity(
+        self,
+        df: pd.DataFrame,
+        col: str,
+        issues: List[str]
+    ) -> int:
+        """Check numeric column for infinity values"""
+        if not pd.api.types.is_numeric_dtype(df[col]):
+            return 0
+        
+        inf_count = np.isinf(df[col].dropna()).sum()
+        if inf_count > 0:
+            issues.append(f"{inf_count} infinite values in '{col}'")
+        return inf_count
     
     def _assess_consistency(self, df: pd.DataFrame) -> DimensionScore:
         """Assess data consistency"""
@@ -480,7 +513,7 @@ Dimension Scores:
         for dim, score in latest.dimension_scores.items():
             summary += f"  - {dim.capitalize()}: {score.score:.2%}\n"
         
-        summary += f"\nData Profile:\n"
+        summary += "\nData Profile:\n"
         summary += f"  - Rows: {latest.data_profile.get('row_count', 'N/A')}\n"
         summary += f"  - Columns: {latest.data_profile.get('column_count', 'N/A')}\n"
         

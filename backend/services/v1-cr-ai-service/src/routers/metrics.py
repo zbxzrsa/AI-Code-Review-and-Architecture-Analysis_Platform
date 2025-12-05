@@ -175,7 +175,7 @@ async def get_metrics_summary():
             "latency_p99_target_ms": 1000,
             "hallucination_rate_target": 0.02,
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }
 
 
@@ -206,5 +206,5 @@ async def record_metrics(
             "recall": round(recall, 3),
             "f1_score": round(f1, 3),
         },
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
     }

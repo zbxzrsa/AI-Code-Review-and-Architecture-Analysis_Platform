@@ -222,7 +222,7 @@ class BidirectionalProtocol:
         self._message_counter += 1
         return f"{self.node_id}:{self._message_counter}:{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
     
-    async def start(self) -> None:
+    def start(self) -> None:
         """Start the protocol"""
         self.status = ChannelStatus.CONNECTING
         
@@ -235,7 +235,7 @@ class BidirectionalProtocol:
         self.status = ChannelStatus.CONNECTED
         logger.info(f"Protocol started for node: {self.node_id}")
     
-    async def stop(self) -> None:
+    def stop(self) -> None:
         """Stop the protocol"""
         self.status = ChannelStatus.DISCONNECTED
         
@@ -442,7 +442,7 @@ class AutomatedTestingPipeline:
         """Register a test function"""
         self.test_definitions[name] = test_fn
     
-    async def _test_health_check(self, context: Dict[str, Any]) -> TestResult:
+    def _test_health_check(self, context: Dict[str, Any]) -> TestResult:
         """Test system health"""
         start = datetime.now()
         
@@ -471,7 +471,7 @@ class AutomatedTestingPipeline:
             duration_ms=(datetime.now() - start).total_seconds() * 1000
         )
     
-    async def _test_model_accuracy(self, context: Dict[str, Any]) -> TestResult:
+    def _test_model_accuracy(self, context: Dict[str, Any]) -> TestResult:
         """Test model accuracy threshold"""
         start = datetime.now()
         
@@ -489,7 +489,7 @@ class AutomatedTestingPipeline:
             details={"accuracy": accuracy, "threshold": threshold}
         )
     
-    async def _test_latency_threshold(self, context: Dict[str, Any]) -> TestResult:
+    def _test_latency_threshold(self, context: Dict[str, Any]) -> TestResult:
         """Test latency threshold"""
         start = datetime.now()
         
@@ -506,7 +506,7 @@ class AutomatedTestingPipeline:
             message=f"P95 Latency: {latency}ms, Threshold: {threshold}ms"
         )
     
-    async def _test_error_rate(self, context: Dict[str, Any]) -> TestResult:
+    def _test_error_rate(self, context: Dict[str, Any]) -> TestResult:
         """Test error rate threshold"""
         start = datetime.now()
         
@@ -523,7 +523,7 @@ class AutomatedTestingPipeline:
             message=f"Error rate: {error_rate:.2%}, Threshold: {threshold:.2%}"
         )
     
-    async def _test_rollback_capability(self, context: Dict[str, Any]) -> TestResult:
+    def _test_rollback_capability(self, context: Dict[str, Any]) -> TestResult:
         """Test rollback capability"""
         start = datetime.now()
         
@@ -537,7 +537,7 @@ class AutomatedTestingPipeline:
             message="Rollback snapshots available" if snapshots_available else "No snapshots"
         )
     
-    async def _test_merge_success(self, context: Dict[str, Any]) -> TestResult:
+    def _test_merge_success(self, context: Dict[str, Any]) -> TestResult:
         """Test merge success rate"""
         start = datetime.now()
         

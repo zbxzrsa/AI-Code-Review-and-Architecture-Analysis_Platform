@@ -334,7 +334,7 @@ class EventPublisher:
     def _generate_event_id(self) -> str:
         """Generate unique event ID"""
         self._event_counter += 1
-        timestamp = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
         return f"evt-{timestamp}-{self._event_counter:06d}"
     
     async def publish(
@@ -352,7 +352,7 @@ class EventPublisher:
         event = LifecycleEvent(
             event_id=self._generate_event_id(),
             event_type=event_type,
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(timezone.utc).isoformat() + "Z",
             version_id=version_id,
             from_state=from_state,
             to_state=to_state,

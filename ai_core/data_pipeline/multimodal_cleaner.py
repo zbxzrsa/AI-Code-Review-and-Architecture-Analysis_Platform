@@ -32,7 +32,7 @@ class CleaningConfig:
     # Image settings
     image_min_size: Tuple[int, int] = (32, 32)
     image_max_size: Tuple[int, int] = (4096, 4096)
-    image_formats: List[str] = None
+    image_formats: Optional[List[str]] = None
     normalize_images: bool = True
     
     # Structured data settings
@@ -51,8 +51,9 @@ class TextProcessor:
     def __init__(self, config: CleaningConfig):
         self.config = config
         self.html_pattern = re.compile(r'<[^>]+>')
+        # Simplified URL pattern following RFC 3986
         self.url_pattern = re.compile(
-            r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+            r'https?://[a-zA-Z\d\-._~:/?#\[\]@!$&\'()*+,;=%]+'
         )
         self.whitespace_pattern = re.compile(r'\s+')
     
@@ -233,8 +234,6 @@ class StructuredDataProcessor:
         
         # Process each column based on type
         for col in cleaned.columns:
-            col_stats = {'dtype': str(cleaned[col].dtype)}
-            
             if pd.api.types.is_numeric_dtype(cleaned[col]):
                 cleaned[col], col_stats = self._clean_numeric(cleaned[col])
             elif pd.api.types.is_datetime64_any_dtype(cleaned[col]):

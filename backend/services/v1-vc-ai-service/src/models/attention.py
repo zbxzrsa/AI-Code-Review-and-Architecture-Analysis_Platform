@@ -234,7 +234,7 @@ class CrossLayerAttention(nn.Module):
         output = self.o_proj(combined)
         
         # Apply layer gating
-        gate_weights = F.softmax(self.layer_gate(hidden_states), dim=-1)
+        _ = F.softmax(self.layer_gate(hidden_states), dim=-1)  # noqa: F841 - gate_weights for future
         # Weighted combination could be applied here for more sophisticated gating
         
         return output

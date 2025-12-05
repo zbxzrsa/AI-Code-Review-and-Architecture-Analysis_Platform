@@ -86,14 +86,14 @@ class SecureAuthManager:
         to_encode = data.copy()
         
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(timezone.utc) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(minutes=self.config.access_token_expire_minutes)
+            expire = datetime.now(timezone.utc) + timedelta(minutes=self.config.access_token_expire_minutes)
         
         to_encode.update({
             "exp": expire,
             "type": "access",
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(timezone.utc),
         })
         
         return jwt.encode(
@@ -111,15 +111,15 @@ class SecureAuthManager:
         to_encode = data.copy()
         
         if expires_delta:
-            expire = datetime.utcnow() + expires_delta
+            expire = datetime.now(timezone.utc) + expires_delta
         else:
-            expire = datetime.utcnow() + timedelta(days=self.config.refresh_token_expire_days)
+            expire = datetime.now(timezone.utc) + timedelta(days=self.config.refresh_token_expire_days)
         
         # Add unique identifier for token rotation
         to_encode.update({
             "exp": expire,
             "type": "refresh",
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(timezone.utc),
             "jti": secrets.token_urlsafe(16),  # JWT ID for revocation
         })
         
@@ -177,18 +177,21 @@ class SecureAuthManager:
                 detail="Invalid or expired token",
             )
     
-    def generate_csrf_token(self, session_id: str) -> str:
+    def generate_csrf_token(
+        self,
+        session_id: str,  # noqa: ARG002 - reserved for session-bound CSRF
+    ) -> str:
         """
         Generate CSRF token for a session.
         
         Args:
-            session_id: User's session identifier
+            session_id: User's session identifier (reserved for future use)
             
         Returns:
             CSRF token string
         """
         token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(minutes=self.config.csrf_token_expire_minutes)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=self.config.csrf_token_expire_minutes)
         
         # Hash the token for storage
         token_hash = hashlib.sha256(token.encode()).hexdigest()
@@ -219,7 +222,7 @@ class SecureAuthManager:
         if not csrf:
             return False
         
-        if datetime.utcnow() > csrf.expires_at:
+        if datetime.now(timezone.utc) > csrf.expires_at:
             del self._csrf_tokens[token_hash]
             return False
         
@@ -227,7 +230,7 @@ class SecureAuthManager:
     
     def _cleanup_expired_csrf_tokens(self):
         """Remove expired CSRF tokens."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired = [k for k, v in self._csrf_tokens.items() if now > v.expires_at]
         for k in expired:
             del self._csrf_tokens[k]
@@ -252,7 +255,7 @@ class SecureAuthManager:
             key="access_token",
             value=access_token,
             max_age=self.config.access_token_expire_minutes * 60,
-            expires=datetime.utcnow() + timedelta(minutes=self.config.access_token_expire_minutes),
+            expires=datetime.now(timezone.utc) + timedelta(minutes=self.config.access_token_expire_minutes),
             path="/",
             domain=self.config.cookie_domain,
             secure=self.config.cookie_secure,
@@ -265,7 +268,7 @@ class SecureAuthManager:
             key="refresh_token",
             value=refresh_token,
             max_age=self.config.refresh_token_expire_days * 24 * 60 * 60,
-            expires=datetime.utcnow() + timedelta(days=self.config.refresh_token_expire_days),
+            expires=datetime.now(timezone.utc) + timedelta(days=self.config.refresh_token_expire_days),
             path="/api/auth/refresh",  # Only sent to refresh endpoint
             domain=self.config.cookie_domain,
             secure=self.config.cookie_secure,
@@ -297,7 +300,7 @@ auth_manager = SecureAuthManager()
 
 
 async def get_current_user(
-    request: Request,
+    request: Request,  # noqa: ARG001 - required by FastAPI dependency signature
     access_token: Optional[str] = Cookie(None),
 ) -> Dict[str, Any]:
     """
@@ -320,7 +323,7 @@ async def get_current_user(
 
 async def verify_csrf(
     request: Request,
-    csrf_token: Optional[str] = Cookie(None),
+    csrf_token: Optional[str] = Cookie(None),  # noqa: ARG001 - cookie fallback
 ) -> bool:
     """
     Verify CSRF token for state-changing requests.
@@ -400,7 +403,7 @@ class RateLimiter:
     async def __call__(self, request: Request) -> None:
         """Check rate limit."""
         ip = self._get_client_ip(request)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         
         # Initialize or get request history
         if ip not in self._requests:

@@ -78,7 +78,7 @@ async def root():
         "service": "AI Code Review Platform",
         "version": "v3-quarantine",
         "status": "read-only",
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "warning": "This is a read-only archive of failed experiments",
     }
 
@@ -120,7 +120,7 @@ async def global_exception_handler(request, exc):
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "detail": "Internal server error",
-            "error_id": str(datetime.utcnow().timestamp()),
+            "error_id": str(datetime.now(timezone.utc).timestamp()),
         },
     )
 

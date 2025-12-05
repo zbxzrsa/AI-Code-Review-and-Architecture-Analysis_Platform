@@ -85,9 +85,9 @@ class EWC:
         if sample_size and sample_size < len(dataset):
             indices = torch.randperm(len(dataset))[:sample_size]
             subset = torch.utils.data.Subset(dataset, indices)
-            dataloader = DataLoader(subset, batch_size=1, shuffle=True)
+            dataloader = DataLoader(subset, batch_size=1, shuffle=True, num_workers=0)
         else:
-            dataloader = DataLoader(dataset, batch_size=1, shuffle=True)
+            dataloader = DataLoader(dataset, batch_size=1, shuffle=True, num_workers=0)
         
         # Compute Fisher
         for inputs, targets in dataloader:
@@ -186,12 +186,12 @@ class EWC:
         Returns:
             Training history
         """
-        optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=1e-4)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
         
         history = {'loss': [], 'ewc_loss': [], 'task_loss': []}
         
-        for epoch in range(epochs):
+        for _ in range(epochs):
             self.model.train()
             epoch_loss = []
             epoch_ewc = []
@@ -455,12 +455,12 @@ class IncrementalLearner:
         lr: float
     ) -> Dict[str, List[float]]:
         """Train with Synaptic Intelligence"""
-        optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=1e-4)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
         
         history = {'loss': [], 'task_loss': [], 'si_loss': []}
         
-        for epoch in range(epochs):
+        for _ in range(epochs):
             epoch_metrics = {'loss': [], 'task_loss': [], 'si_loss': []}
             
             for inputs, targets in dataloader:
@@ -484,12 +484,12 @@ class IncrementalLearner:
         lr: float
     ) -> Dict[str, List[float]]:
         """Train with Learning without Forgetting"""
-        optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=1e-4)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
         
         history = {'loss': [], 'task_loss': [], 'lwf_loss': []}
         
-        for epoch in range(epochs):
+        for _ in range(epochs):
             epoch_metrics = {'loss': [], 'task_loss': [], 'lwf_loss': []}
             
             for inputs, targets in dataloader:
@@ -539,8 +539,8 @@ class IncrementalLearner:
         lr: float
     ) -> Dict[str, List[float]]:
         """Train with PackNet pruning"""
-        optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        optimizer = optim.Adam(self.model.parameters(), lr=lr, weight_decay=1e-4)
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=0)
         
         # Apply previous masks
         for prev_task_id, masks in self.masks.items():
@@ -550,7 +550,7 @@ class IncrementalLearner:
         
         history = {'loss': []}
         
-        for epoch in range(epochs):
+        for _ in range(epochs):
             epoch_loss = []
             
             for inputs, targets in dataloader:
@@ -563,7 +563,7 @@ class IncrementalLearner:
                 loss.backward()
                 
                 # Zero out gradients for masked parameters
-                for prev_task_id, masks in self.masks.items():
+                for prev_id, masks in self.masks.items():
                     for name, param in self.model.named_parameters():
                         if name in masks and param.grad is not None:
                             param.grad *= (1 - masks[name])
@@ -603,11 +603,11 @@ class IncrementalLearner:
     def evaluate(
         self,
         dataset: Dataset,
-        task_id: Optional[int] = None
+        task_id: Optional[int] = None  # noqa: ARG002 - reserved for future task-specific evaluation
     ) -> float:
         """Evaluate on a dataset"""
         self.model.eval()
-        dataloader = DataLoader(dataset, batch_size=32, shuffle=False)
+        dataloader = DataLoader(dataset, batch_size=32, shuffle=False, num_workers=0)
         
         correct = 0
         total = 0

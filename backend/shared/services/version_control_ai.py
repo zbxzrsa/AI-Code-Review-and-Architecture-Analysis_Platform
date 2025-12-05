@@ -234,7 +234,7 @@ class VersionControlAI:
             report = PromotionReport(
                 id=report_id,
                 experiment_id=experiment_id,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 decision=decision,
                 statistical_tests=statistical_tests,
                 regressions=regressions,
@@ -516,7 +516,7 @@ class VersionControlAI:
         # In production, use actual cryptographic signing
         import hashlib
         return hashlib.sha256(
-            f"{report_id}{datetime.utcnow().isoformat()}".encode()
+            f"{report_id}{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()
 
     async def _save_report_to_s3(self, report: PromotionReport) -> None:

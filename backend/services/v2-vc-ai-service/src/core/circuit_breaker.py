@@ -54,7 +54,7 @@ class CircuitBreakerMetrics:
     last_state_change: Optional[datetime] = None
     
     # Per-window metrics
-    window_start: datetime = field(default_factory=datetime.utcnow)
+    window_start: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     window_requests: int = 0
     window_failures: int = 0
 
@@ -116,9 +116,9 @@ class CircuitBreaker:
             if self._state == CircuitState.OPEN:
                 # Check if timeout has passed
                 if self._opened_at:
-                    elapsed = (datetime.utcnow() - self._opened_at).total_seconds()
+                    elapsed = (datetime.now(timezone.utc) - self._opened_at).total_seconds()
                     if elapsed >= self.config.timeout_seconds:
-                        await self._transition_to(CircuitState.HALF_OPEN)
+                        self._transition_to(CircuitState.HALF_OPEN)
                         return True
                 return False
             
@@ -138,12 +138,12 @@ class CircuitBreaker:
             self._metrics.successful_requests += 1
             self._metrics.consecutive_successes += 1
             self._metrics.consecutive_failures = 0
-            self._metrics.last_success_time = datetime.utcnow()
+            self._metrics.last_success_time = datetime.now(timezone.utc)
             self._metrics.window_requests += 1
             
             if self._state == CircuitState.HALF_OPEN:
                 if self._metrics.consecutive_successes >= self.config.success_threshold:
-                    await self._transition_to(CircuitState.CLOSED)
+                    self._transition_to(CircuitState.CLOSED)
             
             logger.debug(
                 f"Circuit {self.name}: success recorded, "
@@ -157,17 +157,17 @@ class CircuitBreaker:
             self._metrics.failed_requests += 1
             self._metrics.consecutive_failures += 1
             self._metrics.consecutive_successes = 0
-            self._metrics.last_failure_time = datetime.utcnow()
+            self._metrics.last_failure_time = datetime.now(timezone.utc)
             self._metrics.window_requests += 1
             self._metrics.window_failures += 1
             
             if self._state == CircuitState.CLOSED:
                 if self._metrics.consecutive_failures >= self.config.failure_threshold:
-                    await self._transition_to(CircuitState.OPEN)
+                    self._transition_to(CircuitState.OPEN)
             
             elif self._state == CircuitState.HALF_OPEN:
                 # Single failure in half-open reopens circuit
-                await self._transition_to(CircuitState.OPEN)
+                self._transition_to(CircuitState.OPEN)
             
             logger.warning(
                 f"Circuit {self.name}: failure recorded, "
@@ -186,17 +186,17 @@ class CircuitBreaker:
             self._metrics.rejected_requests += 1
             logger.debug(f"Circuit {self.name}: request rejected (circuit open)")
     
-    async def _transition_to(self, new_state: CircuitState) -> None:
+    def _transition_to(self, new_state: CircuitState) -> None:
         """Transition to a new state"""
         old_state = self._state
         if old_state == new_state:
             return
         
         self._state = new_state
-        self._metrics.last_state_change = datetime.utcnow()
+        self._metrics.last_state_change = datetime.now(timezone.utc)
         
         if new_state == CircuitState.OPEN:
-            self._opened_at = datetime.utcnow()
+            self._opened_at = datetime.now(timezone.utc)
             self._half_open_count = 0
         elif new_state == CircuitState.HALF_OPEN:
             self._half_open_count = 0

@@ -45,8 +45,8 @@ class Repository(Base):
     access_token = Column(String(255), nullable=False)  # Encrypted
     webhook_id = Column(String(255), nullable=True)
     active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -76,8 +76,8 @@ class PullRequest(Base):
     author = Column(String(255), nullable=False)
     branch = Column(String(255), nullable=False)
     base_branch = Column(String(255), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     analyzed_at = Column(DateTime, nullable=True)
 
     def to_dict(self):
@@ -112,8 +112,8 @@ class PRComment(Base):
     category = Column(String(100), nullable=True)  # security, performance, style, etc.
     suggestion = Column(Text, nullable=True)  # Suggested fix
     external_id = Column(String(255), nullable=True)  # GitHub/GitLab comment ID
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     def to_dict(self):
         """Convert to dictionary."""
@@ -140,7 +140,7 @@ class FileCache(Base):
     branch = Column(String(255), nullable=False)
     file_tree = Column(JSON, nullable=False)  # Cached file tree structure
     commit_sha = Column(String(40), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     expires_at = Column(DateTime, nullable=False)
 
     def to_dict(self):

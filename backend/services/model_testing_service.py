@@ -17,6 +17,13 @@ router = APIRouter(prefix="/api/model-testing", tags=["model-testing"])
 
 
 # =============================================================================
+# Constants
+# =============================================================================
+
+MODEL_NOT_FOUND = "Model not found"
+
+
+# =============================================================================
 # Models
 # =============================================================================
 
@@ -158,7 +165,7 @@ async def list_models(
 async def get_model(model_id: str):
     """Get a specific model."""
     if model_id not in _models:
-        raise HTTPException(status_code=404, detail="Model not found")
+        raise HTTPException(status_code=404, detail=MODEL_NOT_FOUND)
     return _models[model_id]
 
 
@@ -169,13 +176,13 @@ async def run_test(request: TestRequest):
     import time
     
     if request.model_id not in _models:
-        raise HTTPException(status_code=404, detail="Model not found")
+        raise HTTPException(status_code=404, detail=MODEL_NOT_FOUND)
     
     model = _models[request.model_id]
     if model.status == ModelStatus.DEPRECATED:
         raise HTTPException(status_code=400, detail="Model is deprecated")
     
-    config = request.config or TestConfig()
+    _ = request.config or TestConfig()  # noqa: F841 - reserved for future config usage
     start_time = time.time()
     
     # Simulate model inference
@@ -227,7 +234,7 @@ async def run_test(request: TestRequest):
 async def run_test_stream(request: TestRequest):
     """Run a test with streaming response."""
     if request.model_id not in _models:
-        raise HTTPException(status_code=404, detail="Model not found")
+        raise HTTPException(status_code=404, detail=MODEL_NOT_FOUND)
     
     model = _models[request.model_id]
     if model.status == ModelStatus.DEPRECATED:
@@ -340,7 +347,7 @@ async def get_stats():
 async def promote_model(model_id: str):
     """Promote a V1 model to V2."""
     if model_id not in _models:
-        raise HTTPException(status_code=404, detail="Model not found")
+        raise HTTPException(status_code=404, detail=MODEL_NOT_FOUND)
     
     model = _models[model_id]
     if model.version != ModelVersion.V1:
@@ -362,7 +369,7 @@ async def promote_model(model_id: str):
 async def deprecate_model(model_id: str):
     """Deprecate a model to V3."""
     if model_id not in _models:
-        raise HTTPException(status_code=404, detail="Model not found")
+        raise HTTPException(status_code=404, detail=MODEL_NOT_FOUND)
     
     model = _models[model_id]
     model.version = ModelVersion.V3

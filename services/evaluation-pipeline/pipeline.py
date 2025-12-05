@@ -144,10 +144,10 @@ class GoldSetEvaluator:
         """Run full gold-set evaluation"""
         
         evaluation_id = hashlib.sha256(
-            f"{version_id}:{datetime.utcnow().isoformat()}".encode()
+            f"{version_id}:{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()[:16]
         
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         test_results: List[TestCaseResult] = []
         category_results: Dict[str, Dict[str, Any]] = {}
         
@@ -213,7 +213,7 @@ class GoldSetEvaluator:
             version_id=version_id,
             evaluation_type=EvaluationType.GOLD_SET,
             started_at=started_at,
-            completed_at=datetime.utcnow(),
+            completed_at=datetime.now(timezone.utc),
             status="completed",
             overall_pass_rate=overall_pass_rate,
             total_tests=total_tests,
@@ -275,7 +275,7 @@ class GoldSetEvaluator:
         prompt_version: str
     ) -> TestCaseResult:
         """Run a single test case"""
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         
         # Call AI service
         response = await self.client.post(
@@ -289,7 +289,7 @@ class GoldSetEvaluator:
             }
         )
         
-        latency_ms = int((datetime.utcnow() - start_time).total_seconds() * 1000)
+        latency_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
         
         if response.status_code != 200:
             return TestCaseResult(
@@ -462,7 +462,7 @@ class ShadowComparisonEvaluator:
             'version_id': version_id,
             'time_range_hours': time_range_hours,
             'sample_size': sample_size,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'metrics': {},
             'agreement_analysis': {},
             'quality_comparison': {}

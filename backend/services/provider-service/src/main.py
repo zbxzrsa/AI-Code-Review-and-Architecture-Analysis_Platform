@@ -93,7 +93,7 @@ async def list_providers():
                 model="codellama:13b",
                 is_free=True,
                 latency_ms=1200,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(timezone.utc),
             ),
             ProviderResponse(
                 id="openai_gpt4",
@@ -104,7 +104,7 @@ async def list_providers():
                 model="gpt-4",
                 is_free=False,
                 latency_ms=2500,
-                last_check=datetime.utcnow(),
+                last_check=datetime.now(timezone.utc),
             ),
         ]
     }
@@ -122,7 +122,7 @@ async def get_provider(provider_id: str):
         model="codellama:13b",
         is_free=True,
         latency_ms=1200,
-        last_check=datetime.utcnow(),
+        last_check=datetime.now(timezone.utc),
     )
 
 
@@ -133,7 +133,7 @@ async def check_provider_health(provider_id: str):
         "provider_id": provider_id,
         "status": "healthy",
         "latency_ms": 1250,
-        "checked_at": datetime.utcnow().isoformat(),
+        "checked_at": datetime.now(timezone.utc).isoformat(),
     }
 
 

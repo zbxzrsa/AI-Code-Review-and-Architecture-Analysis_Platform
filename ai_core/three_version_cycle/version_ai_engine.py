@@ -215,11 +215,11 @@ class V1ExperimentalAI(VersionAIEngine):
         weights = list(self.technology_weights.values())
         return random.choices(techs, weights=weights)[0]
     
-    async def _analyze_code(
+    def _analyze_code(
         self,
         code: str,
-        language: str,
-        technology: str,
+        language: str,  # noqa: ARG002 - reserved for language-specific analysis
+        technology: str,  # noqa: ARG002 - reserved for tech-specific analysis
     ) -> tuple:
         """Analyze code using specified technology."""
         # Simulated analysis - in production, this would use actual models
@@ -370,11 +370,11 @@ class V2ProductionAI(VersionAIEngine):
         
         return result
     
-    async def _analyze_code(
+    def _analyze_code(
         self,
         code: str,
-        language: str,
-        technology: str,
+        language: str,  # noqa: ARG002 - reserved for language-specific analysis
+        technology: str,  # noqa: ARG002 - reserved for tech-specific analysis
     ) -> tuple:
         """Production-grade code analysis."""
         issues = []

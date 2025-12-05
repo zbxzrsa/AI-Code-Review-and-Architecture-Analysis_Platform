@@ -270,7 +270,7 @@ class ModelVersionControl:
         self,
         version_id: str,
         model: nn.Module,
-        load_optimizer: bool = False
+        load_optimizer: bool = False  # noqa: ARG002 - reserved for optimizer loading
     ) -> Tuple[nn.Module, Dict[str, Any]]:
         """
         Load a specific model version
@@ -278,7 +278,7 @@ class ModelVersionControl:
         Args:
             version_id: Version ID to load
             model: Model instance to load weights into
-            load_optimizer: Whether to return optimizer state
+            load_optimizer: Whether to return optimizer state (reserved)
             
         Returns:
             Tuple of (model, checkpoint_data)

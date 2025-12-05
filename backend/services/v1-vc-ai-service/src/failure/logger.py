@@ -423,7 +423,7 @@ class FailureLogger:
         # Create failure record
         failure = FailureRecord(
             failure_id=str(uuid.uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             v1_version=v1_version,
             experiment_id=experiment_id,
             technique_attempted=technique_attempted,

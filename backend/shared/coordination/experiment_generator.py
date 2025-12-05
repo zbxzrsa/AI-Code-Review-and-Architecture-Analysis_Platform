@@ -129,7 +129,7 @@ class ExperimentGenerator:
                 },
                 evaluation_period_days=14,
                 sample_size=2000,
-                rollback_plan=f"Revert to current model if criteria not met",
+                rollback_plan="Revert to current model if criteria not met",
                 estimated_cost_usd=500.0,
                 source=ExperimentSource.INDUSTRY_RESEARCH.value,
             )
@@ -137,7 +137,7 @@ class ExperimentGenerator:
         
         return proposals
     
-    async def _check_model_releases(self) -> List[Dict[str, Any]]:
+    def _check_model_releases(self) -> List[Dict[str, Any]]:
         """Check for new AI model releases."""
         # In production, scan OpenAI/Anthropic APIs, blogs, arXiv
         # Mock new releases
@@ -145,11 +145,11 @@ class ExperimentGenerator:
             # {
             #     "name": "gpt-4.5-turbo",
             #     "improvement": "improved reasoning capabilities",
-            #     "released": datetime.utcnow(),
+            #     "released": datetime.now(timezone.utc),
             # }
         ]
     
-    async def _analyze_internal_signals(self) -> List[ExperimentProposal]:
+    def _analyze_internal_signals(self) -> List[ExperimentProposal]:
         """Analyze internal performance signals."""
         proposals = []
         
@@ -240,14 +240,14 @@ class ExperimentGenerator:
         if not record.quarantined_at:
             return False
         
-        days_since = (datetime.utcnow() - record.quarantined_at).days
+        days_since = (datetime.now(timezone.utc) - record.quarantined_at).days
         return days_since >= 90  # Quarterly review
     
     def _get_context_change(self, record) -> str:
         """Describe what context has changed."""
         return "new model capabilities and platform improvements"
     
-    async def _analyze_user_feedback(self) -> List[ExperimentProposal]:
+    def _analyze_user_feedback(self) -> List[ExperimentProposal]:
         """Analyze user feedback for improvement opportunities."""
         proposals = []
         
@@ -258,7 +258,7 @@ class ExperimentGenerator:
         # - Usage patterns
         
         # Mock feedback analysis
-        common_complaints = await self._get_common_complaints()
+        common_complaints = self._get_common_complaints()
         
         for complaint in common_complaints:
             if complaint["frequency"] > 10:  # More than 10 mentions
@@ -280,7 +280,7 @@ class ExperimentGenerator:
         
         return proposals
     
-    async def _get_common_complaints(self) -> List[Dict[str, Any]]:
+    def _get_common_complaints(self) -> List[Dict[str, Any]]:
         """Get common user complaints."""
         # Mock data
         return [
@@ -313,10 +313,10 @@ class ExperimentGenerator:
         logger.info(f"Experiment {experiment_id} approved by {approver}")
         return True
     
-    async def reject_proposal(
+    def reject_proposal(
         self,
         experiment_id: str,
-        reason: str,
+        reason: str,  # noqa: ARG002 - Used in log message
     ) -> bool:
         """Reject experiment proposal."""
         proposal = self._proposals.get(experiment_id)

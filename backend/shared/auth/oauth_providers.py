@@ -14,11 +14,14 @@ import secrets
 import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from abc import ABC, abstractmethod
 from urllib.parse import urlencode
 
 logger = logging.getLogger(__name__)
+
+# GitHub API constants
+GITHUB_ACCEPT_HEADER = "application/vnd.github+json"
 
 
 @dataclass
@@ -33,7 +36,7 @@ class OAuthToken:
     
     def __post_init__(self):
         if self.expires_in and not self.expires_at:
-            self.expires_at = datetime.utcnow() + timedelta(seconds=self.expires_in)
+            self.expires_at = datetime.now(timezone.utc) + timedelta(seconds=self.expires_in)
 
 
 @dataclass
@@ -196,7 +199,7 @@ class GitHubOAuth(OAuthProviderBase):
         client = await self.get_client()
         headers = {
             "Authorization": f"Bearer {access_token}",
-            "Accept": "application/vnd.github+json",
+            "Accept": GITHUB_ACCEPT_HEADER,
         }
         
         # Get user info
@@ -229,7 +232,7 @@ class GitHubOAuth(OAuthProviderBase):
         client = await self.get_client()
         headers = {
             "Authorization": f"Bearer {access_token}",
-            "Accept": "application/vnd.github+json",
+            "Accept": GITHUB_ACCEPT_HEADER,
         }
         
         repos = []
@@ -277,7 +280,7 @@ class GitHubOAuth(OAuthProviderBase):
         client = await self.get_client()
         headers = {
             "Authorization": f"Bearer {access_token}",
-            "Accept": "application/vnd.github+json",
+            "Accept": GITHUB_ACCEPT_HEADER,
         }
         
         response = await client.get(
@@ -317,7 +320,7 @@ class GitHubOAuth(OAuthProviderBase):
         client = await self.get_client()
         headers = {
             "Authorization": f"Bearer {access_token}",
-            "Accept": "application/vnd.github+json",
+            "Accept": GITHUB_ACCEPT_HEADER,
         }
         
         response = await client.post(

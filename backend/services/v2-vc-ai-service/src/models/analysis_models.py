@@ -85,7 +85,7 @@ class CommitAnalysisResponse(BaseModel):
     """Response from commit analysis"""
     commit_hash: str
     repo: str
-    analyzed_at: datetime = Field(default_factory=datetime.utcnow)
+    analyzed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     model_used: str = Field(..., description="AI model that performed analysis")
     
     # Core analysis

@@ -313,7 +313,7 @@ async def promote_experiment(experiment_id: str, request: PromotionRequest):
         "status": status,
         "justification": request.justification,
         "validation_results": validation_results,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }
     
     return PromotionResponse(
