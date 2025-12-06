@@ -235,19 +235,19 @@ def print_results(results: LoadTestResults):
     print("   Load Test Results")
     print("=" * 60)
     
-    print(f"\n📊 Summary")
+    print("\n📊 Summary")
     print(f"   Total Requests:    {results.total_requests}")
     print(f"   Successful:        {results.successful}")
     print(f"   Failed:            {results.failed}")
     print(f"   Success Rate:      {results.success_rate:.1f}%")
     
-    print(f"\n⏱️  Latency")
+    print("\n⏱️  Latency")
     print(f"   Average:           {results.avg_duration:.0f}ms")
     print(f"   P50:               {results.p50_duration:.0f}ms")
     print(f"   P95:               {results.p95_duration:.0f}ms")
     print(f"   P99:               {results.p99_duration:.0f}ms")
     
-    print(f"\n🚀 Throughput")
+    print("\n🚀 Throughput")
     print(f"   Requests/sec:      {results.requests_per_second:.1f}")
     print(f"   Duration:          {results.end_time - results.start_time:.1f}s")
     

@@ -291,7 +291,7 @@ class VersionManager:
     # Technology Management
     # =========================================================================
     
-    async def register_technology(
+    def register_technology(
         self,
         name: str,
         category: str,
@@ -319,16 +319,16 @@ class VersionManager:
         logger.info(f"Registered technology: {name} ({tech_id}) in {version.value}")
         return tech
     
-    async def get_technology(self, tech_id: str) -> Optional[Technology]:
+    def get_technology(self, tech_id: str) -> Optional[Technology]:
         """Get a technology by ID."""
         return self._technologies.get(tech_id)
     
-    async def get_version_technologies(self, version: Version) -> List[Technology]:
+    def get_version_technologies(self, version: Version) -> List[Technology]:
         """Get all technologies in a version."""
         tech_ids = self._version_technologies[version]
         return [self._technologies[tid] for tid in tech_ids if tid in self._technologies]
     
-    async def update_technology_metrics(
+    def update_technology_metrics(
         self,
         tech_id: str,
         metrics: Dict[str, float],
@@ -345,7 +345,7 @@ class VersionManager:
     # Promotion and Degradation
     # =========================================================================
     
-    async def evaluate_for_promotion(self, tech_id: str) -> Dict[str, Any]:
+    def evaluate_for_promotion(self, tech_id: str) -> Dict[str, Any]:
         """Evaluate if a technology is ready for promotion."""
         tech = self._technologies.get(tech_id)
         if not tech:

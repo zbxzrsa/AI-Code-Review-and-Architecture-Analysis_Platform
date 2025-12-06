@@ -57,11 +57,11 @@ const THRESHOLDS = {
 class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
   private apiMetrics: APIMetric[] = [];
-  private componentMetrics: Map<string, ComponentMetric> = new Map();
+  private readonly componentMetrics: Map<string, ComponentMetric> = new Map();
   private memoryMetrics: MemoryMetric[] = [];
   private isEnabled: boolean = true;
-  private maxMetrics: number = 1000;
-  private reportInterval: number = 60000; // 1 minute
+  private readonly maxMetrics: number = 1000;
+  private readonly reportInterval: number = 60000; // 1 minute
   private reportTimer: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -492,8 +492,8 @@ export function usePerformanceTracking(componentName: string) {
   const mountTime = performance.now();
 
   // Track mount time on first render
-  if (typeof window !== "undefined") {
-    requestAnimationFrame(() => {
+  if (typeof globalThis.requestAnimationFrame !== "undefined") {
+    globalThis.requestAnimationFrame(() => {
       performanceMonitor.trackComponentMount(
         componentName,
         performance.now() - mountTime

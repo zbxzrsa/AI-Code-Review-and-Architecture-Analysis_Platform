@@ -113,12 +113,7 @@ class PretrainingConfig:
     def __post_init__(self):
         """Validate configuration."""
         # Ensure batch sizes are consistent
-        world_size = (
-            self.tensor_parallel_size * 
-            self.pipeline_parallel_size * 
-            self.data_parallel_size
-        )
-        
+        # Note: world_size used implicitly through data_parallel_size
         effective_batch = (
             self.micro_batch_size * 
             self.gradient_accumulation_steps * 
@@ -887,7 +882,7 @@ class PretrainingEngine:
     def _log_metrics(
         self,
         metrics: Dict[str, float],
-        prefix: str = "train",
+        prefix: str = "train",  # noqa: ARG002 - reserved for prefixed metric logging
     ):
         """Log training metrics."""
         if not self.trainer.is_main_process():

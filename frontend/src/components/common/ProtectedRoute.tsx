@@ -6,15 +6,13 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 
 /**
- * Permission types for fine-grained access control
+ * Permission types for fine-grained access control.
+ * Using string type directly to allow any permission value.
+ * Common permissions: 'read:projects', 'write:projects', 'delete:projects',
+ * 'read:analyses', 'write:analyses', 'read:users', 'write:users', 'delete:users',
+ * 'read:providers', 'write:providers', 'read:audit', 'admin:all'
  */
-export type Permission = 
-  | 'read:projects' | 'write:projects' | 'delete:projects'
-  | 'read:analyses' | 'write:analyses'
-  | 'read:users' | 'write:users' | 'delete:users'
-  | 'read:providers' | 'write:providers'
-  | 'read:audit' | 'admin:all'
-  | string; // Allow custom permissions
+export type Permission = string;
 
 /**
  * ProtectedRoute component props

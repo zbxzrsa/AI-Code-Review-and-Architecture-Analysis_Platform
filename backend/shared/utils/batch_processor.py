@@ -115,8 +115,7 @@ class BatchProcessor(Generic[T, R]):
             try:
                 await self._batch_task
             except asyncio.CancelledError:
-                # Re-raise to allow proper cancellation propagation
-                raise
+                logger.info("Batch processor task cancelled")
         
         # Process any remaining items
         if self._pending:
@@ -144,9 +143,8 @@ class BatchProcessor(Generic[T, R]):
             
             # Trigger immediate batch if we hit max size
             if len(self._pending) >= self.config.max_batch_size:
-                # Save task to prevent garbage collection
-                task = asyncio.create_task(self._process_pending_batch())
-                # Note: We don't await here as it runs in background
+                # Create task (runs in background, no await needed)
+                _ = asyncio.create_task(self._process_pending_batch())
         
         # Wait for result
         return await future
@@ -174,9 +172,8 @@ class BatchProcessor(Generic[T, R]):
             
             # Trigger batch processing
             if len(self._pending) >= self.config.max_batch_size:
-                # Save task to prevent garbage collection
-                task = asyncio.create_task(self._process_pending_batch())
-                # Note: We don't await here as it runs in background
+                # Create task (runs in background, no await needed)
+                _ = asyncio.create_task(self._process_pending_batch())
         
         # Wait for all results
         return await asyncio.gather(*futures)

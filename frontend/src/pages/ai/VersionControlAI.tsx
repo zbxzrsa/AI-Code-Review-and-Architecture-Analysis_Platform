@@ -26,7 +26,6 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Divider,
   Timeline,
   Badge,
@@ -35,14 +34,12 @@ import {
   Avatar,
   message,
   Popconfirm,
-  Skeleton,
   notification,
 } from 'antd';
 import {
   ExperimentOutlined,
   CheckCircleOutlined,
   HistoryOutlined,
-  RocketOutlined,
   ArrowUpOutlined,
   ArrowDownOutlined,
   ReloadOutlined,
@@ -307,7 +304,7 @@ export const VersionControlAI: React.FC = () => {
 
   // API Hooks
   const { data: apiTechnologies, isLoading: techLoading, refetch: refetchTech } = useTechnologies();
-  const { data: cycleStatus, isLoading: statusLoading } = useCycleStatus();
+  const { data: cycleStatus } = useCycleStatus();
   const startCycleMutation = useStartCycle();
   const stopCycleMutation = useStopCycle();
   const promoteMutation = usePromoteTechnology();

@@ -165,8 +165,6 @@ describe('ErrorBoundary', () => {
   });
 
   it('shows error details in development mode', () => {
-    const originalEnv = process.env.NODE_ENV;
-    
     // Mock development mode
     vi.stubEnv('NODE_ENV', 'development');
 

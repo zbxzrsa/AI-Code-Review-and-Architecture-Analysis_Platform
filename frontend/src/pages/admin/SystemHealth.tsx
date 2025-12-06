@@ -123,7 +123,7 @@ const SystemHealth: React.FC = () => {
           name: 'AI Orchestrator',
           status: 'healthy',
           latency_ms: 250,
-          uptime_percent: 99.90,
+          uptime_percent: 99.9,
           last_check: new Date().toISOString(),
         },
         {

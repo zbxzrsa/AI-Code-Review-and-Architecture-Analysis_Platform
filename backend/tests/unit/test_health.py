@@ -247,8 +247,8 @@ class TestComponentHealthChecks:
             class MockContext:
                 async def __aenter__(self):
                     return mock_conn
-                async def __aexit__(self, *args):
-                    pass
+                async def __aexit__(self, *args):  # noqa: ARG002
+                    pass  # Mock - no cleanup needed
             return MockContext()
         
         result = await check_database(get_connection)
@@ -261,9 +261,9 @@ class TestComponentHealthChecks:
         async def get_connection():
             class MockContext:
                 async def __aenter__(self):
-                    raise Exception("Connection refused")
-                async def __aexit__(self, *args):
-                    pass
+                    raise ConnectionError("Connection refused")
+                async def __aexit__(self, *args):  # noqa: ARG002
+                    pass  # Mock - no cleanup needed
             return MockContext()
         
         result = await check_database(get_connection)

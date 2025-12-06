@@ -10,7 +10,7 @@
  * - Real OAuth integration
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Row,
@@ -260,7 +260,7 @@ export const Repositories: React.FC = () => {
   });
 
   // Fetch repositories from OAuth provider
-  const { data: providerRepos, isLoading: isLoadingProviderRepos, refetch: fetchProviderRepos } = useQuery({
+  const { data: providerRepos, isLoading: isLoadingProviderRepos } = useQuery({
     queryKey: ['provider-repos', selectedProvider],
     queryFn: async () => {
       if (!selectedProvider) return null;
@@ -371,8 +371,8 @@ export const Repositories: React.FC = () => {
     } else {
       // Redirect to OAuth
       try {
-        const response = await apiService.oauth.connect(provider, window.location.href);
-        window.location.href = response.data.authorization_url;
+        const response = await apiService.oauth.connect(provider, globalThis.location.href);
+        globalThis.location.href = response.data.authorization_url;
       } catch (error: unknown) {
         message.error(getApiErrorMessage(error, `Failed to connect to ${provider}`));
       }

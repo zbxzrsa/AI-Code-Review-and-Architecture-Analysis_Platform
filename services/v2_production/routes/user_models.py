@@ -103,9 +103,7 @@ class UsageStatsResponse(BaseModel):
 # Endpoints
 
 @router.get("/available", response_model=List[ModelResponse])
-async def get_available_models(
-    # user = Depends(get_current_user)  # Uncomment when auth is integrated
-):
+async def get_available_models():
     """
     Get all available models for the current user
     
@@ -149,10 +147,7 @@ async def get_available_models(
 
 
 @router.post("/register", response_model=ModelResponse, status_code=status.HTTP_201_CREATED)
-async def register_model(
-    request: RegisterModelRequest,
-    # user = Depends(get_current_user)
-):
+async def register_model(request: RegisterModelRequest):
     """
     Register a new custom AI model
     
@@ -174,9 +169,7 @@ async def register_model(
 
 
 @router.get("/my-models", response_model=List[ModelResponse])
-async def get_my_models(
-    # user = Depends(get_current_user)
-):
+async def get_my_models():
     """
     Get all models registered by the current user
     """
@@ -185,10 +178,7 @@ async def get_my_models(
 
 
 @router.get("/{model_id}", response_model=ModelResponse)
-async def get_model(
-    model_id: str,
-    # user = Depends(get_current_user)
-):
+async def get_model(model_id: str):
     """
     Get details of a specific model
     """
@@ -200,11 +190,7 @@ async def get_model(
 
 
 @router.put("/{model_id}", response_model=ModelResponse)
-async def update_model(
-    model_id: str,
-    request: UpdateModelRequest,
-    # user = Depends(get_current_user)
-):
+async def update_model(model_id: str, request: UpdateModelRequest):
     """
     Update a custom model configuration
     
@@ -219,10 +205,7 @@ async def update_model(
 
 
 @router.delete("/{model_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_model(
-    model_id: str,
-    # user = Depends(get_current_user)
-):
+async def delete_model(model_id: str):
     """
     Delete a custom model
     
@@ -234,10 +217,7 @@ async def delete_model(
 
 
 @router.post("/{model_id}/validate")
-async def validate_model(
-    model_id: str,
-    # user = Depends(get_current_user)
-):
+async def validate_model(model_id: str):
     """
     Trigger validation for a model
     
@@ -253,9 +233,7 @@ async def validate_model(
 # Preferences
 
 @router.get("/preferences/current")
-async def get_preferences(
-    # user = Depends(get_current_user)
-):
+async def get_preferences():
     """
     Get current user's model preferences
     """
@@ -268,10 +246,7 @@ async def get_preferences(
 
 
 @router.post("/preferences/default")
-async def set_default_preference(
-    request: SetPreferenceRequest,
-    # user = Depends(get_current_user)
-):
+async def set_default_preference(request: SetPreferenceRequest):
     """
     Set default model preference
     """
@@ -283,10 +258,7 @@ async def set_default_preference(
 
 
 @router.post("/preferences/language")
-async def set_language_preference(
-    request: LanguagePreferenceRequest,
-    # user = Depends(get_current_user)
-):
+async def set_language_preference(request: LanguagePreferenceRequest):
     """
     Set preferred model for a specific programming language
     """
@@ -298,10 +270,7 @@ async def set_language_preference(
 
 
 @router.post("/preferences/analysis")
-async def set_analysis_preference(
-    request: AnalysisPreferenceRequest,
-    # user = Depends(get_current_user)
-):
+async def set_analysis_preference(request: AnalysisPreferenceRequest):
     """
     Set preferred model for a specific analysis type
     """
@@ -315,9 +284,7 @@ async def set_analysis_preference(
 # Usage Statistics
 
 @router.get("/usage/stats", response_model=UsageStatsResponse)
-async def get_usage_stats(
-    # user = Depends(get_current_user)
-):
+async def get_usage_stats():
     """
     Get usage statistics for user's models
     """
@@ -331,10 +298,7 @@ async def get_usage_stats(
 
 
 @router.get("/usage/history")
-async def get_usage_history(
-    days: int = 30,
-    # user = Depends(get_current_user)
-):
+async def get_usage_history(days: int = 30):
     """
     Get usage history for the past N days
     """

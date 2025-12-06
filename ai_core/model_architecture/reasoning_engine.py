@@ -394,13 +394,13 @@ class ReasoningEngine(nn.Module):
         """Get routing statistics"""
         total = sum(self.routing_stats.values())
         if total == 0:
-            return {name: 0.0 for name in self.routing_stats}
+            return dict.fromkeys(self.routing_stats, 0.0)
         
         return {name: count / total for name, count in self.routing_stats.items()}
     
     def reset_stats(self) -> None:
         """Reset routing statistics"""
-        self.routing_stats = {name: 0 for name in self.reasoning_modules}
+        self.routing_stats = dict.fromkeys(self.reasoning_modules, 0)
         if hasattr(self, 'router'):
             self.router.path_usage.zero_()
 

@@ -371,21 +371,20 @@ class LoRAAdapterManager:
             raise ValueError("Weights must match adapter count")
         
         # Create new adapter
-        first_adapter = self.adapters[adapter_names[0]]
         merged_adapter = self.create_adapter(new_name)
         
         # Merge weights
         for layer_name in merged_adapter:
-            merged_A = torch.zeros_like(merged_adapter[layer_name].lora_A.weight)
-            merged_B = torch.zeros_like(merged_adapter[layer_name].lora_B.weight)
+            merged_a = torch.zeros_like(merged_adapter[layer_name].lora_A.weight)
+            merged_b = torch.zeros_like(merged_adapter[layer_name].lora_B.weight)
             
             for adapter_name, weight in zip(adapter_names, weights):
                 if layer_name in self.adapters[adapter_name]:
-                    merged_A += weight * self.adapters[adapter_name][layer_name].lora_A.weight
-                    merged_B += weight * self.adapters[adapter_name][layer_name].lora_B.weight
+                    merged_a += weight * self.adapters[adapter_name][layer_name].lora_A.weight
+                    merged_b += weight * self.adapters[adapter_name][layer_name].lora_B.weight
             
-            merged_adapter[layer_name].lora_A.weight.data.copy_(merged_A)
-            merged_adapter[layer_name].lora_B.weight.data.copy_(merged_B)
+            merged_adapter[layer_name].lora_A.weight.data.copy_(merged_a)
+            merged_adapter[layer_name].lora_B.weight.data.copy_(merged_b)
         
         logger.info(f"Merged {len(adapter_names)} adapters into '{new_name}'")
         
@@ -604,13 +603,16 @@ class RAGSystem:
         if cache_key in self.embedding_cache:
             return self.embedding_cache[cache_key]
         
+        # Use seeded random generator for reproducibility
+        rng = np.random.default_rng(hash(text) % (2**32))
+        
         if self.embedding_model is not None:
             # Use embedding model
             # (In production, this would call the actual model)
-            embedding = np.random.randn(768).astype(np.float32)
+            embedding = rng.standard_normal(768).astype(np.float32)
         else:
             # Fallback: simple hash-based embedding (not recommended for production)
-            embedding = np.random.randn(768).astype(np.float32)
+            embedding = rng.standard_normal(768).astype(np.float32)
         
         self.embedding_cache[cache_key] = embedding
         return embedding
@@ -900,7 +902,7 @@ class RetrainingScheduler:
                 return
             
             # Setup optimizer
-            optimizer = AdamW(params, lr=1e-4)
+            optimizer = AdamW(params, lr=1e-4, weight_decay=0.01)
             
             # Training loop (simplified)
             total_loss = 0.0
@@ -1094,7 +1096,7 @@ class ModelDistiller:
         if self.student_model is None:
             raise ValueError("Student model not created")
         
-        optimizer = AdamW(self.student_model.parameters(), lr=1e-4)
+        optimizer = AdamW(self.student_model.parameters(), lr=1e-4, weight_decay=0.01)
         
         logger.info(f"Starting distillation: {epochs} epochs")
         

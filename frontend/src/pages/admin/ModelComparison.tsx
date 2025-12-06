@@ -445,7 +445,7 @@ const ModelComparison: React.FC = () => {
                     <Progress
                       type="circle"
                       percent={typeof result.model1Value === 'string' && result.model1Value.includes('%')
-                        ? parseFloat(result.model1Value)
+                        ? Number.parseFloat(result.model1Value)
                         : 75}
                       width={60}
                       strokeColor={result.winner === 'model1' ? '#52c41a' : '#1890ff'}
@@ -463,7 +463,7 @@ const ModelComparison: React.FC = () => {
                     <Progress
                       type="circle"
                       percent={typeof result.model2Value === 'string' && result.model2Value.includes('%')
-                        ? parseFloat(result.model2Value)
+                        ? Number.parseFloat(result.model2Value)
                         : 75}
                       width={60}
                       strokeColor={result.winner === 'model2' ? '#52c41a' : '#1890ff'}

@@ -1,14 +1,14 @@
 /**
  * Test Setup File
- * 
+ *
  * Configuration for Vitest with React Testing Library
  */
 
-import '@testing-library/jest-dom';
-import { vi, afterEach } from 'vitest';
+import "@testing-library/jest-dom";
+import { vi, afterEach } from "vitest";
 
-// Mock window.matchMedia
-Object.defineProperty(window, 'matchMedia', {
+// Mock globalThis.matchMedia
+Object.defineProperty(globalThis, "matchMedia", {
   writable: true,
   value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
@@ -29,12 +29,12 @@ class ResizeObserverMock {
   disconnect = vi.fn();
 }
 
-window.ResizeObserver = ResizeObserverMock;
+globalThis.ResizeObserver = ResizeObserverMock;
 
 // Mock IntersectionObserver
 class IntersectionObserverMock {
   root = null;
-  rootMargin = '';
+  rootMargin = "";
   thresholds = [];
   observe = vi.fn();
   unobserve = vi.fn();
@@ -42,16 +42,17 @@ class IntersectionObserverMock {
   takeRecords = vi.fn().mockReturnValue([]);
 }
 
-window.IntersectionObserver = IntersectionObserverMock as any;
+globalThis.IntersectionObserver =
+  IntersectionObserverMock as unknown as typeof IntersectionObserver;
 
 // Mock scrollTo
-window.scrollTo = vi.fn() as unknown as typeof window.scrollTo;
+globalThis.scrollTo = vi.fn() as unknown as typeof globalThis.scrollTo;
 
 // Mock clipboard API
 Object.assign(navigator, {
   clipboard: {
     writeText: vi.fn().mockResolvedValue(undefined),
-    readText: vi.fn().mockResolvedValue(''),
+    readText: vi.fn().mockResolvedValue(""),
   },
 });
 
@@ -60,8 +61,8 @@ const originalError = console.error;
 console.error = (...args: any[]) => {
   // Ignore React's act() warnings in tests
   if (
-    typeof args[0] === 'string' &&
-    args[0].includes('Warning: An update to')
+    typeof args[0] === "string" &&
+    args[0].includes("Warning: An update to")
   ) {
     return;
   }
@@ -78,7 +79,7 @@ const localStorageMock = {
   key: vi.fn(),
 };
 
-Object.defineProperty(window, 'localStorage', {
+Object.defineProperty(globalThis, "localStorage", {
   value: localStorageMock,
 });
 
@@ -92,7 +93,7 @@ const sessionStorageMock = {
   key: vi.fn(),
 };
 
-Object.defineProperty(window, 'sessionStorage', {
+Object.defineProperty(globalThis, "sessionStorage", {
   value: sessionStorageMock,
 });
 

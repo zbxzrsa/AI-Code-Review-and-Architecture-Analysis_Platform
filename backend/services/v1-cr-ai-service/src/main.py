@@ -173,9 +173,12 @@ async def prometheus_metrics():
 # Include Routers
 # =============================================================================
 
-app.include_router(review_router, prefix="/api/v1/cr-ai")
-app.include_router(analysis_router, prefix="/api/v1/cr-ai")
-app.include_router(metrics_router, prefix="/api/v1/cr-ai")
+# API prefix constant
+API_PREFIX = "/api/v1/cr-ai"
+
+app.include_router(review_router, prefix=API_PREFIX)
+app.include_router(analysis_router, prefix=API_PREFIX)
+app.include_router(metrics_router, prefix=API_PREFIX)
 
 
 # =============================================================================

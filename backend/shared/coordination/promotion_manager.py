@@ -199,24 +199,36 @@ class PromotionManager:
         
         return all_passed
     
-    async def _revalidate_metrics(self, request: PromotionRequest) -> bool:
+    def _revalidate_metrics(
+        self,
+        request: PromotionRequest,  # noqa: ARG002 - reserved for production metrics
+    ) -> bool:
         """Re-run evaluation metrics as sanity check."""
         # In production, re-run evaluation
         logger.info("Re-validating metrics...")
         return True
     
-    async def _run_load_test(self, request: PromotionRequest) -> bool:
+    def _run_load_test(
+        self,
+        request: PromotionRequest,  # noqa: ARG002 - reserved for load test config
+    ) -> bool:
         """Simulate production load on V1."""
         logger.info("Running load test...")
         # In production, use k6 or similar
         return True
     
-    async def _run_security_audit(self, request: PromotionRequest) -> bool:
+    def _run_security_audit(
+        self,
+        request: PromotionRequest,  # noqa: ARG002 - reserved for security audit
+    ) -> bool:
         """Scan for security vulnerabilities."""
         logger.info("Running security audit...")
         return True
     
-    async def _check_dependencies(self, request: PromotionRequest) -> bool:
+    def _check_dependencies(
+        self,
+        request: PromotionRequest,  # noqa: ARG002 - reserved for dependency checks
+    ) -> bool:
         """Check for infrastructure conflicts."""
         logger.info("Checking dependencies...")
         return True

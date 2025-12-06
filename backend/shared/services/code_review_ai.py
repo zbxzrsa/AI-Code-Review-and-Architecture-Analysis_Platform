@@ -351,7 +351,7 @@ class CodeReviewAI:
             )
             raise
 
-    async def _select_model(self, user_api_keys: Optional[Dict[str, str]]) -> str:
+    def _select_model(self, user_api_keys: Optional[Dict[str, str]]) -> str:
         """Select model using fallback chain."""
         # If user provided keys, try them first
         if user_api_keys:
@@ -385,10 +385,10 @@ class CodeReviewAI:
                 applied.append(flag)
         return applied
 
-    async def _scan_security_vulnerabilities(
+    def _scan_security_vulnerabilities(
         self,
         code: str,
-        language: str,
+        language: str,  # noqa: ARG002 - reserved for language-specific scanning
     ) -> List[SecurityVulnerability]:
         """Scan for security vulnerabilities (SAST)."""
         vulnerabilities = []

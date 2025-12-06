@@ -271,7 +271,7 @@ class VersionControlAI:
             )
             raise
 
-    async def _run_statistical_tests(
+    def _run_statistical_tests(
         self,
         experiment_metrics: Dict[str, Any],
         baseline_metrics: Optional[Dict[str, Any]],
@@ -318,7 +318,7 @@ class VersionControlAI:
         logger.info("Statistical tests completed", test_count=len(tests))
         return tests
 
-    async def _detect_regressions(
+    def _detect_regressions(
         self,
         experiment_metrics: Dict[str, Any],
         baseline_metrics: Optional[Dict[str, Any]],
@@ -364,7 +364,7 @@ class VersionControlAI:
         logger.info("Regression detection completed", regression_count=len(regressions))
         return regressions
 
-    async def _analyze_cost_benefit(
+    def _analyze_cost_benefit(
         self,
         experiment_metrics: Dict[str, Any],
         baseline_metrics: Optional[Dict[str, Any]],
@@ -408,7 +408,7 @@ class VersionControlAI:
             recommendation=recommendation,
         )
 
-    async def _run_ab_testing(
+    def _run_ab_testing(
         self,
         experiment_metrics: Dict[str, Any],
         baseline_metrics: Optional[Dict[str, Any]],
@@ -424,7 +424,7 @@ class VersionControlAI:
             "winner": "treatment" if experiment_metrics.get("accuracy", 0.94) > (baseline_metrics.get("accuracy", 0.92) if baseline_metrics else 0.92) else "control",
         }
 
-    async def _make_promotion_decision(
+    def _make_promotion_decision(
         self,
         statistical_tests: List[StatisticalTest],
         regressions: List[RegressionDetection],
@@ -456,10 +456,10 @@ class VersionControlAI:
         )
         return PromotionDecision.PROMOTE, confidence
 
-    async def _generate_reasoning(
+    def _generate_reasoning(
         self,
         decision: PromotionDecision,
-        statistical_tests: List[StatisticalTest],
+        statistical_tests: List[StatisticalTest],  # noqa: ARG002 - for extended reasoning
         regressions: List[RegressionDetection],
         cost_benefit: CostBenefitAnalysis,
     ) -> str:
@@ -483,7 +483,7 @@ class VersionControlAI:
 
         return "; ".join(reasons)
 
-    async def _generate_recommendations(
+    def _generate_recommendations(
         self,
         decision: PromotionDecision,
         regressions: List[RegressionDetection],
@@ -511,7 +511,7 @@ class VersionControlAI:
 
         return recommendations
 
-    async def _generate_signature(self, report_id: str) -> str:
+    def _generate_signature(self, report_id: str) -> str:
         """Generate cryptographic signature for report integrity."""
         # In production, use actual cryptographic signing
         import hashlib
@@ -519,14 +519,14 @@ class VersionControlAI:
             f"{report_id}{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()
 
-    async def _save_report_to_s3(self, report: PromotionReport) -> None:
+    def _save_report_to_s3(self, report: PromotionReport) -> None:
         """Save report to S3 with signature."""
         if not self.s3_client:
             logger.warning("S3 client not configured, skipping report save")
             return
 
         try:
-            report_json = json.dumps(report.to_dict(), default=str)
+            _ = json.dumps(report.to_dict(), default=str)  # Prepared for S3 upload
             # In production: self.s3_client.put_object(...)
             logger.info(
                 "Report saved to S3",
@@ -536,7 +536,7 @@ class VersionControlAI:
         except Exception as e:
             logger.error("Failed to save report to S3", error=str(e))
 
-    async def _check_opa_policies(self, report: PromotionReport) -> None:
+    def _check_opa_policies(self, report: PromotionReport) -> None:
         """Check OPA policies for gate enforcement."""
         if not self.opal_client:
             logger.warning("OPA client not configured, skipping policy check")

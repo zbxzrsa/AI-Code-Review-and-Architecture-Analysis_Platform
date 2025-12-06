@@ -37,7 +37,7 @@ class TestSecureAuthManager:
 
     # JWT Token Tests
     
-    async def test_create_access_token(self, auth_manager):
+    def test_create_access_token(self, auth_manager):
         """Test access token creation."""
         user_data = {"sub": "user123", "role": "user"}
         token = auth_manager.create_access_token(user_data)
@@ -46,7 +46,7 @@ class TestSecureAuthManager:
         assert isinstance(token, str)
         assert len(token) > 100  # JWT tokens are typically long
 
-    async def test_create_refresh_token(self, auth_manager):
+    def test_create_refresh_token(self, auth_manager):
         """Test refresh token creation."""
         user_data = {"sub": "user123"}
         token = auth_manager.create_refresh_token(user_data)
@@ -54,7 +54,7 @@ class TestSecureAuthManager:
         assert token is not None
         assert isinstance(token, str)
 
-    async def test_create_token_pair(self, auth_manager):
+    def test_create_token_pair(self, auth_manager):
         """Test token pair creation."""
         user_data = {"sub": "user123", "role": "admin"}
         token_pair = auth_manager.create_token_pair(user_data)
@@ -64,7 +64,7 @@ class TestSecureAuthManager:
         assert token_pair.token_type == "bearer"
         assert token_pair.expires_in == 15 * 60  # 15 minutes in seconds
 
-    async def test_verify_valid_access_token(self, auth_manager):
+    def test_verify_valid_access_token(self, auth_manager):
         """Test verification of valid access token."""
         user_data = {"sub": "user123", "role": "user"}
         token = auth_manager.create_access_token(user_data)
@@ -75,7 +75,7 @@ class TestSecureAuthManager:
         assert payload["role"] == "user"
         assert payload["type"] == "access"
 
-    async def test_verify_valid_refresh_token(self, auth_manager):
+    def test_verify_valid_refresh_token(self, auth_manager):
         """Test verification of valid refresh token."""
         user_data = {"sub": "user123"}
         token = auth_manager.create_refresh_token(user_data)
@@ -86,7 +86,7 @@ class TestSecureAuthManager:
         assert payload["type"] == "refresh"
         assert "jti" in payload  # JWT ID for rotation
 
-    async def test_verify_expired_token_fails(self, auth_manager):
+    def test_verify_expired_token_fails(self, auth_manager):
         """Test that expired tokens are rejected."""
         from fastapi import HTTPException
         
@@ -102,7 +102,7 @@ class TestSecureAuthManager:
         
         assert exc_info.value.status_code == 401
 
-    async def test_verify_wrong_token_type_fails(self, auth_manager):
+    def test_verify_wrong_token_type_fails(self, auth_manager):
         """Test that wrong token type is rejected."""
         from fastapi import HTTPException
         
@@ -114,7 +114,7 @@ class TestSecureAuthManager:
         
         assert exc_info.value.status_code == 401
 
-    async def test_verify_invalid_token_fails(self, auth_manager):
+    def test_verify_invalid_token_fails(self, auth_manager):
         """Test that invalid tokens are rejected."""
         from fastapi import HTTPException
         
@@ -125,7 +125,7 @@ class TestSecureAuthManager:
 
     # CSRF Token Tests
     
-    async def test_generate_csrf_token(self, auth_manager):
+    def test_generate_csrf_token(self, auth_manager):
         """Test CSRF token generation."""
         session_id = "session123"
         token = auth_manager.generate_csrf_token(session_id)
@@ -134,7 +134,7 @@ class TestSecureAuthManager:
         assert isinstance(token, str)
         assert len(token) > 20
 
-    async def test_verify_valid_csrf_token(self, auth_manager):
+    def test_verify_valid_csrf_token(self, auth_manager):
         """Test CSRF token verification."""
         session_id = "session123"
         token = auth_manager.generate_csrf_token(session_id)
@@ -143,13 +143,13 @@ class TestSecureAuthManager:
         
         assert is_valid is True
 
-    async def test_verify_invalid_csrf_token(self, auth_manager):
+    def test_verify_invalid_csrf_token(self, auth_manager):
         """Test that invalid CSRF tokens are rejected."""
         is_valid = auth_manager.verify_csrf_token("invalid-token")
         
         assert is_valid is False
 
-    async def test_csrf_token_uniqueness(self, auth_manager):
+    def test_csrf_token_uniqueness(self, auth_manager):
         """Test that each CSRF token is unique."""
         tokens = [auth_manager.generate_csrf_token(f"session{i}") for i in range(100)]
         
@@ -158,7 +158,7 @@ class TestSecureAuthManager:
 
     # Cookie Tests
     
-    async def test_set_auth_cookies(self, auth_manager):
+    def test_set_auth_cookies(self, auth_manager):
         """Test setting authentication cookies."""
         from fastapi import Response
         
@@ -181,7 +181,7 @@ class TestSecureAuthManager:
         assert "csrf_token" in cookie_str
         assert "httponly" in cookie_str.lower()
 
-    async def test_clear_auth_cookies(self, auth_manager):
+    def test_clear_auth_cookies(self, auth_manager):
         """Test clearing authentication cookies."""
         from fastapi import Response
         
@@ -401,7 +401,7 @@ class TestAIProviderSecurity:
         api_key = "sk-secret-api-key-12345"
         
         # Log something that might include the key
-        logger.info(f"Provider configured with endpoint")
+        logger.info("Provider configured with endpoint")
         
         log_output = log_capture.getvalue()
         
@@ -411,7 +411,7 @@ class TestAIProviderSecurity:
         # Cleanup
         logger.removeHandler(handler)
 
-    async def test_cost_calculation_accuracy(self):
+    def test_cost_calculation_accuracy(self):
         """Test AI cost calculation accuracy."""
         from backend.shared.utils.ai_provider_factory import OpenAIProvider, ProviderConfig, ProviderType, ProviderTier
         

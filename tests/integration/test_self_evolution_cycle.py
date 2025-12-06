@@ -289,24 +289,24 @@ class TestCompleteCycle:
         
         config = orchestrator.lifecycle.active_versions[version_id]
         assert config.current_state == VersionState.EXPERIMENT
-        print(f"✅ Step 1: Registered in V1 (Experiment)")
+        print("✅ Step 1: Registered in V1 (Experiment)")
         
         # Step 2: Start shadow evaluation
         await orchestrator.start_shadow_evaluation(version_id)
         assert config.current_state == VersionState.SHADOW
-        print(f"✅ Step 2: Started shadow evaluation")
+        print("✅ Step 2: Started shadow evaluation")
         
         # Step 3: Simulate promotion to V2 gray-scale
         config.current_state = VersionState.GRAY_1
-        print(f"✅ Step 3: Promoted to V2 Gray-scale (1%)")
+        print("✅ Step 3: Promoted to V2 Gray-scale (1%)")
         
         # Step 4: Progress through gray-scale
         config.current_state = VersionState.GRAY_25
-        print(f"✅ Step 4: Progressed to Gray-scale (25%)")
+        print("✅ Step 4: Progressed to Gray-scale (25%)")
         
         # Step 5: Reach stable production
         config.current_state = VersionState.STABLE
-        print(f"✅ Step 5: Reached V2 Stable (Production)")
+        print("✅ Step 5: Reached V2 Stable (Production)")
         
         # Step 6: Simulate SLO breach → Quarantine
         await orchestrator.trigger_quarantine(
@@ -315,7 +315,7 @@ class TestCompleteCycle:
             metrics={"error_rate": 0.05}
         )
         assert config.current_state == VersionState.QUARANTINE
-        print(f"✅ Step 6: Demoted to V3 (Quarantine)")
+        print("✅ Step 6: Demoted to V3 (Quarantine)")
         
         # Step 7: Simulate recovery success
         record = orchestrator.recovery.get_recovery_status(version_id)
@@ -326,9 +326,9 @@ class TestCompleteCycle:
         await orchestrator._promote_recovered_to_v1(version_id)
         assert config.current_state == VersionState.SHADOW
         assert config.metadata.get("recovered_from_quarantine") is True
-        print(f"✅ Step 7-8: Recovered back to V1 (Shadow)")
+        print("✅ Step 7-8: Recovered back to V1 (Shadow)")
         
-        print(f"\n🎉 COMPLETE CYCLE VERIFIED: V1 → V2 → V3 → V1")
+        print("\n🎉 COMPLETE CYCLE VERIFIED: V1 → V2 → V3 → V1")
 
     @pytest.mark.asyncio
     async def test_cycle_continuity(self, orchestrator):

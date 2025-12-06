@@ -146,12 +146,12 @@ function classifyError(error: AxiosError): ApiError {
 // ============================================
 
 class EnhancedApi {
-  private client: AxiosInstance;
-  private cache: Map<string, CacheEntry> = new Map();
-  private pendingRequests: Map<string, Promise<any>> = new Map();
+  private readonly client: AxiosInstance;
+  private readonly cache: Map<string, CacheEntry> = new Map();
+  private readonly pendingRequests: Map<string, Promise<unknown>> = new Map();
   private offlineQueue: PendingRequest[] = [];
   private isOnline: boolean = navigator.onLine;
-  private retryDelays: number[] = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff
+  private readonly retryDelays: number[] = [1000, 2000, 4000, 8000, 16000]; // Exponential backoff
 
   constructor(baseURL: string = "/api") {
     this.client = axios.create({

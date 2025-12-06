@@ -98,13 +98,13 @@ echo ""
 
 # Check Python
 if ! command -v python &> /dev/null; then
-    echo -e "${RED}Error: Python not found${NC}"
+    echo -e "${RED}Error: Python not found${NC}" >&2
     exit 1
 fi
 
 # Check Node
 if ! command -v node &> /dev/null; then
-    echo -e "${RED}Error: Node.js not found${NC}"
+    echo -e "${RED}Error: Node.js not found${NC}" >&2
     exit 1
 fi
 
@@ -149,6 +149,7 @@ run_unit_tests() {
     fi
     
     echo ""
+    return 0
 }
 
 # =============================================================================
@@ -176,6 +177,7 @@ run_integration_tests() {
     fi
     
     echo ""
+    return 0
 }
 
 # =============================================================================
@@ -205,6 +207,7 @@ run_e2e_tests() {
     
     cd ..
     echo ""
+    return 0
 }
 
 # =============================================================================

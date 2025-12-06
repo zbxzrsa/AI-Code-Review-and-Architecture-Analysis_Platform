@@ -202,6 +202,7 @@ class OnlineLearningModule:
         self.optimizer = torch.optim.AdamW(
             model.parameters(),
             lr=config.online_learning_rate,
+            weight_decay=0.01,
         )
         
         # Learning statistics
@@ -233,7 +234,7 @@ class OnlineLearningModule:
             try:
                 await self._learning_task
             except asyncio.CancelledError:
-                raise  # Re-raise CancelledError after cleanup
+                logger.info("Learning task cancelled")
         logger.info("Stopped online learning")
     
     async def _learning_loop(self):

@@ -510,9 +510,9 @@ async def get_project_files(project_id: str, path: Optional[str] = None):
         "items": [
             {"name": "src", "path": "src", "type": "directory"},
             {"name": "tests", "path": "tests", "type": "directory"},
-            {"name": "main.py", "path": "main.py", "type": "file", "size": 1024, "language": "python"},
+            {"name": Literals.FILE_MAIN_PY, "path": Literals.FILE_MAIN_PY, "type": "file", "size": 1024, "language": "python"},
             {"name": "app.ts", "path": "app.ts", "type": "file", "size": 2048, "language": "typescript"},
-            {"name": "README.md", "path": "README.md", "type": "file", "size": 512, "language": "markdown"},
+            {"name": Literals.FILE_README_MD, "path": Literals.FILE_README_MD, "type": "file", "size": 512, "language": "markdown"},
         ]
     }
 
@@ -851,8 +851,8 @@ async def get_repository_tree(repo_id: str, path: str = ""):
         "items": [
             {"name": "src", "path": "src", "type": "directory"},
             {"name": "tests", "path": "tests", "type": "directory"},
-            {"name": "main.py", "path": "main.py", "type": "file", "size": 1024, "language": "python"},
-            {"name": "README.md", "path": "README.md", "type": "file", "size": 2048, "language": "markdown"},
+            {"name": Literals.FILE_MAIN_PY, "path": Literals.FILE_MAIN_PY, "type": "file", "size": 1024, "language": "python"},
+            {"name": Literals.FILE_README_MD, "path": Literals.FILE_README_MD, "type": "file", "size": 2048, "language": "markdown"},
             {"name": "requirements.txt", "path": "requirements.txt", "type": "file", "size": 256},
         ]
     }

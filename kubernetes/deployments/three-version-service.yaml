@@ -38,8 +38,8 @@ spec:
         fsGroup: 1000
       containers:
         - name: three-version-service
-          image: coderev/three-version-service:latest
-          imagePullPolicy: Always
+          image: coderev/three-version-service:v1.0.0
+          imagePullPolicy: IfNotPresent
           ports:
             - name: http
               containerPort: 8010

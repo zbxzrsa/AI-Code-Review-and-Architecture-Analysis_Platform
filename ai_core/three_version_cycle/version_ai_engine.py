@@ -204,7 +204,7 @@ class V1ExperimentalAI(VersionAIEngine):
         
         return result
     
-    async def _select_technology(self) -> str:
+    def _select_technology(self) -> str:
         """Select technology for request based on experiment weights."""
         import random
         
@@ -413,7 +413,7 @@ class V2ProductionAI(VersionAIEngine):
         
         return issues, suggestions
     
-    async def _calculate_metrics(
+    def _calculate_metrics(
         self,
         code: str,
         issues: List[Dict],
@@ -462,7 +462,7 @@ class V2ProductionAI(VersionAIEngine):
     def get_capabilities(self) -> List[AICapability]:
         return self.config.capabilities
     
-    async def add_promoted_technology(self, technology: str):
+    def add_promoted_technology(self, technology: str):
         """Add a technology promoted from V1."""
         if technology not in self.active_technologies:
             self.active_technologies.append(technology)
@@ -526,7 +526,7 @@ class V3QuarantineAI(VersionAIEngine):
         
         return result
     
-    async def _basic_analysis(self, code: str) -> List[Dict[str, Any]]:
+    def _basic_analysis(self, code: str) -> List[Dict[str, Any]]:
         """Basic code analysis without experimental technologies."""
         issues = []
         lines = code.split("\n")
@@ -568,7 +568,7 @@ class V3QuarantineAI(VersionAIEngine):
     def get_capabilities(self) -> List[AICapability]:
         return self.config.capabilities
     
-    async def quarantine_technology(
+    def quarantine_technology(
         self,
         tech_id: str,
         name: str,

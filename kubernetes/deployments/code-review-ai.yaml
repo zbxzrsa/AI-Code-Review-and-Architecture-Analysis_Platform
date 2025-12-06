@@ -37,8 +37,8 @@ spec:
 
       containers:
         - name: service
-          image: platform-code-review-ai:latest
-          imagePullPolicy: Always
+          image: platform-code-review-ai:v1.0.0
+          imagePullPolicy: IfNotPresent
 
           ports:
             - name: http

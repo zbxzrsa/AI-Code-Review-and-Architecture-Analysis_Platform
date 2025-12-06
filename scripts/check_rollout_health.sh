@@ -26,10 +26,12 @@ echo ""
 # Function to query Prometheus
 query_prometheus() {
     local query="$1"
-    local result=$(curl -s "${PROMETHEUS_URL}/api/v1/query" \
+    local result
+    result=$(curl -s "${PROMETHEUS_URL}/api/v1/query" \
         --data-urlencode "query=${query}" | \
         jq -r '.data.result[0].value[1] // "NaN"')
     echo "$result"
+    return 0
 }
 
 # Get rollout status
@@ -56,7 +58,7 @@ else
         echo "   ✅ P95 Latency: ${P95_LATENCY_INT}ms (threshold: ${P95_LATENCY_THRESHOLD_MS}ms)"
         LATENCY_OK=true
     else
-        echo "   ❌ P95 Latency: ${P95_LATENCY_INT}ms EXCEEDS threshold: ${P95_LATENCY_THRESHOLD_MS}ms"
+        echo "   ❌ P95 Latency: ${P95_LATENCY_INT}ms EXCEEDS threshold: ${P95_LATENCY_THRESHOLD_MS}ms" >&2
         LATENCY_OK=false
     fi
 fi
@@ -78,7 +80,7 @@ else
         printf "   ✅ Error Rate: %.2f%% (threshold: %.2f%%)\n" "$ERROR_RATE_PCT" "$THRESHOLD_PCT"
         ERROR_OK=true
     else
-        printf "   ❌ Error Rate: %.2f%% EXCEEDS threshold: %.2f%%\n" "$ERROR_RATE_PCT" "$THRESHOLD_PCT"
+        printf "   ❌ Error Rate: %.2f%% EXCEEDS threshold: %.2f%%\n" "$ERROR_RATE_PCT" "$THRESHOLD_PCT" >&2
         ERROR_OK=false
     fi
 fi
@@ -177,14 +179,14 @@ OVERALL_HEALTHY=true
 if [[ "$LATENCY_OK" == true ]]; then
     echo "║ ✅ Latency Check      : PASSED                              ║"
 else
-    echo "║ ❌ Latency Check      : FAILED                              ║"
+    echo "║ ❌ Latency Check      : FAILED                              ║" >&2
     OVERALL_HEALTHY=false
 fi
 
 if [[ "$ERROR_OK" == true ]]; then
     echo "║ ✅ Error Rate Check   : PASSED                              ║"
 else
-    echo "║ ❌ Error Rate Check   : FAILED                              ║"
+    echo "║ ❌ Error Rate Check   : FAILED                              ║" >&2
     OVERALL_HEALTHY=false
 fi
 

@@ -60,31 +60,39 @@ export const formatDateTime = (
 /**
  * Get relative time string (e.g., "2 hours ago")
  */
-export const getRelativeTime = (dateString: string | Date): string => {
+export const getRelativeTime = (
+  dateString: string | Date,
+  locale = "en-US"
+): string => {
   const date =
     typeof dateString === "string" ? new Date(dateString) : dateString;
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+  const diffMs = Date.now() - date.getTime();
   const diffSeconds = Math.floor(diffMs / 1000);
-  const diffMinutes = Math.floor(diffSeconds / 60);
-  const diffHours = Math.floor(diffMinutes / 60);
-  const diffDays = Math.floor(diffHours / 24);
-  const diffWeeks = Math.floor(diffDays / 7);
-  const diffMonths = Math.floor(diffDays / 30);
-  const diffYears = Math.floor(diffDays / 365);
 
-  if (diffSeconds < 60) return "Just now";
-  if (diffMinutes < 60)
-    return `${diffMinutes} minute${diffMinutes !== 1 ? "s" : ""} ago`;
-  if (diffHours < 24)
-    return `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`;
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays < 7) return `${diffDays} days ago`;
-  if (diffWeeks < 4)
-    return `${diffWeeks} week${diffWeeks !== 1 ? "s" : ""} ago`;
-  if (diffMonths < 12)
-    return `${diffMonths} month${diffMonths !== 1 ? "s" : ""} ago`;
-  return `${diffYears} year${diffYears !== 1 ? "s" : ""} ago`;
+  // Use Intl.RelativeTimeFormat for proper localization
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+
+  // Define time thresholds and units
+  const thresholds: Array<{
+    max: number;
+    divisor: number;
+    unit: Intl.RelativeTimeFormatUnit;
+  }> = [
+    { max: 60, divisor: 1, unit: "second" },
+    { max: 3600, divisor: 60, unit: "minute" },
+    { max: 86400, divisor: 3600, unit: "hour" },
+    { max: 604800, divisor: 86400, unit: "day" },
+    { max: 2592000, divisor: 604800, unit: "week" },
+    { max: 31536000, divisor: 2592000, unit: "month" },
+    { max: Infinity, divisor: 31536000, unit: "year" },
+  ];
+
+  const threshold =
+    thresholds.find((t) => diffSeconds < t.max) ??
+    thresholds[thresholds.length - 1];
+  const value = Math.floor(diffSeconds / threshold.divisor);
+
+  return rtf.format(-value, threshold.unit);
 };
 
 /**
@@ -133,7 +141,7 @@ export const formatBytes = (bytes: number, decimals = 2): string => {
   const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${
     sizes[i]
   }`;
 };

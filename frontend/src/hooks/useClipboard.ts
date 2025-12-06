@@ -38,7 +38,7 @@ export function useClipboard(options: ClipboardOptions = {}) {
     async (text: string): Promise<boolean> => {
       try {
         // Try modern clipboard API
-        if (navigator.clipboard && window.isSecureContext) {
+        if (navigator.clipboard && globalThis.isSecureContext) {
           await navigator.clipboard.writeText(text);
         } else {
           // Fallback for older browsers
@@ -51,8 +51,9 @@ export function useClipboard(options: ClipboardOptions = {}) {
           textArea.focus();
           textArea.select();
 
+          // execCommand is deprecated but needed for older browser fallback
           const success = document.execCommand("copy");
-          document.body.removeChild(textArea);
+          textArea.remove();
 
           if (!success) {
             throw new Error("execCommand failed");

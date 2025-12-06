@@ -106,16 +106,16 @@ class SecurityTestSuite:
         ]
         
         endpoints = [
-            ("/api/v2/projects", "GET", {"search": "{payload}"}),
-            ("/api/v2/users", "GET", {"filter": "{payload}"}),
-            ("/api/auth/login", "POST", {"username": "{payload}", "password": "test"}),
+            ("/api/v2/projects", "GET", {"search": PAYLOAD_PLACEHOLDER}),
+            ("/api/v2/users", "GET", {"filter": PAYLOAD_PLACEHOLDER}),
+            ("/api/auth/login", "POST", {"username": PAYLOAD_PLACEHOLDER, "password": "test"}),
         ]
         
         for endpoint, method, params in endpoints:
             for payload in sql_payloads:
                 try:
                     test_params = {
-                        k: v.replace("{payload}", payload) 
+                        k: v.replace(PAYLOAD_PLACEHOLDER, payload) 
                         for k, v in params.items()
                     }
                     
@@ -428,7 +428,7 @@ class SecurityTestSuite:
                     category="XSS",
                     severity="high",
                     title="Reflected XSS",
-                    description=f"XSS payload reflected in response",
+                    description="XSS payload reflected in response",
                     evidence=f"Payload: {payload}",
                     remediation="Escape output, use Content-Security-Policy",
                     owasp="A7:2021-XSS",

@@ -57,10 +57,10 @@ export function safeGet<T>(obj: unknown, path: string, fallback: T): T {
  * @param fallback - Fallback number (defaults to 0)
  */
 export function ensureNumber(value: unknown, fallback = 0): number {
-  if (typeof value === "number" && !isNaN(value)) return value;
+  if (typeof value === "number" && !Number.isNaN(value)) return value;
   if (typeof value === "string") {
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed)) return parsed;
+    const parsed = Number.parseFloat(value);
+    if (!Number.isNaN(parsed)) return parsed;
   }
   return fallback;
 }

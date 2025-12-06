@@ -286,7 +286,7 @@ class TestRateLimiter:
         for _ in range(5):
             self.limiter.record_attempt(self.user_id, success=False)
         
-        is_locked, seconds = self.limiter.is_locked_out(self.user_id)
+        _, seconds = self.limiter.is_locked_out(self.user_id)
         
         # Should be close to 15 minutes
         assert 14 * 60 <= seconds <= 15 * 60

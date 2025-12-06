@@ -31,7 +31,6 @@ import { apiService } from '../../services/api';
 import './ExperimentManagement.css';
 
 const { Title } = Typography;
-// const { TextArea } = Input;
 
 interface Experiment {
   id: string;
@@ -91,7 +90,7 @@ export const ExperimentManagement: React.FC = () => {
         name: values.name,
         config: {
           model: values.model,
-          temperature: parseFloat(values.temperature),
+          temperature: Number.parseFloat(values.temperature),
           prompt_template: values.prompt_template
         },
         dataset_id: values.dataset_id

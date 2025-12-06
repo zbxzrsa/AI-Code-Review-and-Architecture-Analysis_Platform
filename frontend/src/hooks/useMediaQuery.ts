@@ -31,28 +31,23 @@ export type Breakpoint = keyof typeof breakpoints;
 
 export function useMediaQuery(query: string): boolean {
   const [matches, setMatches] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.matchMedia(query).matches;
+    if (typeof globalThis.matchMedia === "undefined") return false;
+    return globalThis.matchMedia(query).matches;
   });
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof globalThis.matchMedia === "undefined") return;
 
-    const mediaQuery = window.matchMedia(query);
+    const mediaQuery = globalThis.matchMedia(query);
     setMatches(mediaQuery.matches);
 
     const handler = (event: MediaQueryListEvent) => {
       setMatches(event.matches);
     };
 
-    // Modern browsers
-    if (mediaQuery.addEventListener) {
-      mediaQuery.addEventListener("change", handler);
-      return () => mediaQuery.removeEventListener("change", handler);
-    }
-    // Legacy browsers
-    mediaQuery.addListener(handler);
-    return () => mediaQuery.removeListener(handler);
+    // Use modern addEventListener API
+    mediaQuery.addEventListener("change", handler);
+    return () => mediaQuery.removeEventListener("change", handler);
   }, [query]);
 
   return matches;

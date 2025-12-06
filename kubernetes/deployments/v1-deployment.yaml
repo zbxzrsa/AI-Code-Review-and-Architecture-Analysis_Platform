@@ -40,8 +40,8 @@ spec:
 
       containers:
         - name: api
-          image: platform-v1:latest
-          imagePullPolicy: Always
+          image: platform-v1:v1.0.0
+          imagePullPolicy: IfNotPresent
 
           ports:
             - name: http

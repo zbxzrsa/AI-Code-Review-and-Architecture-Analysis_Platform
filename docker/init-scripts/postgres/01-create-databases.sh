@@ -34,6 +34,7 @@ create_database() {
 EOSQL
     
     echo "Database $database created successfully"
+    return 0
 }
 
 # Parse POSTGRES_MULTIPLE_DATABASES environment variable

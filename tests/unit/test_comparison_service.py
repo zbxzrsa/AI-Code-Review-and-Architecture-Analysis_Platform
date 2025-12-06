@@ -296,7 +296,6 @@ class TestIssueComparison:
     def test_false_positive_rate(self):
         """Test false positive rate calculation"""
         total_issues = 100
-        true_positives = 92
         false_positives = 8
         
         fp_rate = false_positives / total_issues

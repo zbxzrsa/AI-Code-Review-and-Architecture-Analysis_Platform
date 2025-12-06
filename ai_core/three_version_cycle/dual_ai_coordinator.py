@@ -394,7 +394,7 @@ class DualAICoordinator:
             return {"success": False, "error": "V2 VC-AI not available"}
         
         # V2 analyzes the error
-        analysis = await self._v2_analyze_error(error_data)
+        analysis = self._v2_analyze_error(error_data)
         
         # Generate fix
         fix = self._v2_generate_fix(analysis)
@@ -408,7 +408,7 @@ class DualAICoordinator:
             "source": "v2_vcai",
         }
     
-    async def _v2_analyze_error(self, error_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _v2_analyze_error(self, error_data: Dict[str, Any]) -> Dict[str, Any]:
         """V2 VC-AI analyzes V1 error."""
         return {
             "error_type": error_data.get("error_type"),
@@ -458,7 +458,7 @@ class DualAICoordinator:
             "source": "v3_vcai",
         }
     
-    async def coordinate_promotion(
+    def coordinate_promotion(
         self,
         tech_id: str,
         from_version: str,
@@ -601,7 +601,7 @@ class DualAIRequestHandler:
         self,
         request_type: str,
         version: str,
-        ai_type: str,
+        ai_type: str,  # noqa: ARG002 - reserved for AI type routing
         request_data: Dict[str, Any],
     ) -> Dict[str, Any]:
         """Handle an admin request (can access any AI)."""

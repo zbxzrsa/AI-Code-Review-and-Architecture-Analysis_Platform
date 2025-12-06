@@ -538,7 +538,7 @@ class SparseAttention(nn.Module):
         """
         Sparse attention forward pass.
         """
-        batch_size, seq_len, _ = hidden_states.shape
+        batch_size, _, _ = hidden_states.shape
         
         # Add global tokens
         global_tokens = self.global_tokens.unsqueeze(0).expand(batch_size, -1, -1)
@@ -690,19 +690,10 @@ class ExpertRouter(nn.Module):
             # Transpose for expert-centric view
             router_probs_t = router_probs.transpose(-1, -2)  # [batch, num_experts, seq_len]
             
-            capacity = int(seq_len * self.capacity_factor / self.num_experts)
-            expert_weights, token_indices = torch.topk(router_probs_t, capacity, dim=-1)
+            capacity = int(hidden_states.shape[1] * self.capacity_factor / self.num_experts)
+            _, _ = torch.topk(router_probs_t, capacity, dim=-1)  # For expert-choice routing
             
             # Convert back to token-centric view (simplified)
-            expert_indices = torch.zeros(
-                batch_size, seq_len, self.num_experts_per_token,
-                dtype=torch.long, device=hidden_states.device
-            )
-            expert_weights_out = torch.zeros(
-                batch_size, seq_len, self.num_experts_per_token,
-                device=hidden_states.device
-            )
-            
             # Default to top-k for simplicity in this implementation
             expert_weights, expert_indices = torch.topk(
                 router_probs, 
@@ -789,7 +780,7 @@ class MoELayer(nn.Module):
         batch_size, seq_len, hidden_size = hidden_states.shape
         
         # Route tokens
-        router_probs, expert_indices, expert_weights, aux_loss = self.router(hidden_states)
+        _, expert_indices, expert_weights, aux_loss = self.router(hidden_states)
         
         # Flatten for processing
         hidden_flat = hidden_states.view(-1, hidden_size)  # [batch*seq_len, hidden_size]
@@ -956,7 +947,7 @@ class MoETransformer(nn.Module):
         # Initialize weights
         self.apply(self._init_weights)
         
-        logger.info(f"Initialized MoE Transformer:")
+        logger.info("Initialized MoE Transformer:")
         logger.info(f"  Total parameters: {config.total_params:,}")
         logger.info(f"  Active parameters: {config.active_params:,}")
         logger.info(f"  Efficiency ratio: {config.active_params / config.total_params:.2%}")

@@ -49,8 +49,6 @@ import {
   BulbOutlined,
   CopyOutlined,
   ReloadOutlined,
-  LikeOutlined,
-  DislikeOutlined,
   UserOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
@@ -60,7 +58,6 @@ import './CodeReview.css';
 const { Content } = Layout;
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
-// const { Panel } = Collapse;
 
 // Types
 interface Issue {

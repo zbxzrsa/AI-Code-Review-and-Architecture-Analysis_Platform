@@ -165,11 +165,11 @@ const determineSeverity = (
  * Error Logging Service Class
  */
 class ErrorLoggingService {
-  private isProduction: boolean;
-  private logEndpoint: string;
+  private readonly isProduction: boolean;
+  private readonly logEndpoint: string;
   private errorQueue: ErrorLogEntry[] = [];
-  private flushInterval: number = 5000;
-  private maxQueueSize: number = 50;
+  private readonly flushInterval: number = 5000;
+  private readonly maxQueueSize: number = 50;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
@@ -180,8 +180,8 @@ class ErrorLoggingService {
     this.startFlushTimer();
 
     // Flush on page unload
-    if (typeof window !== "undefined") {
-      window.addEventListener("beforeunload", () => this.flush());
+    if (typeof globalThis.window !== "undefined") {
+      globalThis.addEventListener("beforeunload", () => this.flush());
     }
   }
 

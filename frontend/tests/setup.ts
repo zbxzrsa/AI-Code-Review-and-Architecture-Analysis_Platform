@@ -1,12 +1,12 @@
 /**
  * Jest Test Setup
- * 
+ *
  * This file runs before each test file
  */
 
-import '@testing-library/jest-dom';
-import { cleanup } from '@testing-library/react';
-import { afterEach, beforeAll, afterAll, vi } from 'vitest';
+import "@testing-library/jest-dom";
+import { cleanup } from "@testing-library/react";
+import { afterEach, beforeAll, afterAll, vi } from "vitest";
 
 // Cleanup after each test
 afterEach(() => {
@@ -16,7 +16,7 @@ afterEach(() => {
 
 // Mock window.matchMedia
 beforeAll(() => {
-  Object.defineProperty(window, 'matchMedia', {
+  Object.defineProperty(globalThis, "matchMedia", {
     writable: true,
     value: vi.fn().mockImplementation((query: string) => ({
       matches: false,
@@ -36,7 +36,7 @@ beforeAll(() => {
     disconnect = vi.fn();
     unobserve = vi.fn();
   }
-  Object.defineProperty(window, 'IntersectionObserver', {
+  Object.defineProperty(globalThis, "IntersectionObserver", {
     writable: true,
     value: MockIntersectionObserver,
   });
@@ -47,13 +47,13 @@ beforeAll(() => {
     disconnect = vi.fn();
     unobserve = vi.fn();
   }
-  Object.defineProperty(window, 'ResizeObserver', {
+  Object.defineProperty(globalThis, "ResizeObserver", {
     writable: true,
     value: MockResizeObserver,
   });
 
   // Mock scrollTo
-  Object.defineProperty(window, 'scrollTo', {
+  Object.defineProperty(globalThis, "scrollTo", {
     writable: true,
     value: vi.fn(),
   });
@@ -67,18 +67,18 @@ beforeAll(() => {
     length: 0,
     key: vi.fn(),
   };
-  Object.defineProperty(window, 'localStorage', {
+  Object.defineProperty(globalThis, "localStorage", {
     value: localStorageMock,
   });
 
   // Mock sessionStorage
-  Object.defineProperty(window, 'sessionStorage', {
+  Object.defineProperty(globalThis, "sessionStorage", {
     value: localStorageMock,
   });
 
   // Suppress console errors during tests
-  vi.spyOn(console, 'error').mockImplementation(() => {});
-  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
 });
 
 afterAll(() => {
@@ -86,12 +86,12 @@ afterAll(() => {
 });
 
 // Mock fetch globally
-global.fetch = vi.fn();
+globalThis.fetch = vi.fn() as typeof fetch;
 
 // Mock crypto for UUID generation
-Object.defineProperty(global, 'crypto', {
+Object.defineProperty(globalThis, "crypto", {
   value: {
-    randomUUID: () => 'test-uuid-' + Math.random().toString(36).substr(2, 9),
+    randomUUID: () => "test-uuid-" + Math.random().toString(36).substr(2, 9),
     getRandomValues: (arr: Uint8Array) => {
       for (let i = 0; i < arr.length; i++) {
         arr[i] = Math.floor(Math.random() * 256);

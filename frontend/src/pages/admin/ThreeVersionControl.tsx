@@ -39,7 +39,6 @@ import {
   ArrowUpOutlined,
   ArrowDownOutlined,
   CheckCircleOutlined,
-  WarningOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import type { VersionAIStatus, FeedbackStats } from '../../services/threeVersionService';

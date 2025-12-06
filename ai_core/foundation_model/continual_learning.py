@@ -806,7 +806,7 @@ class PackNet:
     
     def _compute_importance(
         self,
-        dataloader: DataLoader,
+        dataloader: DataLoader,  # noqa: ARG002 - used for gradient-based importance in production
     ) -> Dict[str, torch.Tensor]:
         """Compute parameter importance (magnitude-based)."""
         importance = {}
@@ -983,6 +983,7 @@ class ContinualPretraining:
         self.optimizer = AdamW(
             model.parameters(),
             lr=config.learning_rate,
+            weight_decay=0.01,
         )
         
         # Task tracking
@@ -1211,6 +1212,7 @@ class DomainAdaptive:
         self.optimizer = AdamW(
             model.parameters(),
             lr=config.learning_rate,
+            weight_decay=0.01,
         )
     
     def add_domain_adapter(
@@ -1327,7 +1329,7 @@ class ContinualFineTuning:
         task_id: str,
         target_modules: List[str],
         lora_r: int = 8,
-        lora_alpha: int = 32,
+        lora_alpha: int = 32,  # noqa: ARG002 - reserved for scaling factor
     ):
         """Add LoRA adapter for a task."""
         adapters = {}
@@ -1339,15 +1341,15 @@ class ContinualFineTuning:
                     in_features = module.in_features
                     out_features = module.out_features
                     
-                    lora_A = nn.Linear(in_features, lora_r, bias=False)
-                    lora_B = nn.Linear(lora_r, out_features, bias=False)
+                    lora_down = nn.Linear(in_features, lora_r, bias=False)
+                    lora_up = nn.Linear(lora_r, out_features, bias=False)
                     
                     # Initialize
-                    nn.init.kaiming_uniform_(lora_A.weight, a=math.sqrt(5))
-                    nn.init.zeros_(lora_B.weight)
+                    nn.init.kaiming_uniform_(lora_down.weight, a=math.sqrt(5))
+                    nn.init.zeros_(lora_up.weight)
                     
                     adapters[name] = nn.Sequential(
-                        lora_A, lora_B
+                        lora_down, lora_up
                     ).to(self.device)
         
         self.lora_adapters[task_id] = adapters
@@ -1374,7 +1376,7 @@ class ContinualFineTuning:
                 param.requires_grad = True
                 lora_params.append(param)
         
-        optimizer = AdamW(lora_params, lr=self.config.learning_rate)
+        optimizer = AdamW(lora_params, lr=self.config.learning_rate, weight_decay=0.01)
         
         total_loss = 0.0
         

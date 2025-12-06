@@ -220,7 +220,7 @@ def check_services() -> Tuple[int, int]:
         
         if check_port(host, port):
             if http_path:
-                success, response = check_http_endpoint(host, port, http_path)
+                success, _ = check_http_endpoint(host, port, http_path)
                 if success:
                     print_success(f"{service_name} ({host}:{port}) - HTTP OK")
                     running += 1

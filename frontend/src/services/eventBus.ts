@@ -183,11 +183,12 @@ const priorityValues: Record<EventPriority, number> = {
 // ============================================
 
 class EventBus {
-  private listeners: Map<string, EventListener[]> = new Map();
+  private readonly listeners: Map<string, EventListener[]> = new Map();
   private history: EventEntry[] = [];
-  private maxHistory: number = 100;
-  private middlewares: Middleware[] = [];
-  private globalListeners: Set<(event: EventEntry) => void> = new Set();
+  private readonly maxHistory: number = 100;
+  private readonly middlewares: Middleware[] = [];
+  private readonly globalListeners: Set<(event: EventEntry) => void> =
+    new Set();
 
   // ============================================
   // Subscription Methods

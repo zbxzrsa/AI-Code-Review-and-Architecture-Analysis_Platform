@@ -8,7 +8,7 @@ Batch fix Kubernetes security issues:
 import re
 from pathlib import Path
 
-def fix_deployment_file(file_path: Path) -> None:
+def fix_deployment_file(file_path: Path) -> bool:
     """Fix a single deployment file."""
     print(f"Processing {file_path}...")
     
@@ -18,13 +18,13 @@ def fix_deployment_file(file_path: Path) -> None:
     # Fix 1: Add automountServiceAccountToken: false after serviceAccountName
     # Pattern: spec:\n      serviceAccountName: (something)
     # Add: automountServiceAccountToken: false after serviceAccountName
-    pattern1 = r'(\n    spec:\n(?:      serviceAccountName: [^\n]+\n)?)(      securityContext:)'
+    pattern1 = r'(\n {4}spec:\n(?: {6}serviceAccountName: [^\n]+\n)?)( {6}securityContext:)'
     replacement1 = r'\1      automountServiceAccountToken: false\n\2'
     content = re.sub(pattern1, replacement1, content)
     
     # Fix 2: Add automountServiceAccountToken to pods that don't have serviceAccountName
     # Pattern: spec: followed by securityContext (no serviceAccountName)
-    pattern2 = r'(\n    spec:\n)(      securityContext:)'
+    pattern2 = r'(\n {4}spec:\n)( {6}securityContext:)'
     def replace_func(match):
         # Only add if not already present and no serviceAccountName before
         if 'automountServiceAccountToken' not in match.group(0):
@@ -42,7 +42,7 @@ def fix_deployment_file(file_path: Path) -> None:
             return resources_block
         
         # Add to limits section
-        limits_pattern = r'(limits:\n(?:[ ]+[a-z-]+: [^\n]+\n)+)'
+        limits_pattern = r'(limits:\n(?: +[a-z-]+: [^\n]+\n)+)'
         def add_to_limits(limits_match):
             limits_content = limits_match.group(0)
             # Insert before the last line (which should be memory or cpu)
@@ -54,7 +54,7 @@ def fix_deployment_file(file_path: Path) -> None:
         resources_block = re.sub(limits_pattern, add_to_limits, resources_block)
         
         # Add to requests section
-        requests_pattern = r'(requests:\n(?:[ ]+[a-z-]+: [^\n]+\n)+)'
+        requests_pattern = r'(requests:\n(?: +[a-z-]+: [^\n]+\n)+)'
         def add_to_requests(requests_match):
             requests_content = requests_match.group(0)
             lines = requests_content.rstrip('\n').split('\n')
@@ -67,7 +67,7 @@ def fix_deployment_file(file_path: Path) -> None:
         return resources_block
     
     # Match resources blocks
-    resources_pattern = r'( {10}resources:\n(?:[ ]+[a-z-]+:\n(?:[ ]+[a-z-]+: [^\n]+\n)+)+)'
+    resources_pattern = r'( {10}resources:\n(?: +[a-z-]+:\n(?: +[a-z-]+: [^\n]+\n)+)+)'
     content = re.sub(resources_pattern, add_ephemeral_storage, content)
     
     # Write back if changed

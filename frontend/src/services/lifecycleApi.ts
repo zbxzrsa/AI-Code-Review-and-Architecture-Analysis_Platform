@@ -107,7 +107,7 @@ export interface RollbackStats {
 
 // API Client
 class LifecycleApiClient {
-  private baseUrl = "/api/admin/lifecycle";
+  private readonly baseUrl = "/api/admin/lifecycle";
 
   // ============================================================
   // Comparison Requests

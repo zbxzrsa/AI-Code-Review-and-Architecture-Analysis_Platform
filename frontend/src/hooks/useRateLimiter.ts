@@ -192,8 +192,9 @@ export function useRateLimiter(key: string, config?: RateLimitConfig) {
 
           // Check if rate limited (429)
           if (error instanceof AxiosError && error.response?.status === 429) {
-            const retryAfter = parseInt(
-              error.response.headers["retry-after"] || "60"
+            const retryAfter = Number.parseInt(
+              error.response.headers["retry-after"] || "60",
+              10
             );
             handleRateLimitResponse(retryAfter);
 

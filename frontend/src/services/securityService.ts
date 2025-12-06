@@ -55,12 +55,12 @@ interface ValidationRule {
 
 class SecurityService {
   private securityEvents: SecurityEvent[] = [];
-  private rateLimitMap: Map<
+  private readonly rateLimitMap: Map<
     string,
     { count: number; resetTime: number; blocked: boolean }
   > = new Map();
   private csrfToken: string | null = null;
-  private maxEvents = 1000;
+  private readonly maxEvents = 1000;
 
   constructor() {
     this.initCSRFToken();
@@ -203,10 +203,10 @@ class SecurityService {
     const dataUrls = /data:/gi;
 
     let sanitized = html
-      .replace(dangerous, "")
-      .replace(events, "")
-      .replace(javascript, "")
-      .replace(dataUrls, "");
+      .replaceAll(dangerous, "")
+      .replaceAll(events, "")
+      .replaceAll(javascript, "")
+      .replaceAll(dataUrls, "");
 
     // Check if content was modified
     if (sanitized !== html) {
@@ -294,8 +294,8 @@ class SecurityService {
     value: unknown,
     rules: ValidationRule
   ): { valid: boolean; error?: string; sanitized?: unknown } {
-    const num = typeof value === "string" ? parseFloat(value) : value;
-    if (typeof num !== "number" || isNaN(num)) {
+    const num = typeof value === "string" ? Number.parseFloat(value) : value;
+    if (typeof num !== "number" || Number.isNaN(num)) {
       return { valid: false, error: "Must be a number" };
     }
 
@@ -504,7 +504,7 @@ class SecurityService {
       ...event,
       timestamp: Date.now(),
       userAgent: navigator.userAgent,
-      page: window.location.pathname,
+      page: globalThis.location.pathname,
     };
 
     this.securityEvents.push(fullEvent);

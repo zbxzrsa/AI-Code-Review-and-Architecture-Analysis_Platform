@@ -154,7 +154,7 @@ async def check_tcp_health(
         )
 
 
-async def run_health_checks(verbose: bool = False) -> HealthReport:
+async def run_health_checks(_verbose: bool = False) -> HealthReport:
     """Run health checks on all services."""
     results: List[ServiceHealth] = []
     

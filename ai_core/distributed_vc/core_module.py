@@ -228,11 +228,11 @@ class ServiceRegistry:
         async def check_health():
             while True:
                 await asyncio.sleep(interval)
-                await self._check_all_nodes()
+                self._check_all_nodes()
         
         self._health_check_task = asyncio.create_task(check_health())
     
-    async def _check_all_nodes(self) -> None:
+    def _check_all_nodes(self) -> None:
         """Check health of all nodes"""
         now = datetime.now()
         

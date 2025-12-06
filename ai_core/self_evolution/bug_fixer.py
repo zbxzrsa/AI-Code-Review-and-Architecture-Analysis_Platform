@@ -875,7 +875,7 @@ class AutoFixCycle:
             try:
                 await self._cycle_task
             except asyncio.CancelledError:
-                raise  # Re-raise CancelledError after cleanup
+                logger.info("Bug fix cycle task cancelled")
         logger.info("Automated bug fix cycle stopped")
     
     async def _run_cycle(self):

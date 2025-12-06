@@ -77,41 +77,15 @@ export class ErrorBoundary extends Component<Props, State> {
     this.props.onError?.(error, errorInfo);
   }
 
-  private reportError(error: Error, errorInfo: ErrorInfo): void {
-    // Already handled by errorLoggingService in componentDidCatch
-    // This is kept for backwards compatibility
-    try {
-      const errorReport = {
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString(),
-        url: window.location.href,
-        userAgent: navigator.userAgent
-      };
-      
-      // Example: Send to backend error endpoint
-      fetch('/api/errors', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(errorReport)
-      }).catch(() => {
-        // Silently fail if error reporting fails
-      });
-    } catch {
-      // Silently fail
-    }
-  }
-
-  private handleReload = (): void => {
-    window.location.reload();
+  private readonly handleReload = (): void => {
+    globalThis.location.reload();
   };
 
-  private handleGoHome = (): void => {
-    window.location.href = '/dashboard';
+  private readonly handleGoHome = (): void => {
+    globalThis.location.href = '/dashboard';
   };
 
-  private handleRetry = (): void => {
+  private readonly handleRetry = (): void => {
     this.setState({
       hasError: false,
       error: null,

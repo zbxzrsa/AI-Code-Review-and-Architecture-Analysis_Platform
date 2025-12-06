@@ -4,7 +4,7 @@
  * Tests for the centralized event handling system.
  */
 
-import { eventBus, EventMap } from "../eventBus";
+import { eventBus } from "../eventBus";
 
 describe("EventBus", () => {
   beforeEach(() => {

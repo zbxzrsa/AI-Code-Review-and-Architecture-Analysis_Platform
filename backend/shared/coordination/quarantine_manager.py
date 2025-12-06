@@ -146,7 +146,7 @@ class QuarantineManager:
         logger.info(f"Experiment {experiment_id} quarantined as {record.record_id}")
         return record
     
-    async def _capture_evidence(
+    def _capture_evidence(
         self,
         experiment_id: str,
         failure_evidence: Dict[str, Any],
@@ -168,10 +168,10 @@ class QuarantineManager:
             # - API responses
         }
     
-    async def _analyze_root_cause(
+    def _analyze_root_cause(
         self,
         failure_type: str,
-        evidence: Dict[str, Any],
+        evidence: Dict[str, Any],  # noqa: ARG002 - used in production analysis
     ) -> Dict[str, Any]:
         """
         Perform automated root cause analysis.

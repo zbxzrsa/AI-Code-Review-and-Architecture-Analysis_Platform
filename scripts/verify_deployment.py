@@ -207,12 +207,12 @@ class DeploymentVerifier:
                 passed=False,
                 message=f"V3 services returned unexpected status {response.status_code}"
             )
-        except Exception as e:
+        except Exception:
             # V3 being unreachable is often acceptable
             return CheckResult(
                 name=CHECK_V3_SERVICES,
                 passed=True,
-                message=f"V3 services not responding (expected if scaled down)"
+                message="V3 services not responding (expected if scaled down)"
             )
     
     async def check_lifecycle_controller(self) -> CheckResult:

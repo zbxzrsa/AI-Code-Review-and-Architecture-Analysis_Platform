@@ -6,7 +6,7 @@
  * - Pixel (Retro 8-bit)
  */
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { ConfigProvider, theme as antdTheme } from 'antd';
 
 export type ThemeStyle = 'default' | 'pixel';
@@ -59,12 +59,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   });
 
   const [systemDark, setSystemDark] = useState(() =>
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+    globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false
   );
 
   // Listen for system theme changes
   useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const mediaQuery = globalThis.matchMedia?.('(prefers-color-scheme: dark)');
+    if (!mediaQuery) return;
     const handler = (e: MediaQueryListEvent) => setSystemDark(e.matches);
     mediaQuery.addEventListener('change', handler);
     return () => mediaQuery.removeEventListener('change', handler);
@@ -105,17 +106,20 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     token: isPixel ? pixelThemeToken : undefined,
   };
 
+  const contextValue = useMemo(
+    () => ({
+      themeStyle,
+      themeMode,
+      setThemeStyle,
+      setThemeMode,
+      isPixel,
+      isDark,
+    }),
+    [themeStyle, themeMode, isPixel, isDark]
+  );
+
   return (
-    <ThemeContext.Provider
-      value={{
-        themeStyle,
-        themeMode,
-        setThemeStyle,
-        setThemeMode,
-        isPixel,
-        isDark,
-      }}
-    >
+    <ThemeContext.Provider value={contextValue}>
       <ConfigProvider theme={antdThemeConfig}>
         <div className={isPixel ? 'pixel-theme' : ''}>
           {children}

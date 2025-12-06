@@ -342,9 +342,9 @@ class MinHasher:
         self.ngram_size = ngram_size
         
         # Generate random hash functions with seed for reproducibility
-        rng = np.random.RandomState(seed)
-        self.a = rng.randint(1, 2**31, size=num_perm, dtype=np.int64)
-        self.b = rng.randint(0, 2**31, size=num_perm, dtype=np.int64)
+        rng = np.random.default_rng(seed)
+        self.a = rng.integers(1, 2**31, size=num_perm, dtype=np.int64)
+        self.b = rng.integers(0, 2**31, size=num_perm, dtype=np.int64)
         self.prime = 2**61 - 1
     
     def _get_ngrams(self, text: str) -> Set[str]:
@@ -1123,7 +1123,8 @@ class DataPipeline:
                     training_shard_id = f"train_{shard_idx:06d}"
                     
                     # Shuffle before writing
-                    np.random.shuffle(current_docs)
+                    rng = np.random.default_rng()
+                    rng.shuffle(current_docs)
                     
                     train_storage = ParquetStorage(output_path, "zstd")
                     train_storage.write(current_docs, training_shard_id)
@@ -1136,7 +1137,8 @@ class DataPipeline:
         # Write remaining
         if current_docs:
             training_shard_id = f"train_{shard_idx:06d}"
-            np.random.shuffle(current_docs)
+            rng = np.random.default_rng()
+            rng.shuffle(current_docs)
             train_storage = ParquetStorage(output_path, "zstd")
             train_storage.write(current_docs, training_shard_id)
             training_shards.append(training_shard_id)
@@ -1180,7 +1182,8 @@ class StreamingDataLoader:
         self.shards = self.storage.list_shards()
         
         # Shuffle shards
-        np.random.shuffle(self.shards)
+        rng = np.random.default_rng()
+        rng.shuffle(self.shards)
         
         self._current_shard_idx = 0
         self._current_docs: List[Document] = []
@@ -1227,13 +1230,15 @@ class StreamingDataLoader:
         self._current_shard_idx += 1
         
         # Shuffle within shard
-        np.random.shuffle(self._current_docs)
+        rng = np.random.default_rng()
+        rng.shuffle(self._current_docs)
         
         return True
     
     def reset(self):
         """Reset the data loader."""
-        np.random.shuffle(self.shards)
+        rng = np.random.default_rng()
+        rng.shuffle(self.shards)
         self._current_shard_idx = 0
         self._current_docs = []
         self._doc_idx = 0

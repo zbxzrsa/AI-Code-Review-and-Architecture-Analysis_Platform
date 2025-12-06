@@ -230,7 +230,7 @@ class ChaosMonkey:
             
             return experiment
             
-        except Exception as e:
+        except Exception:
             experiment.state = ChaosState.FAILED
             if experiment.rollback_on_failure:
                 await self._rollback_experiment(experiment)
@@ -285,7 +285,7 @@ class ChaosMonkey:
             
             return experiment
             
-        except Exception as e:
+        except Exception:
             experiment.state = ChaosState.FAILED
             raise
     

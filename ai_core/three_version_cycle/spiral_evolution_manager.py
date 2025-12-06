@@ -197,7 +197,7 @@ class SpiralEvolutionManager:
             try:
                 await self._cycle_task
             except asyncio.CancelledError:
-                raise  # Re-raise CancelledError after cleanup
+                logger.info("Evolution cycle task cancelled")
         
         logger.info("Spiral evolution cycle stopped")
     
@@ -242,13 +242,13 @@ class SpiralEvolutionManager:
             await self._phase_promotion(cycle)
             
             # Phase 5: V2 Stabilization
-            await self._phase_stabilization(cycle)
+            self._phase_stabilization(cycle)
             
             # Phase 6: Degradation (V2 → V3)
             await self._phase_degradation(cycle)
             
             # Phase 7: V3 Comparison
-            await self._phase_comparison(cycle)
+            self._phase_comparison(cycle)
             
             # Phase 8: Re-evaluation (V3 → V1)
             await self._phase_reevaluation(cycle)
@@ -341,12 +341,12 @@ class SpiralEvolutionManager:
         
         # Get metrics from version manager
         if self.version_manager:
-            v1_techs = await self.version_manager.get_version_technologies(
+            v1_techs = self.version_manager.get_version_technologies(
                 self.version_manager.configs.get("v1")
             ) if hasattr(self.version_manager, 'get_version_technologies') else []
             
             for tech in v1_techs if v1_techs else []:
-                evaluation = await self._evaluate_technology(tech)
+                evaluation = self._evaluate_technology(tech)
                 
                 if evaluation["eligible"]:
                     self._pending_promotions.append(tech.tech_id)
@@ -354,7 +354,7 @@ class SpiralEvolutionManager:
                         "tech_id": tech.tech_id,
                     })
     
-    async def _evaluate_technology(self, tech) -> Dict[str, Any]:
+    def _evaluate_technology(self, tech) -> Dict[str, Any]:
         """Evaluate a technology against promotion criteria."""
         metrics = tech.metrics if hasattr(tech, 'metrics') else {}
         
@@ -384,7 +384,7 @@ class SpiralEvolutionManager:
         for tech_id in self._pending_promotions[:]:
             try:
                 # Coordinate AI handoff
-                handoff = await self.dual_ai.coordinate_promotion(
+                handoff = self.dual_ai.coordinate_promotion(
                     tech_id, "v1", "v2"
                 )
                 
@@ -479,7 +479,7 @@ class SpiralEvolutionManager:
     # Phase 7: V3 Comparison
     # =========================================================================
     
-    async def _phase_comparison(self, cycle: EvolutionCycleState):
+    def _phase_comparison(self, cycle: EvolutionCycleState):
         """Phase 7: V3 provides comparison baseline for V1 experiments."""
         cycle.phase = CyclePhase.COMPARISON
         

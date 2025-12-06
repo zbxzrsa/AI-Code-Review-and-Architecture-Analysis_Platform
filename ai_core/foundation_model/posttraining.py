@@ -199,7 +199,7 @@ class SFTTrainer:
     def train(
         self,
         train_data: List[Conversation],
-        eval_data: Optional[List[Conversation]] = None,
+        eval_data: Optional[List[Conversation]] = None,  # noqa: ARG002 - reserved for validation
     ) -> Dict[str, float]:
         """
         Train the model with SFT.
@@ -220,6 +220,7 @@ class SFTTrainer:
             batch_size=self.config.sft_batch_size,
             shuffle=True,
             drop_last=True,
+            num_workers=0,
         )
         
         # Training loop

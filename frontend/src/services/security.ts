@@ -1,6 +1,6 @@
 /**
  * Security Service
- * 
+ *
  * Comprehensive security utilities for:
  * - CSRF token management (stored in memory, not localStorage)
  * - Secure authentication with httpOnly cookies
@@ -9,7 +9,7 @@
  * - Two-factor authentication support
  */
 
-import { api } from './api';
+import { api } from "./api";
 
 // ============================================
 // CSRF Token Management
@@ -25,7 +25,7 @@ const CSRF_TOKEN_LIFETIME = 60 * 60 * 1000; // 1 hour
 
 /**
  * CSRF Token Manager
- * 
+ *
  * Implements Double-Submit Cookie pattern:
  * 1. Server sends CSRF token in response header or body
  * 2. Client stores token in memory (not localStorage)
@@ -66,16 +66,16 @@ export const csrfManager = {
    */
   async fetchToken(): Promise<string> {
     try {
-      const response = await api.get('/csrf-token');
-      const token = response.data.token || response.headers['x-csrf-token'];
-      
+      const response = await api.get("/csrf-token");
+      const token = response.data.token || response.headers["x-csrf-token"];
+
       if (token) {
         this.setToken(token);
         return token;
       }
-      throw new Error('No CSRF token received');
+      throw new Error("No CSRF token received");
     } catch (error) {
-      console.error('Failed to fetch CSRF token:', error);
+      console.error("Failed to fetch CSRF token:", error);
       throw error;
     }
   },
@@ -124,7 +124,7 @@ const defaultRateLimitConfig: RateLimitConfig = {
 
 /**
  * Client-side Rate Limiter
- * 
+ *
  * Prevents excessive requests before they hit the server.
  * Server-side rate limiting is still enforced.
  */
@@ -132,7 +132,10 @@ export const rateLimiter = {
   /**
    * Check if request should be rate limited
    */
-  shouldLimit(key: string, config: RateLimitConfig = defaultRateLimitConfig): boolean {
+  shouldLimit(
+    key: string,
+    config: RateLimitConfig = defaultRateLimitConfig
+  ): boolean {
     const now = Date.now();
     const entry = rateLimitCache.get(key);
 
@@ -155,7 +158,10 @@ export const rateLimiter = {
   /**
    * Get remaining requests for a key
    */
-  getRemaining(key: string, config: RateLimitConfig = defaultRateLimitConfig): number {
+  getRemaining(
+    key: string,
+    config: RateLimitConfig = defaultRateLimitConfig
+  ): number {
     const entry = rateLimitCache.get(key);
     if (!entry || Date.now() > entry.resetTime) {
       return config.maxRequests;
@@ -192,11 +198,11 @@ export const rateLimiter = {
    * Rate limit configurations for different endpoints
    */
   configs: {
-    login: { maxRequests: 5, windowMs: 60000 },       // 5 per minute
-    register: { maxRequests: 3, windowMs: 60000 },    // 3 per minute
+    login: { maxRequests: 5, windowMs: 60000 }, // 5 per minute
+    register: { maxRequests: 3, windowMs: 60000 }, // 3 per minute
     passwordReset: { maxRequests: 3, windowMs: 300000 }, // 3 per 5 minutes
-    twoFactor: { maxRequests: 5, windowMs: 60000 },   // 5 per minute
-    api: { maxRequests: 100, windowMs: 60000 },       // 100 per minute
+    twoFactor: { maxRequests: 5, windowMs: 60000 }, // 5 per minute
+    api: { maxRequests: 100, windowMs: 60000 }, // 100 per minute
   },
 };
 
@@ -208,29 +214,31 @@ export const rateLimiter = {
  * Security Headers Configuration
  */
 export interface SecurityHeaders {
-  'Content-Security-Policy'?: string;
-  'X-Content-Type-Options'?: string;
-  'X-Frame-Options'?: string;
-  'X-XSS-Protection'?: string;
-  'Referrer-Policy'?: string;
-  'Strict-Transport-Security'?: string;
-  'Permissions-Policy'?: string;
+  "Content-Security-Policy"?: string;
+  "X-Content-Type-Options"?: string;
+  "X-Frame-Options"?: string;
+  "X-XSS-Protection"?: string;
+  "Referrer-Policy"?: string;
+  "Strict-Transport-Security"?: string;
+  "Permissions-Policy"?: string;
 }
 
 /**
  * Expected security headers for production
  */
 export const expectedSecurityHeaders: SecurityHeaders = {
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "X-XSS-Protection": "1; mode=block",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
 };
 
 /**
  * Validate response has proper security headers
  */
-export function validateSecurityHeaders(headers: Headers | Record<string, string>): {
+export function validateSecurityHeaders(
+  headers: Headers | Record<string, string>
+): {
   valid: boolean;
   missing: string[];
   warnings: string[];
@@ -246,7 +254,9 @@ export function validateSecurityHeaders(headers: Headers | Record<string, string
   };
 
   // Check expected headers
-  for (const [header, expectedValue] of Object.entries(expectedSecurityHeaders)) {
+  for (const [header, expectedValue] of Object.entries(
+    expectedSecurityHeaders
+  )) {
     const value = getHeader(header);
     if (!value) {
       missing.push(header);
@@ -256,10 +266,13 @@ export function validateSecurityHeaders(headers: Headers | Record<string, string
   }
 
   // Check for HSTS in production
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
-    const hsts = getHeader('Strict-Transport-Security');
+  if (
+    typeof globalThis.location !== "undefined" &&
+    globalThis.location.protocol === "https:"
+  ) {
+    const hsts = getHeader("Strict-Transport-Security");
     if (!hsts) {
-      missing.push('Strict-Transport-Security');
+      missing.push("Strict-Transport-Security");
     }
   }
 
@@ -278,10 +291,10 @@ export function validateSecurityHeaders(headers: Headers | Record<string, string
  * 2FA verification states
  */
 export enum TwoFactorState {
-  NOT_ENABLED = 'not_enabled',
-  SETUP_REQUIRED = 'setup_required',
-  VERIFICATION_REQUIRED = 'verification_required',
-  VERIFIED = 'verified',
+  NOT_ENABLED = "not_enabled",
+  SETUP_REQUIRED = "setup_required",
+  VERIFICATION_REQUIRED = "verification_required",
+  VERIFIED = "verified",
 }
 
 /**
@@ -335,7 +348,7 @@ export const twoFactorAuth = {
    */
   validateBackupCodeFormat(code: string): boolean {
     // Backup codes are typically 8-10 alphanumeric characters
-    return /^[A-Z0-9]{8,10}$/i.test(code.replace(/-/g, ''));
+    return /^[A-Z0-9]{8,10}$/i.test(code.replace(/-/g, ""));
   },
 
   /**
@@ -343,7 +356,7 @@ export const twoFactorAuth = {
    */
   formatBackupCode(code: string): string {
     // Format as XXXX-XXXX or XXXXX-XXXXX
-    const clean = code.replace(/-/g, '').toUpperCase();
+    const clean = code.replace(/-/g, "").toUpperCase();
     const mid = Math.floor(clean.length / 2);
     return `${clean.slice(0, mid)}-${clean.slice(mid)}`;
   },
@@ -393,10 +406,12 @@ export const sessionSecurity = {
     this.resetInactivityTimer();
 
     // Listen for user activity
-    if (typeof window !== 'undefined') {
-      const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-      events.forEach(event => {
-        window.addEventListener(event, () => this.updateActivity(), { passive: true });
+    if (typeof globalThis.addEventListener !== "undefined") {
+      const events = ["mousedown", "keydown", "scroll", "touchstart"];
+      events.forEach((event) => {
+        globalThis.addEventListener(event, () => this.updateActivity(), {
+          passive: true,
+        });
       });
     }
   },
@@ -441,7 +456,7 @@ export const sessionSecurity = {
  * Sanitize user input to prevent XSS
  */
 export function sanitizeInput(input: string): string {
-  const div = document.createElement('div');
+  const div = document.createElement("div");
   div.textContent = input;
   return div.innerHTML;
 }
@@ -468,24 +483,24 @@ export function validatePasswordStrength(password: string): PasswordStrength {
   let score = 0;
 
   if (password.length >= 8) score++;
-  else feedback.push('Password should be at least 8 characters');
+  else feedback.push("Password should be at least 8 characters");
 
   if (password.length >= 12) score++;
 
   if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
-  else feedback.push('Include both uppercase and lowercase letters');
+  else feedback.push("Include both uppercase and lowercase letters");
 
   if (/\d/.test(password)) score++;
-  else feedback.push('Include at least one number');
+  else feedback.push("Include at least one number");
 
   if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score++;
-  else feedback.push('Include at least one special character');
+  else feedback.push("Include at least one special character");
 
   // Check for common patterns
-  const commonPatterns = ['password', '123456', 'qwerty', 'abc123'];
-  if (commonPatterns.some(p => password.toLowerCase().includes(p))) {
+  const commonPatterns = ["password", "123456", "qwerty", "abc123"];
+  if (commonPatterns.some((p) => password.toLowerCase().includes(p))) {
     score = Math.max(0, score - 2);
-    feedback.push('Avoid common password patterns');
+    feedback.push("Avoid common password patterns");
   }
 
   return {
@@ -507,7 +522,7 @@ export async function getDeviceFingerprint(): Promise<string> {
   const components: string[] = [];
 
   // Screen info
-  if (typeof screen !== 'undefined') {
+  if (typeof screen !== "undefined") {
     components.push(`${screen.width}x${screen.height}x${screen.colorDepth}`);
   }
 
@@ -517,17 +532,25 @@ export async function getDeviceFingerprint(): Promise<string> {
   // Language
   components.push(navigator.language);
 
-  // Platform
-  components.push(navigator.platform);
+  // Platform (using userAgentData when available, fallback to userAgent parsing)
+  if ("userAgentData" in navigator && navigator.userAgentData?.platform) {
+    components.push(navigator.userAgentData.platform);
+  } else {
+    // Fallback: extract platform from userAgent
+    const ua = navigator.userAgent;
+    const platform =
+      /Windows|Mac|Linux|Android|iOS/i.exec(ua)?.[0] ?? "unknown";
+    components.push(platform);
+  }
 
   // Canvas fingerprint (generic)
   try {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
     if (ctx) {
-      ctx.textBaseline = 'top';
-      ctx.font = '14px Arial';
-      ctx.fillText('fingerprint', 0, 0);
+      ctx.textBaseline = "top";
+      ctx.font = "14px Arial";
+      ctx.fillText("fingerprint", 0, 0);
       components.push(canvas.toDataURL().slice(-50));
     }
   } catch {
@@ -535,11 +558,11 @@ export async function getDeviceFingerprint(): Promise<string> {
   }
 
   // Create hash
-  const data = components.join('|');
+  const data = components.join("|");
   const encoder = new TextEncoder();
-  const buffer = await crypto.subtle.digest('SHA-256', encoder.encode(data));
+  const buffer = await crypto.subtle.digest("SHA-256", encoder.encode(data));
   const hashArray = Array.from(new Uint8Array(buffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 // ============================================
@@ -560,32 +583,32 @@ export const secureStorage = {
    * Initialize encryption key
    */
   async init(): Promise<void> {
-    if (typeof crypto === 'undefined' || !crypto.subtle) {
-      console.warn('Web Crypto API not available');
+    if (typeof crypto === "undefined" || !crypto.subtle) {
+      console.warn("Web Crypto API not available");
       return;
     }
 
     const fingerprint = await getDeviceFingerprint();
     const encoder = new TextEncoder();
     const keyMaterial = await crypto.subtle.importKey(
-      'raw',
+      "raw",
       encoder.encode(fingerprint),
-      { name: 'PBKDF2' },
+      { name: "PBKDF2" },
       false,
-      ['deriveKey']
+      ["deriveKey"]
     );
 
     this.encryptionKey = await crypto.subtle.deriveKey(
       {
-        name: 'PBKDF2',
-        salt: encoder.encode('ai-code-review-salt'),
+        name: "PBKDF2",
+        salt: encoder.encode("ai-code-review-salt"),
         iterations: 100000,
-        hash: 'SHA-256',
+        hash: "SHA-256",
       },
       keyMaterial,
-      { name: 'AES-GCM', length: 256 },
+      { name: "AES-GCM", length: 256 },
       false,
-      ['encrypt', 'decrypt']
+      ["encrypt", "decrypt"]
     );
   },
 
@@ -601,7 +624,7 @@ export const secureStorage = {
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const encoder = new TextEncoder();
     const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
+      { name: "AES-GCM", iv },
       this.encryptionKey,
       encoder.encode(value)
     );
@@ -627,7 +650,7 @@ export const secureStorage = {
     try {
       const { iv, data } = JSON.parse(stored);
       const decrypted = await crypto.subtle.decrypt(
-        { name: 'AES-GCM', iv: new Uint8Array(iv) },
+        { name: "AES-GCM", iv: new Uint8Array(iv) },
         this.encryptionKey,
         new Uint8Array(data)
       );
@@ -660,9 +683,9 @@ export const secureStorage = {
  * Report CSP violations
  */
 export function setupCSPReporting(): void {
-  if (typeof document === 'undefined') return;
+  if (typeof document === "undefined") return;
 
-  document.addEventListener('securitypolicyviolation', (event) => {
+  document.addEventListener("securitypolicyviolation", (event) => {
     const report = {
       documentURI: event.documentURI,
       violatedDirective: event.violatedDirective,
@@ -674,12 +697,12 @@ export function setupCSPReporting(): void {
     };
 
     // Send to backend for logging
-    api.post('/security/csp-report', report).catch(() => {
+    api.post("/security/csp-report", report).catch(() => {
       // Silently fail - don't block on CSP reporting
     });
 
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('CSP Violation:', report);
+    if (process.env.NODE_ENV === "development") {
+      console.warn("CSP Violation:", report);
     }
   });
 }

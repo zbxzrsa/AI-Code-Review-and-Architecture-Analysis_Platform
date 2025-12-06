@@ -129,8 +129,8 @@ const generateId = () => Math.random().toString(36).substring(2, 9);
 
 // Get system theme preference
 const getSystemTheme = (): "light" | "dark" => {
-  if (typeof window !== "undefined") {
-    return window.matchMedia("(prefers-color-scheme: dark)").matches
+  if (typeof globalThis.matchMedia !== "undefined") {
+    return globalThis.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";
   }
@@ -354,10 +354,10 @@ export const useUIStore = create<UIState>()(
 );
 
 // Listen for system theme changes
-if (typeof window !== "undefined") {
-  window
+if (typeof globalThis.matchMedia !== "undefined") {
+  globalThis
     .matchMedia("(prefers-color-scheme: dark)")
-    .addEventListener("change", (_e) => {
+    .addEventListener("change", () => {
       const state = useUIStore.getState();
       if (state.theme === "system") {
         state.setTheme("system");

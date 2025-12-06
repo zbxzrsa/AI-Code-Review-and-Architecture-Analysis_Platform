@@ -78,7 +78,7 @@ versions:
 vcai:
   image:
     repository: vcai
-    tag: latest
+    tag: v1.0.0
     pullPolicy: IfNotPresent
 
   service:
@@ -121,7 +121,7 @@ vcai:
 crai:
   image:
     repository: crai
-    tag: latest
+    tag: v1.0.0
     pullPolicy: IfNotPresent
 
   service:
@@ -144,7 +144,7 @@ lifecycleController:
 
   image:
     repository: lifecycle-controller
-    tag: latest
+    tag: v1.0.0
     pullPolicy: IfNotPresent
 
   replicas: 2
@@ -179,7 +179,7 @@ evaluationPipeline:
 
   image:
     repository: evaluation-pipeline
-    tag: latest
+    tag: v1.0.0
     pullPolicy: IfNotPresent
 
   replicas: 1
@@ -204,7 +204,7 @@ threeVersionService:
 
   image:
     repository: three-version-service
-    tag: latest
+    tag: v1.0.0
     pullPolicy: IfNotPresent
 
   replicas: 2
@@ -259,7 +259,7 @@ semanticCache:
 
   image:
     repository: semantic-cache
-    tag: latest
+    tag: v1.0.0
 
   replicas: 2
 
@@ -276,7 +276,7 @@ frontend:
 
   image:
     repository: frontend
-    tag: latest
+    tag: v1.0.0
     pullPolicy: IfNotPresent
 
   replicas: 2
@@ -337,7 +337,7 @@ opa:
 
   image:
     repository: openpolicyagent/opa
-    tag: latest
+    tag: 0.60.0-rootless
 
   replicas: 2
 

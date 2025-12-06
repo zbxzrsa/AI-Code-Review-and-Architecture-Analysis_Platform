@@ -36,7 +36,6 @@ import {
 import { useTranslation } from 'react-i18next';
 
 const { Title, Text } = Typography;
-// const { Panel } = Collapse;
 
 interface Shortcut {
   keys: string[];

@@ -83,13 +83,13 @@ interface AIModel {
   last_evaluation?: string;
 }
 
-interface _ModelVersion {
+interface ModelVersionInfo {
   id: string;
   model_id: string;
   version: string;
   zone: string;
   status: string;
-  metrics: any;
+  metrics: Record<string, unknown>;
   created_at: string;
   promoted_by?: string;
   promotion_reason?: string;

@@ -19,6 +19,15 @@ from sqlalchemy.sql import func
 
 Base = declarative_base()
 
+# Foreign key reference constants
+FK_USERS_ID = "users.id"
+FK_PROJECTS_ID = "projects.id"
+FK_REPOSITORIES_ID = "repositories.id"
+
+# On delete action constants
+ON_DELETE_CASCADE = "CASCADE"
+ON_DELETE_SET_NULL = "SET NULL"
+
 
 def generate_uuid() -> str:
     """Generate a UUID string."""

@@ -62,11 +62,12 @@ export interface StoredNotification {
 
 class NotificationManager {
   private history: StoredNotification[] = [];
-  private maxHistory: number = 100;
+  private readonly maxHistory: number = 100;
   private soundEnabled: boolean = true;
-  private listeners: Set<(notifications: StoredNotification[]) => void> =
-    new Set();
-  private groupCounts: Map<string, number> = new Map();
+  private readonly listeners: Set<
+    (notifications: StoredNotification[]) => void
+  > = new Set();
+  private readonly groupCounts: Map<string, number> = new Map();
 
   constructor() {
     this.loadFromStorage();
@@ -353,8 +354,11 @@ class NotificationManager {
   private playSound(type: NotificationType): void {
     // Simple beep using Web Audio API
     try {
-      const audioContext = new (window.AudioContext ||
-        (window as any).webkitAudioContext)();
+      const AudioContextClass =
+        globalThis.AudioContext ||
+        (globalThis as unknown as { webkitAudioContext: typeof AudioContext })
+          .webkitAudioContext;
+      const audioContext = new AudioContextClass();
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
 

@@ -167,7 +167,7 @@ def main():
             files_fixed += 1
     
     print("\n" + "=" * 60)
-    print(f"Summary:")
+    print("Summary:")
     print(f"  Files {'would be ' if args.dry_run else ''}modified: {files_fixed}")
     print(f"  Total fixes {'would be ' if args.dry_run else ''}applied: {total_fixes}")
     

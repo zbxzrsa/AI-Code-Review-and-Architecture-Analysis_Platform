@@ -15,14 +15,14 @@ export const useThemeStore = create<ThemeStore>()(
       mode: "light",
       setMode: (mode) => set({ mode }),
       toggleMode: () =>
-        set((state) => ({
-          mode:
-            state.mode === "light"
-              ? "dark"
-              : state.mode === "dark"
-              ? "high-contrast"
-              : "light",
-        })),
+        set((state) => {
+          const modeMap: Record<ThemeMode, ThemeMode> = {
+            light: "dark",
+            dark: "high-contrast",
+            "high-contrast": "light",
+          };
+          return { mode: modeMap[state.mode] };
+        }),
     }),
     {
       name: "theme-storage",

@@ -347,7 +347,7 @@ class CrossVersionFeedbackSystem:
     # Testing & Verification
     # =========================================================================
     
-    async def _test_fix(self, fix: V2Fix):
+    def _test_fix(self, fix: V2Fix):
         """Test the applied fix."""
         fix.status = FixStatus.TESTING
         

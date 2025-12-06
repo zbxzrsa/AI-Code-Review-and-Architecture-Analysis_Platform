@@ -85,7 +85,7 @@ class SlidingWindowRateLimiter:
         self._redis = None
         self._rules: Dict[str, RateLimitRule] = {}
         
-    async def _get_redis(self):
+    def _get_redis(self):
         """Get Redis connection (lazy initialization)."""
         if self._redis is None:
             try:

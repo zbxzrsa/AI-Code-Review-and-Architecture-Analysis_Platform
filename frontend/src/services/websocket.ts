@@ -2,7 +2,7 @@
  * WebSocket service for real-time communication
  */
 
-import { useAuthStore } from '../store/authStore';
+import { useAuthStore } from "../store/authStore";
 
 type MessageHandler = (data: unknown) => void;
 type ConnectionHandler = () => void;
@@ -20,20 +20,21 @@ const defaultConfig: Partial<WebSocketConfig> = {
   reconnect: true,
   reconnectAttempts: 5,
   reconnectDelay: 3000,
-  heartbeatInterval: 30000
+  heartbeatInterval: 30000,
 };
 
 class WebSocketService {
   private ws: WebSocket | null = null;
-  private config: WebSocketConfig;
+  private readonly config: WebSocketConfig;
   private reconnectCount = 0;
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private heartbeatInterval: NodeJS.Timeout | null = null;
-  private messageHandlers: Map<string, Set<MessageHandler>> = new Map();
-  private connectionHandlers: Set<ConnectionHandler> = new Set();
-  private disconnectionHandlers: Set<ConnectionHandler> = new Set();
-  private errorHandlers: Set<ErrorHandler> = new Set();
-  private messageQueue: unknown[] = [];
+  private readonly messageHandlers: Map<string, Set<MessageHandler>> =
+    new Map();
+  private readonly connectionHandlers: Set<ConnectionHandler> = new Set();
+  private readonly disconnectionHandlers: Set<ConnectionHandler> = new Set();
+  private readonly errorHandlers: Set<ErrorHandler> = new Set();
+  private readonly messageQueue: unknown[] = [];
 
   constructor(config: WebSocketConfig) {
     this.config = { ...defaultConfig, ...config };
@@ -49,14 +50,18 @@ class WebSocketService {
 
     const { token } = useAuthStore.getState();
     const url = token
-      ? `${this.config.url}${this.config.url.includes('?') ? '&' : '?'}token=${token}`
+      ? `${this.config.url}${
+          this.config.url.includes("?") ? "&" : "?"
+        }token=${token}`
       : this.config.url;
 
     try {
       this.ws = new WebSocket(url);
       this.setupEventHandlers();
     } catch (error) {
-      this.handleError(error instanceof Error ? error : new Error('Connection failed'));
+      this.handleError(
+        error instanceof Error ? error : new Error("Connection failed")
+      );
     }
   }
 
@@ -158,7 +163,7 @@ class WebSocketService {
     };
 
     this.ws.onerror = () => {
-      this.handleError(new Error('WebSocket error'));
+      this.handleError(new Error("WebSocket error"));
     };
 
     this.ws.onmessage = (event) => {
@@ -167,7 +172,7 @@ class WebSocketService {
         const { type, data } = message;
 
         // Handle heartbeat response
-        if (type === 'pong') {
+        if (type === "pong") {
           return;
         }
 
@@ -178,12 +183,12 @@ class WebSocketService {
         }
 
         // Also dispatch to wildcard handlers
-        const wildcardHandlers = this.messageHandlers.get('*');
+        const wildcardHandlers = this.messageHandlers.get("*");
         if (wildcardHandlers) {
           wildcardHandlers.forEach((handler) => handler(message));
         }
       } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
+        console.error("Failed to parse WebSocket message:", error);
       }
     };
   }
@@ -193,7 +198,7 @@ class WebSocketService {
 
     this.heartbeatInterval = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
-        this.ws.send(JSON.stringify({ type: 'ping' }));
+        this.ws.send(JSON.stringify({ type: "ping" }));
       }
     }, this.config.heartbeatInterval);
   }
@@ -223,7 +228,10 @@ class WebSocketService {
 
   private flushMessageQueue(): void {
     while (this.messageQueue.length > 0) {
-      const message = this.messageQueue.shift() as { type: string; data: unknown };
+      const message = this.messageQueue.shift() as {
+        type: string;
+        data: unknown;
+      };
       this.send(message.type, message.data);
     }
   }
@@ -234,24 +242,24 @@ class WebSocketService {
 }
 
 // Create singleton instances for different WebSocket connections
-const WS_BASE_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000';
+const WS_BASE_URL = import.meta.env.VITE_WS_URL || "ws://localhost:8000";
 
 export const mainWebSocket = new WebSocketService({
-  url: `${WS_BASE_URL}/ws/main`
+  url: `${WS_BASE_URL}/ws/main`,
 });
 
 export const collaborationWebSocket = new WebSocketService({
-  url: `${WS_BASE_URL}/ws/collaborate`
+  url: `${WS_BASE_URL}/ws/collaborate`,
 });
 
 export const notificationWebSocket = new WebSocketService({
-  url: `${WS_BASE_URL}/ws/notifications`
+  url: `${WS_BASE_URL}/ws/notifications`,
 });
 
 // Factory function for creating document-specific WebSocket connections
 export function createDocumentWebSocket(documentId: string): WebSocketService {
   return new WebSocketService({
-    url: `${WS_BASE_URL}/ws/document/${documentId}`
+    url: `${WS_BASE_URL}/ws/document/${documentId}`,
   });
 }
 

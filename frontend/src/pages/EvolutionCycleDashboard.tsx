@@ -27,7 +27,6 @@ import {
   Alert,
   message,
   Divider,
-  notification,
 } from 'antd';
 import {
   ExperimentOutlined,
@@ -38,8 +37,6 @@ import {
   ReloadOutlined,
   SyncOutlined,
   ThunderboltOutlined,
-  PlayCircleOutlined,
-  PauseCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useTranslation } from 'react-i18next';

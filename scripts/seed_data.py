@@ -381,7 +381,7 @@ async def main():
     
     try:
         conn = await create_connection()
-        print(f"✅ Connected to database")
+        print("✅ Connected to database")
         
         # Clear and seed
         await clear_data(conn)

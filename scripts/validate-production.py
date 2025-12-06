@@ -252,11 +252,9 @@ class ProductionValidator:
             ("Hardcoded Secrets", self.validate_secrets_not_in_code),
         ]
         
-        all_passed = True
         for name, validator in validations:
             print(f"\nChecking {name}...")
-            if not validator():
-                all_passed = False
+            validator()
         
         # Print summary
         print_header("Validation Summary")

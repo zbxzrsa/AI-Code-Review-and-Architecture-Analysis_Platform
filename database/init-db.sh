@@ -33,6 +33,7 @@ execute_sql() {
     
     if psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -f "$file" > /dev/null 2>&1; then
         echo -e "${GREEN}✓ $description completed${NC}"
+        return 0
     else
         echo -e "${RED}✗ $description failed${NC}"
         exit 1

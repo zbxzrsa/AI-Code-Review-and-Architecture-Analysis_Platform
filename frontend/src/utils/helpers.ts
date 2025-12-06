@@ -1,6 +1,6 @@
 /**
  * Utility Helper Functions
- * 
+ *
  * Common utility functions used across the application:
  * - Date/Time formatting
  * - String manipulation
@@ -29,13 +29,14 @@ export function formatRelativeTime(date: Date | string | number): string {
   const diffMonth = Math.floor(diffDay / 30);
   const diffYear = Math.floor(diffDay / 365);
 
-  if (diffSec < 60) return 'just now';
-  if (diffMin < 60) return `${diffMin} minute${diffMin > 1 ? 's' : ''} ago`;
-  if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? 's' : ''} ago`;
-  if (diffDay < 7) return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
-  if (diffWeek < 4) return `${diffWeek} week${diffWeek > 1 ? 's' : ''} ago`;
-  if (diffMonth < 12) return `${diffMonth} month${diffMonth > 1 ? 's' : ''} ago`;
-  return `${diffYear} year${diffYear > 1 ? 's' : ''} ago`;
+  if (diffSec < 60) return "just now";
+  if (diffMin < 60) return `${diffMin} minute${diffMin > 1 ? "s" : ""} ago`;
+  if (diffHour < 24) return `${diffHour} hour${diffHour > 1 ? "s" : ""} ago`;
+  if (diffDay < 7) return `${diffDay} day${diffDay > 1 ? "s" : ""} ago`;
+  if (diffWeek < 4) return `${diffWeek} week${diffWeek > 1 ? "s" : ""} ago`;
+  if (diffMonth < 12)
+    return `${diffMonth} month${diffMonth > 1 ? "s" : ""} ago`;
+  return `${diffYear} year${diffYear > 1 ? "s" : ""} ago`;
 }
 
 /**
@@ -44,9 +45,9 @@ export function formatRelativeTime(date: Date | string | number): string {
 export function formatDate(
   date: Date | string | number,
   options: Intl.DateTimeFormatOptions = {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
+    year: "numeric",
+    month: "short",
+    day: "numeric",
   }
 ): string {
   return new Date(date).toLocaleDateString(undefined, options);
@@ -57,11 +58,11 @@ export function formatDate(
  */
 export function formatDateTime(date: Date | string | number): string {
   return new Date(date).toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -71,7 +72,8 @@ export function formatDateTime(date: Date | string | number): string {
 export function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  if (ms < 3600000) return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+  if (ms < 3600000)
+    return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
   return `${Math.floor(ms / 3600000)}h ${Math.floor((ms % 3600000) / 60000)}m`;
 }
 
@@ -82,7 +84,11 @@ export function formatDuration(ms: number): string {
 /**
  * Truncate string with ellipsis
  */
-export function truncate(str: string, maxLength: number, suffix: string = '...'): string {
+export function truncate(
+  str: string,
+  maxLength: number,
+  suffix: string = "..."
+): string {
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength - suffix.length) + suffix;
 }
@@ -94,9 +100,9 @@ export function slugify(str: string): string {
   return str
     .toLowerCase()
     .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replaceAll(/[^\w\s-]/g, "")
+    .replaceAll(/[\s_-]+/g, "-")
+    .replaceAll(/(?:^-+|-+$)/g, "");
 }
 
 /**
@@ -111,8 +117,8 @@ export function capitalize(str: string): string {
  */
 export function camelToTitle(str: string): string {
   return str
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (s) => s.toUpperCase())
+    .replaceAll(/([A-Z])/g, " $1")
+    .replaceAll(/^./, (s) => s.toUpperCase())
     .trim();
 }
 
@@ -120,8 +126,9 @@ export function camelToTitle(str: string): string {
  * Generate random string
  */
 export function randomString(length: number = 8): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
+  const chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
   for (let i = 0; i < length; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length));
   }
@@ -133,12 +140,12 @@ export function randomString(length: number = 8): string {
  */
 export function highlightText(text: string, search: string): string {
   if (!search) return text;
-  const regex = new RegExp(`(${escapeRegExp(search)})`, 'gi');
-  return text.replace(regex, '<mark>$1</mark>');
+  const regex = new RegExp(`(${escapeRegExp(search)})`, "gi");
+  return text.replace(regex, "<mark>$1</mark>");
 }
 
 function escapeRegExp(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // ============================================
@@ -159,13 +166,15 @@ export function formatNumber(num: number, decimals: number = 0): string {
  * Format bytes to human readable size
  */
 export function formatBytes(bytes: number, decimals: number = 2): string {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) return "0 B";
 
   const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+  const sizes = ["B", "KB", "MB", "GB", "TB", "PB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
 
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${sizes[i]}`;
+  return `${Number.parseFloat((bytes / Math.pow(k, i)).toFixed(decimals))} ${
+    sizes[i]
+  }`;
 }
 
 /**
@@ -247,21 +256,21 @@ export function validatePassword(password: string): {
   let score = 0;
 
   if (password.length >= 8) score += 1;
-  else feedback.push('At least 8 characters');
+  else feedback.push("At least 8 characters");
 
   if (password.length >= 12) score += 1;
 
   if (/[a-z]/.test(password)) score += 1;
-  else feedback.push('At least one lowercase letter');
+  else feedback.push("At least one lowercase letter");
 
   if (/[A-Z]/.test(password)) score += 1;
-  else feedback.push('At least one uppercase letter');
+  else feedback.push("At least one uppercase letter");
 
-  if (/[0-9]/.test(password)) score += 1;
-  else feedback.push('At least one number');
+  if (/\d/.test(password)) score += 1;
+  else feedback.push("At least one number");
 
   if (/[^a-zA-Z0-9]/.test(password)) score += 1;
-  else feedback.push('At least one special character');
+  else feedback.push("At least one special character");
 
   return {
     valid: score >= 4,
@@ -278,13 +287,14 @@ export function validatePassword(password: string): {
  * Deep clone an object
  */
 export function deepClone<T>(obj: T): T {
-  if (obj === null || typeof obj !== 'object') return obj;
-  if (obj instanceof Date) return new Date(obj.getTime()) as unknown as T;
-  if (obj instanceof Array) return obj.map(item => deepClone(item)) as unknown as T;
+  if (obj === null || typeof obj !== "object") return obj;
+  if (obj instanceof Date) return new Date(obj.valueOf()) as unknown as T;
+  if (obj instanceof Array)
+    return obj.map((item) => deepClone(item)) as unknown as T;
   if (obj instanceof Object) {
     const clone = {} as T;
     for (const key in obj) {
-      if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      if (Object.hasOwn(obj, key)) {
         (clone as any)[key] = deepClone((obj as any)[key]);
       }
     }
@@ -296,14 +306,17 @@ export function deepClone<T>(obj: T): T {
 /**
  * Deep merge objects
  */
-export function deepMerge<T extends object>(target: T, ...sources: Partial<T>[]): T {
+export function deepMerge<T extends object>(
+  target: T,
+  ...sources: Partial<T>[]
+): T {
   if (!sources.length) return target;
   const source = sources.shift();
 
   if (source === undefined) return target;
 
   for (const key in source) {
-    if (Object.prototype.hasOwnProperty.call(source, key)) {
+    if (Object.hasOwn(source, key)) {
       const targetValue = (target as any)[key];
       const sourceValue = (source as any)[key];
 
@@ -319,14 +332,14 @@ export function deepMerge<T extends object>(target: T, ...sources: Partial<T>[])
 }
 
 function isObject(item: any): item is object {
-  return item !== null && typeof item === 'object' && !Array.isArray(item);
+  return item !== null && typeof item === "object" && !Array.isArray(item);
 }
 
 /**
  * Get nested property safely
  */
 export function get<T>(obj: any, path: string, defaultValue?: T): T {
-  const keys = path.split('.');
+  const keys = path.split(".");
   let result = obj;
 
   for (const key of keys) {
@@ -343,7 +356,7 @@ export function get<T>(obj: any, path: string, defaultValue?: T): T {
  * Set nested property
  */
 export function set(obj: any, path: string, value: any): void {
-  const keys = path.split('.');
+  const keys = path.split(".");
   let current = obj;
 
   for (let i = 0; i < keys.length - 1; i++) {
@@ -360,7 +373,10 @@ export function set(obj: any, path: string, value: any): void {
 /**
  * Pick specified keys from object
  */
-export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
+export function pick<T extends object, K extends keyof T>(
+  obj: T,
+  keys: K[]
+): Pick<T, K> {
   const result = {} as Pick<T, K>;
   for (const key of keys) {
     if (key in obj) {
@@ -373,7 +389,10 @@ export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pi
 /**
  * Omit specified keys from object
  */
-export function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
+export function omit<T extends object, K extends keyof T>(
+  obj: T,
+  keys: K[]
+): Omit<T, K> {
   const result = { ...obj };
   for (const key of keys) {
     delete result[key];
@@ -391,7 +410,7 @@ export function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Om
 export function unique<T>(arr: T[], key?: keyof T): T[] {
   if (key) {
     const seen = new Set();
-    return arr.filter(item => {
+    return arr.filter((item) => {
       const k = item[key];
       if (seen.has(k)) return false;
       seen.add(k);
@@ -416,11 +435,15 @@ export function groupBy<T>(arr: T[], key: keyof T): Record<string, T[]> {
 /**
  * Sort array by key
  */
-export function sortBy<T>(arr: T[], key: keyof T, order: 'asc' | 'desc' = 'asc'): T[] {
+export function sortBy<T>(
+  arr: T[],
+  key: keyof T,
+  order: "asc" | "desc" = "asc"
+): T[] {
   return [...arr].sort((a, b) => {
     const aVal = a[key];
     const bVal = b[key];
-    const modifier = order === 'asc' ? 1 : -1;
+    const modifier = order === "asc" ? 1 : -1;
 
     if (aVal < bVal) return -1 * modifier;
     if (aVal > bVal) return 1 * modifier;
@@ -521,7 +544,9 @@ export async function retry<T>(
     } catch (error) {
       lastError = error as Error;
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+        await new Promise((resolve) =>
+          setTimeout(resolve, delay * Math.pow(2, i))
+        );
       }
     }
   }
@@ -533,7 +558,7 @@ export async function retry<T>(
  * Sleep/delay function
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 // ============================================
@@ -543,13 +568,15 @@ export function sleep(ms: number): Promise<void> {
 /**
  * Convert hex to RGB
  */
-export function hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+export function hexToRgb(
+  hex: string
+): { r: number; g: number; b: number } | null {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result
     ? {
-        r: parseInt(result[1], 16),
-        g: parseInt(result[2], 16),
-        b: parseInt(result[3], 16),
+        r: Number.parseInt(result[1], 16),
+        g: Number.parseInt(result[2], 16),
+        b: Number.parseInt(result[3], 16),
       }
     : null;
 }
@@ -558,7 +585,7 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } | nul
  * Convert RGB to hex
  */
 export function rgbToHex(r: number, g: number, b: number): string {
-  return '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+  return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
 /**

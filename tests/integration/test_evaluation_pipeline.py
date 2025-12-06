@@ -241,7 +241,7 @@ class TestStatisticalAnalysis:
         v1 = sample_metrics["v1_accuracy"]
         v2 = sample_metrics["v2_accuracy"]
         
-        u_stat, p_value = stats.mannwhitneyu(v1, v2, alternative='greater')
+        _, p_value = stats.mannwhitneyu(v1, v2, alternative='greater')
         
         # V1 should have higher accuracy
         assert p_value < 0.05  # Statistically significant

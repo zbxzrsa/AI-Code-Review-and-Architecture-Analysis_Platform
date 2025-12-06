@@ -72,7 +72,7 @@ const calculatePasswordStrength = (password: string): { score: number; status: '
   if (/[A-Z]/.test(password)) score += 15;
   
   // 包含数字 / Contains number
-  if (/[0-9]/.test(password)) score += 15;
+  if (/\d/.test(password)) score += 15;
   
   // 包含特殊字符 / Contains special character
   if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 15;
@@ -129,7 +129,7 @@ export const Register: React.FC = () => {
       text: t('register.password_uppercase', 'One uppercase letter / 一个大写字母') 
     },
     { 
-      valid: /[0-9]/.test(password), 
+      valid: /\d/.test(password), 
       text: t('register.password_number', 'One number / 一个数字') 
     },
   ], [password, t]);

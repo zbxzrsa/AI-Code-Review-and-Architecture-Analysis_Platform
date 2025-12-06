@@ -232,7 +232,7 @@ class VersionOrchestrator:
             try:
                 await self._evolution_task
             except asyncio.CancelledError:
-                raise  # Re-raise after cleanup
+                logger.info("Evolution task cancelled")
         
         logger.info("Version Evolution Cycle stopped")
     
@@ -253,7 +253,7 @@ class VersionOrchestrator:
                 await self._review_v3_quarantine()
                 
                 # Step 5: Execute pending evolutions
-                await self._execute_evolutions()
+                self._execute_evolutions()
                 
                 # Wait before next cycle
                 await asyncio.sleep(60)  # Check every minute
@@ -327,7 +327,7 @@ class VersionOrchestrator:
                     logger.info(f"Quarantined item {record.experiment_id} approved for retry in V1")
                     await self._move_to_v1(record)
     
-    async def _execute_evolutions(self):
+    def _execute_evolutions(self):
         """Execute pending version evolutions."""
         # Check for pending promotions
         if self.promotion:

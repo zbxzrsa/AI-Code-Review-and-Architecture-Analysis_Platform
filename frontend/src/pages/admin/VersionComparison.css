@@ -11,6 +11,7 @@
     height: 100%;
     border-radius: 8px;
     transition: box-shadow 0.3s ease;
+    animation: fadeIn 0.3s ease-out;
 }
 
 .version-card:hover {
@@ -210,10 +211,6 @@
         opacity: 1;
         transform: translateY(0);
     }
-}
-
-.version-card {
-    animation: fadeIn 0.3s ease-out;
 }
 
 .version-card:nth-child(2) {

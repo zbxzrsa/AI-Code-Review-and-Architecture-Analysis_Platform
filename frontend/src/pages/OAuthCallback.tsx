@@ -46,7 +46,7 @@ const OAuthCallback: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { provider } = useParams<{ provider: string }>();
-  const { login } = useAuth();
+  const { } = useAuth();  // Auth context available for future use
   
   const [state, setState] = useState<CallbackState>('loading');
   const [result, setResult] = useState<CallbackResult | null>(null);
@@ -170,16 +170,16 @@ const OAuthCallback: React.FC = () => {
 
   const handleRetry = () => {
     // Redirect to OAuth initiation
-    window.location.href = `/api/auth/oauth/connect/${provider}?return_url=${encodeURIComponent(window.location.origin + '/repositories')}`;
+    globalThis.location.href = `/api/auth/oauth/connect/${provider}?return_url=${encodeURIComponent(globalThis.location.origin + '/repositories')}`;
   };
 
   const handleGoBack = () => {
     navigate('/repositories', { replace: true });
   };
 
-  const handleGoHome = () => {
+  const handleGoHome = useCallback(() => {
     navigate('/', { replace: true });
-  };
+  }, [navigate]);
 
   const providerName = providerNames[provider || ''] || provider || 'OAuth';
   const providerIcon = providerIcons[provider || ''] || <LinkOutlined style={{ fontSize: 48 }} />;

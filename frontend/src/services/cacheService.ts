@@ -43,8 +43,8 @@ const DEFAULT_CONFIG: CacheConfig = {
 };
 
 class CacheService {
-  private memoryCache: Map<string, CacheEntry<unknown>> = new Map();
-  private config: CacheConfig;
+  private readonly memoryCache: Map<string, CacheEntry<unknown>> = new Map();
+  private readonly config: CacheConfig;
   private stats = {
     memoryHits: 0,
     memoryMisses: 0,

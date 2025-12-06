@@ -35,7 +35,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 /**
  * State-changing HTTP methods that require CSRF protection
  */
-const CSRF_PROTECTED_METHODS = ["post", "put", "patch", "delete"];
+const CSRF_PROTECTED_METHODS = new Set(["post", "put", "patch", "delete"]);
 
 /**
  * Endpoints that are rate-limited with specific configs
@@ -113,7 +113,7 @@ api.interceptors.request.use(
     }
 
     // Add CSRF token to state-changing requests
-    if (method && CSRF_PROTECTED_METHODS.includes(method)) {
+    if (method && CSRF_PROTECTED_METHODS.has(method)) {
       try {
         const csrfToken = await csrfManager.ensureToken();
         if (csrfToken && config.headers) {
@@ -254,7 +254,7 @@ api.interceptors.response.use(
     if (status === 429) {
       const retryAfter = error.response.headers["retry-after"];
       const resetTime = retryAfter
-        ? Date.now() + parseInt(retryAfter) * 1000
+        ? Date.now() + Number.parseInt(retryAfter, 10) * 1000
         : Date.now() + 60000;
 
       (error as any).retryAfter = retryAfter;

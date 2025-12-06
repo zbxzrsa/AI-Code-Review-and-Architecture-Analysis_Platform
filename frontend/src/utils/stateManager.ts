@@ -1,6 +1,6 @@
 /**
  * Enhanced State Manager
- * 
+ *
  * Utility functions for state management:
  * - Local storage with encryption
  * - Session management
@@ -37,13 +37,14 @@ interface HistoryEntry<T> {
 // Simple Encryption (for non-sensitive data)
 // ============================================
 
-const encryptionKey = 'crai-state-key-2024';
+const encryptionKey = "crai-state-key-2024";
 
 function simpleEncrypt(text: string): string {
-  let result = '';
+  let result = "";
   for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(
-      text.charCodeAt(i) ^ encryptionKey.charCodeAt(i % encryptionKey.length)
+    result += String.fromCodePoint(
+      (text.codePointAt(i) ?? 0) ^
+        (encryptionKey.codePointAt(i % encryptionKey.length) ?? 0)
     );
   }
   return btoa(result);
@@ -51,10 +52,11 @@ function simpleEncrypt(text: string): string {
 
 function simpleDecrypt(encoded: string): string {
   const text = atob(encoded);
-  let result = '';
+  let result = "";
   for (let i = 0; i < text.length; i++) {
-    result += String.fromCharCode(
-      text.charCodeAt(i) ^ encryptionKey.charCodeAt(i % encryptionKey.length)
+    result += String.fromCodePoint(
+      (text.codePointAt(i) ?? 0) ^
+        (encryptionKey.codePointAt(i % encryptionKey.length) ?? 0)
     );
   }
   return result;
@@ -65,9 +67,9 @@ function simpleDecrypt(encoded: string): string {
 // ============================================
 
 export class PersistenceManager<T> {
-  private key: string;
-  private options: StateOptions;
-  private currentVersion: number;
+  private readonly key: string;
+  private readonly options: StateOptions;
+  private readonly currentVersion: number;
 
   constructor(key: string, options: StateOptions = {}) {
     this.key = `crai_${key}`;
@@ -111,7 +113,9 @@ export class PersistenceManager<T> {
 
       // Check version
       if (stored.version !== this.currentVersion) {
-        console.warn(`[StateManager] Version mismatch for ${this.key}, clearing`);
+        console.warn(
+          `[StateManager] Version mismatch for ${this.key}, clearing`
+        );
         this.clear();
         return null;
       }
@@ -146,8 +150,10 @@ export class PersistenceManager<T> {
 export class HistoryManager<T> {
   private history: HistoryEntry<T>[] = [];
   private currentIndex: number = -1;
-  private maxHistory: number;
-  private listeners: Set<(state: T | null, canUndo: boolean, canRedo: boolean) => void> = new Set();
+  private readonly maxHistory: number;
+  private readonly listeners: Set<
+    (state: T | null, canUndo: boolean, canRedo: boolean) => void
+  > = new Set();
 
   constructor(maxHistory: number = 50) {
     this.maxHistory = maxHistory;
@@ -207,7 +213,7 @@ export class HistoryManager<T> {
   }
 
   public getHistory(): HistoryEntry<T>[] {
-    return this.history.map(entry => ({
+    return this.history.map((entry) => ({
       ...entry,
       state: this.deepClone(entry.state),
     }));
@@ -228,13 +234,13 @@ export class HistoryManager<T> {
 
   private notifyListeners(): void {
     const current = this.getCurrent();
-    this.listeners.forEach(callback => 
+    this.listeners.forEach((callback) =>
       callback(current, this.canUndo(), this.canRedo())
     );
   }
 
   private deepClone(obj: T): T {
-    return JSON.parse(JSON.stringify(obj));
+    return structuredClone(obj);
   }
 }
 
@@ -244,13 +250,13 @@ export class HistoryManager<T> {
 
 export class StateSynchronizer<T> {
   private channel: BroadcastChannel | null = null;
-  private key: string;
-  private listeners: Set<(state: T) => void> = new Set();
+  private readonly key: string;
+  private readonly listeners: Set<(state: T) => void> = new Set();
 
   constructor(channelName: string) {
     this.key = channelName;
-    
-    if ('BroadcastChannel' in window) {
+
+    if ("BroadcastChannel" in globalThis) {
       this.channel = new BroadcastChannel(`crai_sync_${channelName}`);
       this.channel.onmessage = (event) => {
         this.notifyListeners(event.data);
@@ -270,7 +276,7 @@ export class StateSynchronizer<T> {
   }
 
   private notifyListeners(state: T): void {
-    this.listeners.forEach(callback => callback(state));
+    this.listeners.forEach((callback) => callback(state));
   }
 
   public close(): void {
@@ -299,7 +305,7 @@ export function createDebouncedState<T>(
   const listeners = new Set<(value: T) => void>();
 
   const notify = () => {
-    listeners.forEach(callback => callback(currentValue));
+    listeners.forEach((callback) => callback(currentValue));
   };
 
   return {
@@ -333,8 +339,8 @@ export function createComputedState<T, R>(
   let cachedDeps: T[] | undefined;
 
   return () => {
-    const currentDeps = dependencies.map(dep => dep());
-    
+    const currentDeps = dependencies.map((dep) => dep());
+
     if (cachedDeps && currentDeps.every((dep, i) => dep === cachedDeps![i])) {
       return cachedResult!;
     }
@@ -389,12 +395,12 @@ export function createFormState<T extends Record<string, any>>(
   };
 
   const notify = () => {
-    listeners.forEach(callback => callback({ ...state }));
+    listeners.forEach((callback) => callback({ ...state }));
   };
 
   return {
     getState: () => ({ ...state }),
-    
+
     setValue: <K extends keyof T>(field: K, value: T[K]) => {
       state.values[field] = value;
       state.isDirty = true;
@@ -428,9 +434,9 @@ export function createFormState<T extends Record<string, any>>(
 
     submit: async () => {
       validateForm();
-      
+
       // Touch all fields
-      Object.keys(state.values).forEach(key => {
+      Object.keys(state.values).forEach((key) => {
         state.touched[key as keyof T] = true;
       });
 

@@ -13,11 +13,8 @@ import {
   Select,
   Row,
   Col,
-  Tabs,
-  List,
   Tag,
   Progress,
-  Divider,
   Alert,
   Spin,
   Empty,
@@ -25,7 +22,6 @@ import {
   Badge,
   Tooltip,
   message,
-  Rate,
   notification,
 } from 'antd';
 import {
@@ -33,21 +29,15 @@ import {
   BugOutlined,
   SafetyCertificateOutlined,
   ThunderboltOutlined,
-  CheckCircleOutlined,
   WarningOutlined,
   CloseCircleOutlined,
-  CopyOutlined,
   PlayCircleOutlined,
   ToolOutlined,
   RobotOutlined,
   LikeOutlined,
   DislikeOutlined,
-  DownloadOutlined,
-  HistoryOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useCodeAnalysis, useApplyFix, useProvideFeedback } from '../../hooks/useAI';
 
 const { Title, Text } = Typography;

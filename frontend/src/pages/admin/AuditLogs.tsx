@@ -353,7 +353,7 @@ const SecurityAlertsSection: React.FC = () => {
             title={
               <Space>
                 <Tag color={severityColors[alert.severity]}>{alert.severity.toUpperCase()}</Tag>
-                <Text strong>{alert.type.replace(/_/g, ' ')}</Text>
+                <Text strong>{alert.type.replaceAll('_', ' ')}</Text>
               </Space>
             }
             description={

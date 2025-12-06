@@ -307,7 +307,7 @@ class TestAIOutputQuality:
         results = []
         for _ in range(10):
             result = code_ai_v2.analyze(sample_code)
-            results.append(set(i["type"] for i in result.issues))
+            results.append({i["type"] for i in result.issues})
         
         # Calculate consistency
         if len(results) > 1:
@@ -408,8 +408,8 @@ class TestChaosEngineering:
             mock_call.side_effect = failing_call
             
             # Make multiple requests to trigger circuit breaker
-            for i in range(10):
-                response = client.post("/api/analyze", json={
+            for _ in range(10):
+                client.post("/api/analyze", json={
                     "code": "def test(): pass"
                 })
             

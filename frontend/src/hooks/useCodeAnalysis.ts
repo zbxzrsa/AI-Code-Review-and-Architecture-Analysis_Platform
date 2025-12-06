@@ -96,10 +96,12 @@ interface QueuedAnalysis {
 // ============================================
 
 class AnalysisCache {
-  private cache: Map<string, { result: AnalysisResult; expiry: number }> =
-    new Map();
-  private maxSize: number = 100;
-  private ttl: number = 5 * 60 * 1000; // 5 minutes
+  private readonly cache: Map<
+    string,
+    { result: AnalysisResult; expiry: number }
+  > = new Map();
+  private readonly maxSize: number = 100;
+  private readonly ttl: number = 5 * 60 * 1000; // 5 minutes
 
   private generateKey(code: string, options: AnalysisOptions): string {
     const hash = this.hashCode(code);
@@ -109,7 +111,7 @@ class AnalysisCache {
   private hashCode(str: string): string {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
+      const char = str.codePointAt(i) ?? 0;
       hash = (hash << 5) - hash + char;
       hash = hash & hash;
     }

@@ -156,7 +156,7 @@ class TestComparisonAnalysis:
         v2_latencies = [m["latency_ms"] for m in v2_metrics]
         
         # Perform t-test
-        t_stat, p_value = stats.ttest_ind(v1_latencies, v2_latencies)
+        _, p_value = stats.ttest_ind(v1_latencies, v2_latencies)
         
         # Should be statistically significant
         assert p_value < 0.05

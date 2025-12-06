@@ -166,7 +166,7 @@ class HealthMonitor:
             try:
                 await self._monitor_task
             except asyncio.CancelledError:
-                raise  # Re-raise after cleanup
+                logger.info("Health monitor task cancelled")
         logger.info("Health monitor stopped")
     
     async def _monitor_loop(self):

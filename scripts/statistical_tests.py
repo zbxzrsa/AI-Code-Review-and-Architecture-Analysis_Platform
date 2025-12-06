@@ -66,7 +66,7 @@ class StatisticalAnalyzer:
         self.significance_level = significance_level
         self.client = httpx.Client(timeout=30.0)
     
-    def query_prometheus(self, query: str, time_range: str = "1h") -> List[float]:
+    def query_prometheus(self, query: str, _time_range: str = "1h") -> List[float]:
         """Query Prometheus for metric values"""
         try:
             # Query for range data
