@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { message } from "antd";
 import { AxiosError } from "axios";
 import { apiService } from "../services/api";
+import { ensureArray } from "../utils/safeData";
 import {
   useAdminStore,
   type AdminUser,
@@ -735,7 +736,9 @@ export function useLoginPatterns(period?: "day" | "week" | "month") {
       const response = await apiService.admin.audit.getLoginPatterns({
         period,
       });
-      return response.data as { hour: number; day: number; count: number }[];
+      return ensureArray<{ hour: number; day: number; count: number }>(
+        response.data
+      );
     },
   });
 }

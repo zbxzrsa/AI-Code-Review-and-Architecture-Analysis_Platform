@@ -87,8 +87,8 @@ class OAuthProvider(str, PyEnum):
 project_members = Table(
     "project_members",
     Base.metadata,
-    Column("project_id", UUID(as_uuid=True), ForeignKey("projects.id", ondelete="CASCADE")),
-    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE")),
+    Column("project_id", UUID(as_uuid=True), ForeignKey(FK_PROJECTS_ID, ondelete=ON_DELETE_CASCADE)),
+    Column("user_id", UUID(as_uuid=True), ForeignKey(FK_USERS_ID, ondelete=ON_DELETE_CASCADE)),
     Column("role", String(50), default="member"),
     Column("created_at", DateTime, server_default=func.now()),
     UniqueConstraint("project_id", "user_id", name="uq_project_member"),
@@ -146,7 +146,7 @@ class UserSession(Base):
     __tablename__ = "user_sessions"
     
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey(FK_USERS_ID, ondelete=ON_DELETE_CASCADE), nullable=False)
     
     # Session info
     refresh_token_hash = Column(String(64), unique=True, nullable=False)

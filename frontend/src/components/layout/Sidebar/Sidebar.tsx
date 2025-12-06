@@ -72,19 +72,56 @@ interface NavItem {
   children?: NavItem[];
   adminOnly?: boolean;
   badge?: number;
+  disabled?: boolean;
+  tooltip?: string;
 }
 
 /**
- * Create menu item helper
+ * Admin badge component for visual identification
+ */
+const AdminBadge: React.FC<{ collapsed?: boolean }> = ({ collapsed }) => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: 10,
+      fontWeight: 600,
+      padding: collapsed ? '2px' : '2px 6px',
+      marginLeft: collapsed ? 0 : 8,
+      borderRadius: 4,
+      background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+      color: '#fff',
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+      boxShadow: '0 1px 3px rgba(238, 90, 36, 0.3)',
+    }}
+    title="Administrator Only"
+  >
+    {collapsed ? '★' : 'ADMIN'}
+  </span>
+);
+
+/**
+ * Create menu item helper with admin indicator support
  */
 function createMenuItem(
   label: React.ReactNode,
   key: string,
   icon?: React.ReactNode,
   children?: MenuItem[],
-  type?: 'group'
+  type?: 'group',
+  isAdmin?: boolean,
+  collapsed?: boolean
 ): MenuItem {
-  return { key, icon, children, label, type } as MenuItem;
+  const labelWithBadge = isAdmin ? (
+    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+      <span>{label}</span>
+      <AdminBadge collapsed={collapsed} />
+    </span>
+  ) : label;
+  
+  return { key, icon, children, label: labelWithBadge, type } as MenuItem;
 }
 
 /**
@@ -274,20 +311,25 @@ export const Sidebar: React.FC = () => {
     return filterItems(filteredNavItems);
   }, [filteredNavItems, sidebar.searchQuery]);
 
-  // Convert to Ant Design menu items
+  // Convert to Ant Design menu items with admin indicators
   const menuItems: MenuItem[] = useMemo(() => {
+    const isCollapsed = !sidebar.isOpen;
+    
     const convertToMenuItem = (item: NavItem): MenuItem => {
       const children = item.children?.map(convertToMenuItem);
       return createMenuItem(
         item.label,
         item.path || item.key,
         item.icon,
-        children
+        children,
+        undefined,
+        item.adminOnly,
+        isCollapsed
       );
     };
     
     return searchFilteredItems.map(convertToMenuItem);
-  }, [searchFilteredItems]);
+  }, [searchFilteredItems, sidebar.isOpen]);
 
   // Handle menu click
   const handleMenuClick = useCallback((e: { key: string }) => {

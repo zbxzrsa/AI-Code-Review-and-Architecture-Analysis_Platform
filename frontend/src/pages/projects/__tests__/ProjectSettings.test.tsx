@@ -188,7 +188,8 @@ describe('ProjectSettings', () => {
     renderWithRoute(<ProjectSettings />);
     
     await waitFor(() => {
-      const backButton = screen.getByRole('button', { name: '' });
+      // Back button uses arrow-left icon, find by querying the icon or button class
+      const backButton = document.querySelector('.ant-btn-icon-only');
       expect(backButton).toBeInTheDocument();
     });
   });

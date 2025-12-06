@@ -331,6 +331,25 @@ export const Repositories: React.FC = () => {
     },
   });
 
+  // Analyze repository mutation
+  const analyzeRepoMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiService.repositories.analyze(id);
+      return response.data;
+    },
+    onSuccess: (data) => {
+      message.success('Analysis started successfully');
+      queryClient.invalidateQueries({ queryKey: ['repositories'] });
+      // Optionally navigate to analysis results
+      if (data?.session_id) {
+        message.info(`Analysis session: ${data.session_id}`);
+      }
+    },
+    onError: (error: unknown) => {
+      message.error(getApiErrorMessage(error, 'Failed to start analysis'));
+    },
+  });
+
   // Map API data to UI format
   const repositories: Repository[] = (reposData?.items || mockRepositories).map((repo: ApiRepository & Record<string, unknown>) => ({
     id: repo.id,
@@ -675,7 +694,12 @@ export const Repositories: React.FC = () => {
                       onClick={() => syncRepoMutation.mutate(repo.id)}
                     />
                   </Tooltip>
-                  <Button type="primary" icon={<PlayCircleOutlined />}>
+                  <Button 
+                    type="primary" 
+                    icon={<PlayCircleOutlined />}
+                    onClick={() => analyzeRepoMutation.mutate(repo.id)}
+                    loading={analyzeRepoMutation.isPending}
+                  >
                     Analyze
                   </Button>
                   <Dropdown

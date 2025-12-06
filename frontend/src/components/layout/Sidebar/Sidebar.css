@@ -294,3 +294,83 @@
         transition: none;
     }
 }
+
+/* ============================================
+   Admin Badge Styles
+   ============================================ */
+
+/* Admin badge - visual indicator for admin-only menu items */
+.admin-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    margin-left: 8px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(238, 90, 36, 0.3);
+    animation: admin-pulse 2s infinite;
+}
+
+/* Collapsed sidebar - show icon only */
+.sidebar--collapsed .admin-badge {
+    padding: 3px;
+    margin-left: 0;
+    font-size: 8px;
+}
+
+/* Pulse animation for admin badge */
+@keyframes admin-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 2px 4px rgba(238, 90, 36, 0.3);
+    }
+
+    50% {
+        box-shadow: 0 2px 8px rgba(238, 90, 36, 0.5);
+    }
+}
+
+/* Admin menu item highlight */
+.sidebar-nav .ant-menu-item.admin-only,
+.sidebar-nav .ant-menu-submenu.admin-only>.ant-menu-submenu-title {
+    border-left: 3px solid transparent;
+    background: linear-gradient(90deg, rgba(238, 90, 36, 0.1) 0%, transparent 100%);
+}
+
+.sidebar-nav .ant-menu-item.admin-only:hover,
+.sidebar-nav .ant-menu-submenu.admin-only>.ant-menu-submenu-title:hover {
+    border-left-color: #ee5a24;
+    background: linear-gradient(90deg, rgba(238, 90, 36, 0.2) 0%, transparent 100%);
+}
+
+/* Admin section divider */
+.admin-section-divider {
+    margin: 12px 16px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(238, 90, 36, 0.5) 0%, transparent 100%);
+}
+
+/* Admin section header */
+.admin-section-header {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 107, 107, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.admin-section-header::before {
+    content: '★';
+    margin-right: 8px;
+    color: #ee5a24;
+}

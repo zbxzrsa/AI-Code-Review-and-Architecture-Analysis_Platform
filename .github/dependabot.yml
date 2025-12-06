@@ -1,0 +1,203 @@
+# Dependabot Configuration
+# Risk Mitigation: R-006 - Third-Party Dependency Vulnerabilities
+#
+# This configuration enables automated dependency updates to address
+# security vulnerabilities in third-party packages.
+#
+# SLA: Fix critical vulnerabilities (CVE >= 9.0) within 24 hours
+
+version: 2
+
+registries:
+  npm-registry:
+    type: npm-registry
+    url: https://registry.npmjs.org
+    replaces-base: true
+
+updates:
+  # ============================================================
+  # Python Dependencies (Backend)
+  # ============================================================
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "security-team"
+    labels:
+      - "dependencies"
+      - "security"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    groups:
+      # Group minor/patch updates together
+      python-minor:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Security updates get their own PRs
+      python-security:
+        applies-to: security-updates
+    ignore:
+      # Ignore major version updates for critical packages
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "transformers"
+        update-types: ["version-update:semver-major"]
+
+  # ============================================================
+  # Python Dependencies (AI Core)
+  # ============================================================
+  - package-ecosystem: "pip"
+    directory: "/ai_core"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ai-core"
+      - "python"
+
+  # ============================================================
+  # JavaScript/TypeScript Dependencies (Frontend)
+  # ============================================================
+  - package-ecosystem: "npm"
+    directory: "/frontend"
+    schedule:
+      interval: "daily"
+      time: "06:00"
+      timezone: "Asia/Bangkok"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "frontend-team"
+    labels:
+      - "dependencies"
+      - "security"
+      - "javascript"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      # React ecosystem
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-router*"
+          - "@types/react*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Development dependencies
+      dev-deps:
+        patterns:
+          - "@types/*"
+          - "typescript"
+          - "eslint*"
+          - "prettier"
+          - "@testing-library/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # UI libraries
+      ui-libs:
+        patterns:
+          - "tailwindcss"
+          - "@headlessui/*"
+          - "lucide-react"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Be careful with major React updates
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+
+  # ============================================================
+  # Docker Dependencies
+  # ============================================================
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "chore(docker)"
+
+  - package-ecosystem: "docker"
+    directory: "/backend/services/ai-orchestrator"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+      - "ai-orchestrator"
+
+  - package-ecosystem: "docker"
+    directory: "/backend/services/three-version-service"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # ============================================================
+  # GitHub Actions
+  # ============================================================
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "chore(ci)"
+    groups:
+      # Group all action updates
+      actions:
+        patterns:
+          - "*"
+
+  # ============================================================
+  # Terraform (Infrastructure)
+  # ============================================================
+  - package-ecosystem: "terraform"
+    directory: "/infrastructure/terraform"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+    labels:
+      - "dependencies"
+      - "terraform"
+      - "infrastructure"
+
+  # ============================================================
+  # Helm Charts
+  # ============================================================
+  - package-ecosystem: "helm"
+    directory: "/charts/coderev-platform"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+    labels:
+      - "dependencies"
+      - "helm"
+      - "kubernetes"

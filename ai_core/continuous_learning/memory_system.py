@@ -82,7 +82,7 @@ class ExperienceReplay:
         """Add experience to buffer"""
         item = MemoryItem(
             input=input.detach().clone(),  # detach from graph, then clone
-            target=(target if isinstance(target, torch.Tensor) else torch.tensor(target)).detach().clone(),
+            target=target.detach().clone() if isinstance(target, torch.Tensor) else torch.as_tensor(target).clone(),
             task_id=task_id,
             importance=importance,
             timestamp=self.timestamp,
@@ -231,7 +231,7 @@ class ExperienceReplay:
             idx = self.rng.integers(0, self.capacity)
             self.buffer[idx] = MemoryItem(
                 input=input.detach().clone(),  # detach from graph, then clone
-                target=(target if isinstance(target, torch.Tensor) else torch.tensor(target)).detach().clone(),
+                target=target.detach().clone() if isinstance(target, torch.Tensor) else torch.as_tensor(target).clone(),
                 task_id=task_id,
                 importance=1.0,
                 timestamp=self.timestamp

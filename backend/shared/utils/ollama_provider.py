@@ -8,9 +8,10 @@ GitHub: https://github.com/ollama/ollama (95k+ stars)
 License: MIT
 """
 import asyncio
+import json
 import logging
 import time
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from dataclasses import dataclass
 import httpx
 
@@ -32,7 +33,7 @@ MODEL_MIXTRAL_8X7B = "mixtral:8x7b"
 class OllamaConfig:
     """Configuration for Ollama provider."""
     base_url: str = "http://localhost:11434"
-    model: str = "codellama:34b"
+    model: str = MODEL_CODELLAMA_34B
     temperature: float = 0.7
     max_tokens: int = 2000
     timeout: float = 120.0  # seconds
@@ -69,25 +70,25 @@ class OllamaProvider:
     # Model recommendations for code review
     RECOMMENDED_MODELS = {
         "code_review": [
-            "codellama:34b",      # Best for code review
-            "deepseek-coder:33b", # Alternative high quality
-            "codellama:13b",      # Good balance
-            "codellama:7b",       # Fast, lower quality
+            MODEL_CODELLAMA_34B,   # Best for code review
+            MODEL_DEEPSEEK_33B,    # Alternative high quality
+            MODEL_CODELLAMA_13B,   # Good balance
+            MODEL_CODELLAMA_7B,    # Fast, lower quality
         ],
         "security_analysis": [
-            "codellama:34b",
-            "llama3:70b",
-            "mixtral:8x7b",
+            MODEL_CODELLAMA_34B,
+            MODEL_LLAMA3_70B,
+            MODEL_MIXTRAL_8X7B,
         ],
         "architecture": [
-            "llama3:70b",
-            "codellama:34b",
-            "mixtral:8x7b",
+            MODEL_LLAMA3_70B,
+            MODEL_CODELLAMA_34B,
+            MODEL_MIXTRAL_8X7B,
         ],
         "fast": [
-            "codellama:7b",
-            "mistral:7b",
-            "deepseek-coder:6.7b",
+            MODEL_CODELLAMA_7B,
+            MODEL_MISTRAL_7B,
+            MODEL_DEEPSEEK_6B,
         ],
     }
 
@@ -317,6 +318,152 @@ Provide detailed, actionable feedback with specific line references and code exa
             logger.error(f"Ollama embedding failed: {e}")
             raise
 
+    async def stream_analyze(
+        self,
+        code: str,
+        language: str,
+        prompt_template: str,
+        model: Optional[str] = None,
+    ):
+        """
+        Stream code analysis with real-time token output.
+        
+        Args:
+            code: Source code to analyze
+            language: Programming language
+            prompt_template: Template with {code} and {language} placeholders
+            model: Optional model override
+            
+        Yields:
+            Tokens as they are generated
+        """
+        model = model or self.config.model
+        prompt = prompt_template.format(code=code, language=language)
+        
+        system_prompt = """You are an expert code reviewer and software architect with deep knowledge of:
+- Security vulnerabilities (OWASP Top 10, CWE)
+- Code quality and best practices
+- Performance optimization
+- Software architecture patterns
+
+Provide detailed, actionable feedback with specific line references."""
+
+        try:
+            client = await self._get_client()
+            
+            async with client.stream(
+                "POST",
+                "/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "system": system_prompt,
+                    "stream": True,
+                    "options": {
+                        "temperature": self.config.temperature,
+                        "num_ctx": self.config.num_ctx,
+                        "num_predict": self.config.num_predict,
+                    },
+                },
+            ) as response:
+                async for line in response.aiter_lines():
+                    if line:
+                        try:
+                            data = json.loads(line)
+                            token = data.get("response", "")
+                            if token:
+                                yield token
+                            if data.get("done"):
+                                break
+                        except json.JSONDecodeError:
+                            continue
+                            
+        except Exception as e:
+            logger.error(f"Streaming analysis failed: {e}")
+            raise
+
+    async def batch_analyze(
+        self,
+        code_items: List[Dict[str, str]],
+        prompt_template: str,
+        max_concurrent: int = 3,
+    ) -> List[OllamaResponse]:
+        """
+        Batch analyze multiple code snippets with concurrency control.
+        
+        Args:
+            code_items: List of {"code": str, "language": str} dicts
+            prompt_template: Template with {code} and {language} placeholders
+            max_concurrent: Maximum concurrent requests
+            
+        Returns:
+            List of OllamaResponse objects (may include exceptions)
+        """
+        semaphore = asyncio.Semaphore(max_concurrent)
+        
+        async def analyze_one(item: Dict[str, str]) -> OllamaResponse:
+            async with semaphore:
+                return await self.analyze_code(
+                    item["code"],
+                    item["language"],
+                    prompt_template
+                )
+        
+        tasks = [analyze_one(item) for item in code_items]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        return results
+
+    def get_recommended_model(
+        self,
+        task_type: str,
+        available_only: bool = True,
+    ) -> str:
+        """
+        Get recommended model for a specific task type.
+        
+        Args:
+            task_type: One of 'code_review', 'security_analysis', 'architecture', 'fast'
+            available_only: Only return models that are available
+            
+        Returns:
+            Recommended model name
+        """
+        recommendations = self.RECOMMENDED_MODELS.get(task_type, [])
+        
+        if not available_only or not self._available_models:
+            return recommendations[0] if recommendations else self.config.model
+        
+        for model in recommendations:
+            if model in self._available_models:
+                return model
+        
+        # Return first available model or default
+        if self._available_models:
+            return self._available_models[0]
+        return self.config.model
+
+    def get_model_stats(self) -> Dict[str, Any]:
+        """
+        Get statistics about available models and configuration.
+        
+        Returns:
+            Dictionary with model information
+        """
+        return {
+            "current_model": self.config.model,
+            "available_models": self._available_models,
+            "base_url": self.config.base_url,
+            "config": {
+                "temperature": self.config.temperature,
+                "max_tokens": self.config.max_tokens,
+                "num_ctx": self.config.num_ctx,
+                "top_p": self.config.top_p,
+                "top_k": self.config.top_k,
+            },
+            "recommended_models": self.RECOMMENDED_MODELS,
+        }
+
 
 # Code review specific prompts
 CODE_REVIEW_PROMPTS = {
@@ -380,7 +527,7 @@ Evaluate:
 
 async def create_ollama_provider(
     base_url: str = "http://localhost:11434",
-    model: str = "codellama:34b",
+    model: str = MODEL_CODELLAMA_34B,
     ensure_model: bool = True,
 ) -> OllamaProvider:
     """

@@ -12,6 +12,7 @@ import {
 } from "@tanstack/react-query";
 import { message } from "antd";
 import { apiService } from "../services/api";
+import { ensureArray } from "../utils/safeData";
 import type {
   Project,
   ProjectFilters,
@@ -139,7 +140,7 @@ export function useProjectTeam(id: string | undefined) {
     queryFn: async () => {
       if (!id) throw new Error("Project ID is required");
       const response = await apiService.projects.getTeam(id);
-      return response.data as TeamMember[];
+      return ensureArray<TeamMember>(response.data);
     },
     enabled: !!id,
   });
@@ -154,7 +155,7 @@ export function useProjectWebhooks(id: string | undefined) {
     queryFn: async () => {
       if (!id) throw new Error("Project ID is required");
       const response = await apiService.projects.getWebhooks(id);
-      return response.data as Webhook[];
+      return ensureArray<Webhook>(response.data);
     },
     enabled: !!id,
   });
@@ -169,7 +170,7 @@ export function useProjectApiKeys(id: string | undefined) {
     queryFn: async () => {
       if (!id) throw new Error("Project ID is required");
       const response = await apiService.projects.getApiKeys(id);
-      return response.data as APIKey[];
+      return ensureArray<APIKey>(response.data);
     },
     enabled: !!id,
   });
@@ -195,7 +196,9 @@ export function useCreateProject() {
       const response = await apiService.projects.create(data);
       return response.data as Project;
     },
-    onSuccess: (_newProject) => {
+    onSuccess: (newProject) => {
+      // Immediately cache the new project so it's available for detail page
+      queryClient.setQueryData(projectKeys.detail(newProject.id), newProject);
       // Invalidate list queries to refetch
       queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
       message.success("Project created successfully");

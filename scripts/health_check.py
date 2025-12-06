@@ -277,7 +277,7 @@ async def main():
     
     args = parser.parse_args()
     
-    report = await run_health_checks(verbose=args.verbose)
+    report = await run_health_checks()
     
     if args.json:
         print_json_report(report)

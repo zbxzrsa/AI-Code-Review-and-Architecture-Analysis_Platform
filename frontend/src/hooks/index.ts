@@ -43,3 +43,11 @@ export type {
   AsyncDataOptions,
   AsyncDataResult,
 } from "./useAsyncData";
+
+// Permission hooks
+export { usePermissions, APP_FEATURES } from "./usePermissions";
+export type {
+  Permission,
+  FeatureAccess,
+  UsePermissionsResult,
+} from "./usePermissions";

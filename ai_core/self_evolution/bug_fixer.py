@@ -563,8 +563,8 @@ class BugFixerEngine:
         
         # Simple replacements for common patterns
         if pattern.pattern_id == "REL-001":
-            # datetime.now(timezone.utc) -> datetime.now(timezone.utc)
-            return original_code.replace("datetime.now(timezone.utc)", "datetime.now(timezone.utc)")
+            # datetime.utcnow() -> datetime.now(timezone.utc)
+            return original_code.replace("datetime.utcnow()", "datetime.now(timezone.utc)")
         
         elif pattern.pattern_id == "REL-002":
             # asyncio.get_event_loop() -> asyncio.get_running_loop()
@@ -876,6 +876,7 @@ class AutoFixCycle:
                 await self._cycle_task
             except asyncio.CancelledError:
                 logger.info("Bug fix cycle task cancelled")
+                raise
         logger.info("Automated bug fix cycle stopped")
     
     async def _run_cycle(self):

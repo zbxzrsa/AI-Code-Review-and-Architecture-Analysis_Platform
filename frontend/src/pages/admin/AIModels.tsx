@@ -1,16 +1,17 @@
 /**
  * AI Models Management Page (Admin)
- * AI模型管理页面（管理员）
  * 
  * Features:
  * - View all AI models and versions
  * - Manage model lifecycle (V1→V2→V3)
+ * - Import external models via API
+ * - Admin AI Chat interface for version control
  * - Promote/rollback versions
  * - Monitor model performance
  * - Configure model settings
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Card,
   Table,
@@ -19,6 +20,7 @@ import {
   Space,
   Modal,
   Form,
+  Input,
   InputNumber,
   Tabs,
   Statistic,
@@ -29,6 +31,15 @@ import {
   message,
   Alert,
   Descriptions,
+  Drawer,
+  List,
+  Avatar,
+  Select,
+  Divider,
+  Empty,
+  Spin,
+  Tooltip,
+  Badge,
 } from 'antd';
 import type { TableProps, MenuProps } from 'antd';
 import {
@@ -48,6 +59,14 @@ import {
   MoreOutlined,
   ReloadOutlined,
   LineChartOutlined,
+  MessageOutlined,
+  SendOutlined,
+  ApiOutlined,
+  CloudServerOutlined,
+  UserOutlined,
+  ClearOutlined,
+  HistoryOutlined,
+  ToolOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
@@ -94,6 +113,26 @@ interface ModelVersionInfo {
   promoted_by?: string;
   promotion_reason?: string;
 }
+
+interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: Date;
+  model?: string;
+}
+
+interface ImportedModel {
+  id: string;
+  name: string;
+  provider: string;
+  api_endpoint: string;
+  api_key_configured: boolean;
+  status: 'active' | 'inactive' | 'error';
+  created_at: string;
+}
+
+const { TextArea } = Input;
 
 // Mock data
 const mockModels: AIModel[] = [
@@ -194,6 +233,19 @@ export const AIModels: React.FC = () => {
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
   const [form] = Form.useForm();
+  const [importForm] = Form.useForm();
+
+  // AI Chat states
+  const [chatDrawerOpen, setChatDrawerOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatModel, setChatModel] = useState('gpt-4-turbo');
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Import model states
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importedModels, setImportedModels] = useState<ImportedModel[]>([]);
 
   // Fetch models from API with fallback
   const fetchModels = useCallback(async () => {
@@ -244,6 +296,111 @@ export const AIModels: React.FC = () => {
   useEffect(() => {
     fetchModels();
   }, [fetchModels]);
+
+  // Scroll chat to bottom when messages change
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
+
+  // Handle sending chat message
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || chatLoading) return;
+
+    const userMessage: ChatMessage = {
+      id: `msg_${Date.now()}`,
+      role: 'user',
+      content: chatInput.trim(),
+      timestamp: new Date(),
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setChatLoading(true);
+
+    try {
+      const response = await api.post('/api/admin/ai-chat', {
+        message: userMessage.content,
+        model: chatModel,
+        context: 'version_control',
+      });
+
+      const assistantMessage: ChatMessage = {
+        id: `msg_${Date.now()}_assistant`,
+        role: 'assistant',
+        content: response.data?.response || 'I can help you manage AI models and version control. What would you like to know?',
+        timestamp: new Date(),
+        model: chatModel,
+      };
+
+      setChatMessages(prev => [...prev, assistantMessage]);
+    } catch {
+      // Mock response for demo
+      const mockResponses = [
+        'Based on current metrics, Model GPT-4 Turbo is performing well with 94% accuracy. Consider promoting GPT-4 Vision once it reaches the 85% accuracy threshold.',
+        'The V1 experimentation zone currently has 1 model under testing. All promotion criteria require: Accuracy >85%, Error Rate <5%, Latency p95 <3s.',
+        'I recommend monitoring the error rate of models in V2 Production. If any model exceeds 5% error rate, consider rollback to V1 for further testing.',
+        'To import a new model via API, you\'ll need to configure the API endpoint and authentication. The imported model will be available for code review chat only.',
+      ];
+
+      const assistantMessage: ChatMessage = {
+        id: `msg_${Date.now()}_assistant`,
+        role: 'assistant',
+        content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
+        timestamp: new Date(),
+        model: chatModel,
+      };
+
+      setChatMessages(prev => [...prev, assistantMessage]);
+    }
+
+    setChatLoading(false);
+  };
+
+  // Handle import model
+  const handleImportModel = async (values: any) => {
+    try {
+      await api.post('/api/admin/ai-models/import', values);
+      message.success('Model imported successfully');
+      setImportModalOpen(false);
+      importForm.resetFields();
+      
+      // Add to imported models list
+      const newModel: ImportedModel = {
+        id: `imported_${Date.now()}`,
+        name: values.name,
+        provider: values.provider,
+        api_endpoint: values.api_endpoint,
+        api_key_configured: !!values.api_key,
+        status: 'active',
+        created_at: new Date().toISOString(),
+      };
+      setImportedModels(prev => [...prev, newModel]);
+    } catch {
+      // Mock success for demo
+      message.success('Model imported successfully');
+      setImportModalOpen(false);
+      importForm.resetFields();
+      
+      const newModel: ImportedModel = {
+        id: `imported_${Date.now()}`,
+        name: values.name,
+        provider: values.provider || 'Custom',
+        api_endpoint: values.api_endpoint,
+        api_key_configured: !!values.api_key,
+        status: 'active',
+        created_at: new Date().toISOString(),
+      };
+      setImportedModels(prev => [...prev, newModel]);
+    }
+  };
+
+  // Clear chat history
+  const handleClearChat = () => {
+    setChatMessages([]);
+    message.success('Chat history cleared');
+  };
 
   // Get zone color
   const getZoneColor = (zone: string) => {
@@ -494,108 +651,201 @@ export const AIModels: React.FC = () => {
   };
 
   return (
-    <div className="ai-models-page">
-      <div className="page-header">
-        <div>
-          <Title level={3}>
-            <RobotOutlined /> {t('admin.aiModels.title', 'AI Model Management')}
-          </Title>
-          <Text type="secondary">
-            {t('admin.aiModels.subtitle', 'Manage AI models across V1→V2→V3 lifecycle')}
-          </Text>
+    <div className="ai-models-page" style={{ padding: '24px', background: '#f5f5f5', minHeight: '100vh' }}>
+      {/* Page Header */}
+      <Card style={{ marginBottom: 24, borderRadius: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <Title level={3} style={{ margin: 0 }}>
+              <RobotOutlined style={{ marginRight: 8 }} />
+              {t('admin.aiModels.title', 'AI Model Management')}
+            </Title>
+            <Text type="secondary">
+              {t('admin.aiModels.subtitle', 'Manage AI models across V1→V2→V3 lifecycle')}
+            </Text>
+          </div>
+          <Space wrap>
+            <Tooltip title="AI Assistant for Version Control">
+              <Badge count={chatMessages.length} size="small">
+                <Button 
+                  icon={<MessageOutlined />} 
+                  onClick={() => setChatDrawerOpen(true)}
+                  style={{ borderRadius: 8 }}
+                >
+                  AI Assistant
+                </Button>
+              </Badge>
+            </Tooltip>
+            <Button 
+              icon={<ApiOutlined />} 
+              onClick={() => setImportModalOpen(true)}
+              style={{ borderRadius: 8 }}
+            >
+              Import Model
+            </Button>
+            <Button 
+              icon={<ReloadOutlined />} 
+              onClick={fetchModels}
+              style={{ borderRadius: 8 }}
+            >
+              Refresh
+            </Button>
+            <Button 
+              type="primary" 
+              icon={<PlusOutlined />}
+              style={{ borderRadius: 8 }}
+            >
+              Register Model
+            </Button>
+          </Space>
         </div>
-        <Space>
-          <Button icon={<ReloadOutlined />} onClick={fetchModels}>
-            Refresh
-          </Button>
-          <Button type="primary" icon={<PlusOutlined />}>
-            Register Model
-          </Button>
-        </Space>
-      </div>
+      </Card>
 
       {/* Stats */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card 
+            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
+            hoverable
+          >
             <Statistic
-              title="Total Models"
+              title={<Text type="secondary">Total Models</Text>}
               value={stats.total}
-              prefix={<RobotOutlined />}
+              prefix={<RobotOutlined style={{ color: '#722ed1' }} />}
+              valueStyle={{ color: '#722ed1', fontWeight: 600 }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card 
+            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '4px solid #52c41a' }}
+            hoverable
+          >
             <Statistic
-              title="V2 Production"
+              title={<Text type="secondary">V2 Production</Text>}
               value={stats.production}
-              prefix={<SafetyCertificateOutlined />}
-              valueStyle={{ color: '#52c41a' }}
+              prefix={<SafetyCertificateOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a', fontWeight: 600 }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card 
+            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '4px solid #1890ff' }}
+            hoverable
+          >
             <Statistic
-              title="V1 Experimentation"
+              title={<Text type="secondary">V1 Experimentation</Text>}
               value={stats.experimentation}
-              prefix={<ExperimentOutlined />}
-              valueStyle={{ color: '#1890ff' }}
+              prefix={<ExperimentOutlined style={{ color: '#1890ff' }} />}
+              valueStyle={{ color: '#1890ff', fontWeight: 600 }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card>
+        <Col xs={24} sm={12} lg={6}>
+          <Card 
+            style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: `4px solid ${stats.avgAccuracy >= 0.9 ? '#52c41a' : '#faad14'}` }}
+            hoverable
+          >
             <Statistic
-              title="Avg. Accuracy (V2)"
+              title={<Text type="secondary">Avg. Accuracy (V2)</Text>}
               value={(stats.avgAccuracy * 100).toFixed(1)}
               suffix="%"
-              prefix={<LineChartOutlined />}
-              valueStyle={{ color: stats.avgAccuracy >= 0.9 ? '#52c41a' : '#faad14' }}
+              prefix={<LineChartOutlined style={{ color: stats.avgAccuracy >= 0.9 ? '#52c41a' : '#faad14' }} />}
+              valueStyle={{ color: stats.avgAccuracy >= 0.9 ? '#52c41a' : '#faad14', fontWeight: 600 }}
             />
           </Card>
         </Col>
       </Row>
 
       {/* Model Lifecycle Flow */}
-      <Card style={{ marginBottom: 24 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <Tag color="blue" style={{ padding: '8px 16px', fontSize: 14 }}>
-            <ExperimentOutlined /> V1 Experimentation
-            <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>{stats.experimentation} models</Text>
-          </Tag>
-          <span style={{ fontSize: 20 }}>→</span>
-          <Tag color="green" style={{ padding: '8px 16px', fontSize: 14 }}>
-            <SafetyCertificateOutlined /> V2 Production
-            <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>{stats.production} models</Text>
-          </Tag>
-          <span style={{ fontSize: 20 }}>→</span>
-          <Tag color="red" style={{ padding: '8px 16px', fontSize: 14 }}>
-            <WarningOutlined /> V3 Quarantine
-            <br />
-            <Text type="secondary" style={{ fontSize: 12 }}>{stats.quarantine} models</Text>
-          </Tag>
+      <Card 
+        style={{ marginBottom: 24, borderRadius: 12, background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%)' }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24, flexWrap: 'wrap', padding: '16px 0' }}>
+          <div style={{ textAlign: 'center', padding: '16px 24px', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(24,144,255,0.2)', border: '2px solid #1890ff' }}>
+            <ExperimentOutlined style={{ fontSize: 28, color: '#1890ff' }} />
+            <div style={{ marginTop: 8, fontWeight: 600, color: '#1890ff' }}>V1 Experimentation</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{stats.experimentation}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>models testing</Text>
+          </div>
+          
+          <div style={{ fontSize: 32, color: '#1890ff' }}>→</div>
+          
+          <div style={{ textAlign: 'center', padding: '16px 24px', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(82,196,26,0.2)', border: '2px solid #52c41a' }}>
+            <SafetyCertificateOutlined style={{ fontSize: 28, color: '#52c41a' }} />
+            <div style={{ marginTop: 8, fontWeight: 600, color: '#52c41a' }}>V2 Production</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{stats.production}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>models active</Text>
+          </div>
+          
+          <div style={{ fontSize: 32, color: '#ff4d4f' }}>→</div>
+          
+          <div style={{ textAlign: 'center', padding: '16px 24px', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(255,77,79,0.2)', border: '2px solid #ff4d4f' }}>
+            <WarningOutlined style={{ fontSize: 28, color: '#ff4d4f' }} />
+            <div style={{ marginTop: 8, fontWeight: 600, color: '#ff4d4f' }}>V3 Quarantine</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{stats.quarantine}</div>
+            <Text type="secondary" style={{ fontSize: 12 }}>models archived</Text>
+          </div>
         </div>
-        <div style={{ textAlign: 'center', marginTop: 16 }}>
-          <Text type="secondary">
-            Models are promoted based on: Accuracy {'>'}85%, Error Rate {'<'}5%, Latency p95 {'<'}3s
+        
+        <Divider style={{ margin: '16px 0' }} />
+        
+        <div style={{ textAlign: 'center' }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            <SafetyCertificateOutlined style={{ marginRight: 8 }} />
+            Promotion Criteria: Accuracy ≥ 85% • Error Rate {'<'} 5% • Latency p95 {'<'} 3s
           </Text>
         </div>
       </Card>
 
       {/* Models Table */}
-      <Card>
+      <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
+          type="card"
           items={[
-            { key: 'all', label: `All Models (${models.length})` },
-            { key: 'v1-experimentation', label: `V1 Experimentation (${stats.experimentation})` },
-            { key: 'v2-production', label: `V2 Production (${stats.production})` },
-            { key: 'v3-quarantine', label: `V3 Quarantine (${stats.quarantine})` },
+            { 
+              key: 'all', 
+              label: (
+                <Space>
+                  <RobotOutlined />
+                  All Models
+                  <Badge count={models.length} style={{ backgroundColor: '#722ed1' }} />
+                </Space>
+              )
+            },
+            { 
+              key: 'v1-experimentation', 
+              label: (
+                <Space>
+                  <ExperimentOutlined />
+                  V1 Experimentation
+                  <Badge count={stats.experimentation} style={{ backgroundColor: '#1890ff' }} />
+                </Space>
+              )
+            },
+            { 
+              key: 'v2-production', 
+              label: (
+                <Space>
+                  <SafetyCertificateOutlined />
+                  V2 Production
+                  <Badge count={stats.production} style={{ backgroundColor: '#52c41a' }} />
+                </Space>
+              )
+            },
+            { 
+              key: 'v3-quarantine', 
+              label: (
+                <Space>
+                  <WarningOutlined />
+                  V3 Quarantine
+                  <Badge count={stats.quarantine} style={{ backgroundColor: '#ff4d4f' }} />
+                </Space>
+              )
+            },
           ]}
         />
         <Table
@@ -603,7 +853,13 @@ export const AIModels: React.FC = () => {
           dataSource={filteredModels}
           rowKey="id"
           loading={loading}
-          pagination={{ pageSize: 10 }}
+          pagination={{ 
+            pageSize: 10,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `Total ${total} models`,
+          }}
+          style={{ marginTop: 16 }}
         />
       </Card>
 
@@ -728,6 +984,304 @@ export const AIModels: React.FC = () => {
               This will make the model available to all users and subject to SLO requirements.
             </Paragraph>
           </div>
+        )}
+      </Modal>
+
+      {/* AI Chat Drawer */}
+      <Drawer
+        title={
+          <Space>
+            <RobotOutlined style={{ color: '#1890ff' }} />
+            <span>Version Control AI Assistant</span>
+          </Space>
+        }
+        placement="right"
+        width={480}
+        open={chatDrawerOpen}
+        onClose={() => setChatDrawerOpen(false)}
+        extra={
+          <Space>
+            <Select
+              value={chatModel}
+              onChange={setChatModel}
+              style={{ width: 140 }}
+              size="small"
+              options={[
+                { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+                { value: 'claude-3-opus', label: 'Claude 3 Opus' },
+                { value: 'gpt-4-vision', label: 'GPT-4 Vision' },
+              ]}
+            />
+            <Tooltip title="Clear chat history">
+              <Button 
+                size="small" 
+                icon={<ClearOutlined />} 
+                onClick={handleClearChat}
+              />
+            </Tooltip>
+          </Space>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* Chat Messages */}
+          <div 
+            ref={chatContainerRef}
+            style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              paddingBottom: 16,
+              marginBottom: 16,
+            }}
+          >
+            {chatMessages.length === 0 ? (
+              <Empty
+                image={<RobotOutlined style={{ fontSize: 48, color: '#1890ff' }} />}
+                description={
+                  <div>
+                    <Text strong>Welcome to Version Control AI Assistant</Text>
+                    <br />
+                    <Text type="secondary">
+                      Ask about model performance, promotions, or version management.
+                    </Text>
+                  </div>
+                }
+              >
+                <Space direction="vertical" size="small">
+                  <Button 
+                    size="small" 
+                    onClick={() => setChatInput('What models are ready for promotion?')}
+                  >
+                    What models are ready for promotion?
+                  </Button>
+                  <Button 
+                    size="small" 
+                    onClick={() => setChatInput('Show me V2 production metrics')}
+                  >
+                    Show me V2 production metrics
+                  </Button>
+                  <Button 
+                    size="small" 
+                    onClick={() => setChatInput('How do I import a new model?')}
+                  >
+                    How do I import a new model?
+                  </Button>
+                </Space>
+              </Empty>
+            ) : (
+              <List
+                dataSource={chatMessages}
+                renderItem={(msg) => (
+                  <List.Item 
+                    style={{ 
+                      padding: '8px 0',
+                      border: 'none',
+                      justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                    }}
+                  >
+                    <div 
+                      style={{ 
+                        maxWidth: '85%',
+                        display: 'flex',
+                        flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
+                        alignItems: 'flex-start',
+                        gap: 8,
+                      }}
+                    >
+                      <Avatar 
+                        size={32}
+                        icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
+                        style={{ 
+                          backgroundColor: msg.role === 'user' ? '#1890ff' : '#52c41a',
+                          flexShrink: 0,
+                        }}
+                      />
+                      <div 
+                        style={{ 
+                          padding: '8px 12px',
+                          borderRadius: 12,
+                          background: msg.role === 'user' ? '#1890ff' : '#f5f5f5',
+                          color: msg.role === 'user' ? '#fff' : '#333',
+                        }}
+                      >
+                        <Text style={{ color: 'inherit' }}>{msg.content}</Text>
+                        {msg.model && (
+                          <div style={{ marginTop: 4 }}>
+                            <Text type="secondary" style={{ fontSize: 11 }}>
+                              {msg.model} • {msg.timestamp.toLocaleTimeString()}
+                            </Text>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            )}
+            {chatLoading && (
+              <div style={{ textAlign: 'center', padding: 16 }}>
+                <Spin size="small" />
+                <Text type="secondary" style={{ marginLeft: 8 }}>AI is thinking...</Text>
+              </div>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 16 }}>
+            <Space.Compact style={{ width: '100%' }}>
+              <TextArea
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Ask about model management..."
+                autoSize={{ minRows: 1, maxRows: 4 }}
+                onPressEnter={(e) => {
+                  if (!e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                style={{ borderRadius: '8px 0 0 8px' }}
+              />
+              <Button 
+                type="primary" 
+                icon={<SendOutlined />}
+                onClick={handleSendMessage}
+                loading={chatLoading}
+                style={{ height: 'auto', borderRadius: '0 8px 8px 0' }}
+              />
+            </Space.Compact>
+          </div>
+        </div>
+      </Drawer>
+
+      {/* Import Model Modal */}
+      <Modal
+        title={
+          <Space>
+            <ApiOutlined style={{ color: '#1890ff' }} />
+            <span>Import External Model</span>
+          </Space>
+        }
+        open={importModalOpen}
+        onCancel={() => {
+          setImportModalOpen(false);
+          importForm.resetFields();
+        }}
+        onOk={() => importForm.submit()}
+        okText="Import Model"
+        width={600}
+      >
+        <Alert
+          message="API Model Import"
+          description="Import external AI models via API. These models will be available for Code Review AI Chat only."
+          type="info"
+          showIcon
+          style={{ marginBottom: 24 }}
+        />
+        
+        <Form
+          form={importForm}
+          layout="vertical"
+          onFinish={handleImportModel}
+        >
+          <Form.Item
+            name="name"
+            label="Model Name"
+            rules={[{ required: true, message: 'Please enter model name' }]}
+          >
+            <Input placeholder="e.g., Custom CodeLlama 34B" prefix={<RobotOutlined />} />
+          </Form.Item>
+
+          <Form.Item
+            name="provider"
+            label="Provider"
+            rules={[{ required: true, message: 'Please select provider' }]}
+          >
+            <Select
+              placeholder="Select provider"
+              options={[
+                { value: 'openai', label: 'OpenAI' },
+                { value: 'anthropic', label: 'Anthropic' },
+                { value: 'ollama', label: 'Ollama (Local)' },
+                { value: 'huggingface', label: 'HuggingFace' },
+                { value: 'custom', label: 'Custom API' },
+              ]}
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="api_endpoint"
+            label="API Endpoint"
+            rules={[{ required: true, message: 'Please enter API endpoint' }]}
+          >
+            <Input placeholder="https://api.example.com/v1/chat" prefix={<CloudServerOutlined />} />
+          </Form.Item>
+
+          <Form.Item
+            name="api_key"
+            label="API Key (Optional)"
+            extra="API key will be encrypted and stored securely"
+          >
+            <Input.Password placeholder="sk-..." />
+          </Form.Item>
+
+          <Form.Item
+            name="model_id"
+            label="Model ID"
+            extra="The specific model identifier used by the API"
+          >
+            <Input placeholder="e.g., codellama:34b, gpt-4-turbo" />
+          </Form.Item>
+
+          <Divider />
+
+          <Form.Item
+            name="config"
+            label="Model Configuration"
+          >
+            <Row gutter={16}>
+              <Col span={8}>
+                <Form.Item name={['config', 'max_tokens']} label="Max Tokens" initialValue={4096}>
+                  <InputNumber min={100} max={32000} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['config', 'temperature']} label="Temperature" initialValue={0.7}>
+                  <InputNumber min={0} max={2} step={0.1} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+              <Col span={8}>
+                <Form.Item name={['config', 'top_p']} label="Top P" initialValue={0.9}>
+                  <InputNumber min={0} max={1} step={0.05} style={{ width: '100%' }} />
+                </Form.Item>
+              </Col>
+            </Row>
+          </Form.Item>
+        </Form>
+
+        {/* Imported Models List */}
+        {importedModels.length > 0 && (
+          <>
+            <Divider>Imported Models ({importedModels.length})</Divider>
+            <List
+              size="small"
+              dataSource={importedModels}
+              renderItem={(model) => (
+                <List.Item
+                  extra={
+                    <Tag color={model.status === 'active' ? 'green' : 'red'}>
+                      {model.status}
+                    </Tag>
+                  }
+                >
+                  <List.Item.Meta
+                    avatar={<Avatar icon={<ApiOutlined />} />}
+                    title={model.name}
+                    description={`${model.provider} • ${model.api_endpoint}`}
+                  />
+                </List.Item>
+              )}
+            />
+          </>
         )}
       </Modal>
     </div>

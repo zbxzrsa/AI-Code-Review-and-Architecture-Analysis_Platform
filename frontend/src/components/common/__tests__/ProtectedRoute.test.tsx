@@ -385,3 +385,215 @@ describe('ProtectedRoute Accessibility', () => {
     });
   });
 });
+
+// ============================================
+// Direct URL Access Prevention Tests
+// ============================================
+describe('Direct URL Access Prevention', () => {
+  const adminPaths = [
+    '/admin/users',
+    '/admin/ai-models',
+    '/admin/providers',
+    '/admin/security',
+    '/admin/audit',
+    '/admin/health',
+    '/admin/experiments',
+    '/admin/evolution',
+    '/admin/auto-fix',
+    '/admin/vulnerabilities',
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('blocks admin route access for regular user via direct URL', async () => {
+    mockUseAuthStore.mockReturnValue({
+      isAuthenticated: true,
+      user: { id: '1', role: 'user', permissions: [] },
+      isLoading: false,
+    });
+
+    render(
+      <Routes>
+        <Route path="/admin/users" element={
+          <AdminRoute>
+            <ProtectedContent />
+          </AdminRoute>
+        } />
+      </Routes>,
+      { wrapper: createWrapper(['/admin/users']) }
+    );
+
+    await waitFor(() => {
+      // Should show access denied, not the protected content
+      expect(screen.queryByTestId('protected')).not.toBeInTheDocument();
+      expect(screen.getByText(/Administrator Access Required|Access Denied/i)).toBeInTheDocument();
+    });
+  });
+
+  it('blocks admin route access for viewer via direct URL', async () => {
+    mockUseAuthStore.mockReturnValue({
+      isAuthenticated: true,
+      user: { id: '1', role: 'viewer', permissions: [] },
+      isLoading: false,
+    });
+
+    render(
+      <Routes>
+        <Route path="/admin/ai-models" element={
+          <AdminRoute>
+            <ProtectedContent />
+          </AdminRoute>
+        } />
+      </Routes>,
+      { wrapper: createWrapper(['/admin/ai-models']) }
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('protected')).not.toBeInTheDocument();
+      expect(screen.getByText(/Administrator Access Required|Access Denied/i)).toBeInTheDocument();
+    });
+  });
+
+  it('allows admin to access admin routes via direct URL', async () => {
+    mockUseAuthStore.mockReturnValue({
+      isAuthenticated: true,
+      user: { id: '1', role: 'admin', permissions: ['admin:all'] },
+      isLoading: false,
+    });
+
+    render(
+      <Routes>
+        <Route path="/admin/users" element={
+          <AdminRoute>
+            <ProtectedContent />
+          </AdminRoute>
+        } />
+      </Routes>,
+      { wrapper: createWrapper(['/admin/users']) }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('protected')).toBeInTheDocument();
+    });
+  });
+
+  it('shows role information in access denied message', async () => {
+    mockUseAuthStore.mockReturnValue({
+      isAuthenticated: true,
+      user: { id: '1', role: 'user', permissions: [] },
+      isLoading: false,
+    });
+
+    render(
+      <Routes>
+        <Route path="/admin/users" element={
+          <AdminRoute>
+            <ProtectedContent />
+          </AdminRoute>
+        } />
+      </Routes>,
+      { wrapper: createWrapper(['/admin/users']) }
+    );
+
+    await waitFor(() => {
+      // Should show current role and required role
+      expect(screen.getByText(/user/i)).toBeInTheDocument();
+      expect(screen.getByText(/admin/i)).toBeInTheDocument();
+    });
+  });
+
+  it('redirects unauthenticated users to login from admin routes', async () => {
+    mockUseAuthStore.mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      isLoading: false,
+    });
+
+    render(
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/admin/users" element={
+          <AdminRoute>
+            <ProtectedContent />
+          </AdminRoute>
+        } />
+      </Routes>,
+      { wrapper: createWrapper(['/admin/users']) }
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('login')).toBeInTheDocument();
+    });
+  });
+});
+
+// ============================================
+// Role Boundary Tests
+// ============================================
+describe('Role Boundary Tests', () => {
+  const testRoles = ['guest', 'viewer', 'user', 'admin'] as const;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('only admin role can access admin routes', async () => {
+    for (const role of testRoles) {
+      mockUseAuthStore.mockReturnValue({
+        isAuthenticated: role !== 'guest',
+        user: role !== 'guest' ? { id: '1', role, permissions: [] } : null,
+        isLoading: false,
+      });
+
+      const { unmount } = render(
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/admin/test" element={
+            <AdminRoute>
+              <ProtectedContent />
+            </AdminRoute>
+          } />
+        </Routes>,
+        { wrapper: createWrapper(['/admin/test']) }
+      );
+
+      await waitFor(() => {
+        if (role === 'admin') {
+          expect(screen.getByTestId('protected')).toBeInTheDocument();
+        } else if (role === 'guest') {
+          expect(screen.getByTestId('login')).toBeInTheDocument();
+        } else {
+          expect(screen.queryByTestId('protected')).not.toBeInTheDocument();
+          expect(screen.getByText(/Administrator Access Required|Access Denied/i)).toBeInTheDocument();
+        }
+      });
+
+      unmount();
+    }
+  });
+
+  it('all authenticated roles can access non-admin routes', async () => {
+    for (const role of testRoles.filter(r => r !== 'guest')) {
+      mockUseAuthStore.mockReturnValue({
+        isAuthenticated: true,
+        user: { id: '1', role, permissions: [] },
+        isLoading: false,
+      });
+
+      const { unmount } = render(
+        <ProtectedRoute>
+          <ProtectedContent />
+        </ProtectedRoute>,
+        { wrapper: createWrapper() }
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('protected')).toBeInTheDocument();
+      });
+
+      unmount();
+    }
+  });
+});

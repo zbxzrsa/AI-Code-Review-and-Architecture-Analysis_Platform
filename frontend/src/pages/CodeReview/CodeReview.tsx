@@ -1,6 +1,5 @@
 /**
  * Code Review Page with AI Interaction
- * AI代码审查页面
  * 
  * Features:
  * - Code editor with syntax highlighting

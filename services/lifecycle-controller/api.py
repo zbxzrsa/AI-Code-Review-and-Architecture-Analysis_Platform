@@ -11,7 +11,7 @@ Provides endpoints for:
 
 import logging
 from contextlib import asynccontextmanager
-from datetime, timezone import datetime, timezone
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
@@ -459,6 +459,121 @@ async def get_event_types():
     """Get available event types"""
     return {
         "event_types": [e.value for e in EventType]
+    }
+
+
+# ==================== Comparison & Analytics Endpoints ====================
+
+@app.get("/analytics/detailed/{version_id}")
+async def get_detailed_analytics(version_id: str, time_window_hours: int = 24):
+    """
+    Get detailed analytics for a version including:
+    - Issue breakdown by severity and type
+    - Latency distribution statistics
+    - Hourly trends
+    """
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
+    
+    # Get version config
+    if version_id not in orchestrator.lifecycle.active_versions:
+        raise HTTPException(status_code=404, detail=f"Version {version_id} not found")
+    
+    config = orchestrator.lifecycle.active_versions[version_id]
+    
+    # Build analytics response
+    analytics = {
+        "version_id": version_id,
+        "current_state": config.current_state.value,
+        "time_window_hours": time_window_hours,
+        "basic_info": {
+            "model_version": config.model_version,
+            "prompt_version": config.prompt_version,
+            "created_at": config.created_at.isoformat(),
+            "consecutive_failures": config.consecutive_failures,
+        },
+        "evaluation_summary": {
+            "last_evaluation": config.last_evaluation.isoformat() if config.last_evaluation else None,
+            "total_evaluations": len([
+                e for e in orchestrator.lifecycle.evaluation_history
+                if e.get("version_id") == version_id
+            ]),
+        },
+    }
+    
+    return analytics
+
+
+@app.get("/analytics/comparison")
+async def get_version_comparison(
+    version_a: str,
+    version_b: str
+):
+    """Compare two versions side-by-side"""
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
+    
+    versions = orchestrator.lifecycle.active_versions
+    
+    if version_a not in versions:
+        raise HTTPException(status_code=404, detail=f"Version {version_a} not found")
+    if version_b not in versions:
+        raise HTTPException(status_code=404, detail=f"Version {version_b} not found")
+    
+    config_a = versions[version_a]
+    config_b = versions[version_b]
+    
+    return {
+        "comparison": {
+            "version_a": {
+                "version_id": version_a,
+                "state": config_a.current_state.value,
+                "model_version": config_a.model_version,
+                "consecutive_failures": config_a.consecutive_failures,
+            },
+            "version_b": {
+                "version_id": version_b,
+                "state": config_b.current_state.value,
+                "model_version": config_b.model_version,
+                "consecutive_failures": config_b.consecutive_failures,
+            },
+        }
+    }
+
+
+@app.get("/analytics/promotion-history")
+async def get_promotion_history(limit: int = 20):
+    """Get history of promotion decisions"""
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
+    
+    # Filter promotion events from history
+    promotion_events = [
+        e for e in orchestrator.lifecycle.evaluation_history
+        if e.get("event_type") in ["promoted", "gray_scale_started", "promoted_to_stable"]
+    ][-limit:]
+    
+    return {
+        "promotion_history": promotion_events,
+        "total_promotions": len(promotion_events),
+    }
+
+
+@app.get("/analytics/quarantine-history")
+async def get_quarantine_history(limit: int = 20):
+    """Get history of quarantine decisions"""
+    if not orchestrator:
+        raise HTTPException(status_code=503, detail=ORCHESTRATOR_NOT_INITIALIZED)
+    
+    # Filter quarantine events from history
+    quarantine_events = [
+        e for e in orchestrator.lifecycle.evaluation_history
+        if e.get("event_type") in ["downgraded_to_v3", "quarantined", "rollback"]
+    ][-limit:]
+    
+    return {
+        "quarantine_history": quarantine_events,
+        "total_quarantines": len(quarantine_events),
     }
 
 

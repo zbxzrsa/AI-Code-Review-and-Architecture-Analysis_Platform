@@ -126,6 +126,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const hasRequiredPermissions = hasPermissions(userPerms, requiredPermissions, requireAll);
 
   if (!hasRequiredRole || !hasRequiredPermissions) {
+    // Determine if this is an admin-only route
+    const isAdminRoute = requiredRoles.includes('admin') && requiredRoles.length === 1;
+    const currentPath = location.pathname;
+    
     return (
       <div style={{
         display: 'flex',
@@ -133,16 +137,51 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
         alignItems: 'center',
         minHeight: '100vh',
         padding: 24,
-        background: '#f5f5f5'
+        background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%)'
       }}>
         <Result
           status="403"
-          icon={<LockOutlined style={{ color: '#ff4d4f' }} />}
-          title={t('auth.access_denied', 'Access Denied')}
-          subTitle={t('auth.no_permission', "You don't have permission to access this page.")}
+          icon={<LockOutlined style={{ color: '#ff4d4f', fontSize: 72 }} />}
+          title={
+            <span style={{ fontSize: 28 }}>
+              {isAdminRoute 
+                ? t('auth.admin_only', 'Administrator Access Required')
+                : t('auth.access_denied', 'Access Denied')}
+            </span>
+          }
+          subTitle={
+            <div style={{ maxWidth: 400, margin: '0 auto' }}>
+              <p style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
+                {isAdminRoute 
+                  ? t('auth.admin_only_message', 'This feature is only available to administrators.')
+                  : t('auth.no_permission', "You don't have permission to access this page.")}
+              </p>
+              <p style={{ fontSize: 14, color: '#999' }}>
+                {t('auth.contact_admin', 'If you believe you should have access, please contact your administrator.')}
+              </p>
+              {isAdminRoute && (
+                <div style={{ 
+                  marginTop: 16, 
+                  padding: '12px 16px', 
+                  background: 'rgba(255, 77, 79, 0.1)', 
+                  borderRadius: 8,
+                  border: '1px solid rgba(255, 77, 79, 0.2)'
+                }}>
+                  <p style={{ margin: 0, fontSize: 13, color: '#ff4d4f' }}>
+                    <LockOutlined style={{ marginRight: 8 }} />
+                    {t('auth.current_role', 'Your current role')}: <strong>{user?.role || 'user'}</strong>
+                  </p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: 13, color: '#ff4d4f' }}>
+                    {t('auth.required_role', 'Required role')}: <strong>admin</strong>
+                  </p>
+                </div>
+              )}
+            </div>
+          }
           extra={
-            <Space>
+            <Space size="middle">
               <Button 
+                size="large"
                 icon={<ArrowLeftOutlined />} 
                 onClick={() => navigate(-1)}
               >
@@ -150,6 +189,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
               </Button>
               <Button 
                 type="primary" 
+                size="large"
                 icon={<HomeOutlined />}
                 onClick={() => navigate('/dashboard')}
               >

@@ -1,14 +1,11 @@
 """
-Development API Server / 开发API服务器
+Development API Server
 
 Handles all non-auth API endpoints for frontend development.
-处理所有非认证API端点用于前端开发。
 
 Run with: python dev-api-server.py
-运行命令: python dev-api-server.py
 
 SECURITY NOTE: This server validates configuration for production safety.
-安全提示: 此服务器会验证生产环境配置的安全性。
 """
 
 import os
@@ -16,7 +13,7 @@ import secrets
 import logging
 from datetime import datetime, timedelta
 from typing import Optional, List
-from fastapi import FastAPI, HTTPException, status, Query, Request
+from fastapi import FastAPI, HTTPException, status, Query, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -30,7 +27,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ============================================
-# Mode Configuration / 模式配置
+# Mode Configuration
 # ============================================
 MOCK_MODE = os.getenv('MOCK_MODE', 'true').lower() == 'true'
 ENVIRONMENT = os.getenv('ENVIRONMENT', 'development')
@@ -38,7 +35,7 @@ IS_PRODUCTION = ENVIRONMENT == 'production'
 
 
 # ============================================
-# Constants / 常量 (避免字符串重复)
+# Constants (avoid string duplication)
 # ============================================
 class Literals:
     """String literals to avoid duplication."""
@@ -95,8 +92,13 @@ class Literals:
     JOHN_EMAIL = "john@example.com"
     JANE_EMAIL = "jane@example.com"
 
+
+# Alias for backward compatibility
+Constants = Literals
+
+
 # ============================================
-# Security Configuration / 安全配置
+# Security Configuration
 # ============================================
 # Maximum request body size (10MB default)
 MAX_REQUEST_SIZE_MB = int(os.getenv('MAX_REQUEST_SIZE_MB', '10'))
@@ -129,7 +131,9 @@ CORS_ORIGINS = get_cors_origins()
 logger.info(f"CORS configured for: {CORS_ORIGINS}")
 
 # ============================================
-# OAuth Configuration / OAuth配置
+# OAuth Configuration (Application-level credentials)
+# Each user authorizes YOUR app to access THEIR GitHub account
+# Create an OAuth App at: https://github.com/settings/developers
 # ============================================
 GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID', '')
 GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET', '')
@@ -137,8 +141,15 @@ GITLAB_CLIENT_ID = os.getenv('GITLAB_CLIENT_ID', '')
 GITLAB_CLIENT_SECRET = os.getenv('GITLAB_CLIENT_SECRET', '')
 BITBUCKET_API_TOKEN = os.getenv('BITBUCKET_API_TOKEN', '')
 
+# Store OAuth states for CSRF protection
+oauth_states: dict = {}
+
+# Store user OAuth connections (in production, this would be in a database)
+# Key: user_id, Value: dict of provider -> {access_token, refresh_token, user_info}
+user_oauth_tokens: dict = {}
+
 # ============================================
-# Models / 模型
+# Models
 # ============================================
 
 class ProjectSettings(BaseModel):
@@ -181,7 +192,7 @@ class Activity(BaseModel):
 
 
 # ============================================
-# Mock Data / 模拟数据
+# Mock Data
 # ============================================
 
 mock_projects = [
@@ -250,7 +261,7 @@ mock_activities = [
 ]
 
 # ============================================
-# Request Size Limiting Middleware / 请求大小限制中间件
+# Request Size Limiting Middleware
 # ============================================
 
 class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
@@ -271,11 +282,11 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 
 
 # ============================================
-# FastAPI App / FastAPI 应用
+# FastAPI App
 # ============================================
 
 app = FastAPI(
-    title="Dev API Server / 开发API服务器",
+    title="Dev API Server",
     description="Development API server for frontend testing",
     version="1.0.0",
     docs_url="/docs" if not IS_PRODUCTION else None,  # Disable docs in production
@@ -295,7 +306,7 @@ app.add_middleware(
 )
 
 # ============================================
-# Health / 健康检查
+# Health Check
 # ============================================
 
 @app.get("/")
@@ -309,12 +320,12 @@ async def health():
 
 
 # ============================================
-# Dashboard / 仪表板
+# Dashboard
 # ============================================
 
 @app.get("/api/metrics/dashboard")
 async def get_dashboard_metrics():
-    """Get dashboard metrics / 获取仪表板指标"""
+    """Get dashboard metrics"""
     return DashboardMetrics(
         total_projects=len(mock_projects),
         total_analyses=47,
@@ -326,7 +337,7 @@ async def get_dashboard_metrics():
 
 @app.get("/api/metrics/system")
 async def get_system_metrics():
-    """Get system metrics / 获取系统指标"""
+    """Get system metrics"""
     return {
         "cpu_usage": random.uniform(20, 60),
         "memory_usage": random.uniform(40, 70),
@@ -336,7 +347,7 @@ async def get_system_metrics():
 
 
 # ============================================
-# Projects / 项目
+# Projects
 # ============================================
 
 @app.get("/api/projects")
@@ -345,7 +356,7 @@ async def list_projects(
     limit: int = Query(10, ge=1, le=100),
     search: Optional[str] = None
 ):
-    """List projects / 列出项目"""
+    """List projects"""
     projects = mock_projects
     
     if search:
@@ -361,7 +372,7 @@ async def list_projects(
 
 @app.get("/api/projects/{project_id}")
 async def get_project(project_id: str):
-    """Get project by ID / 通过ID获取项目"""
+    """Get project by ID"""
     for project in mock_projects:
         if project.id == project_id:
             return project
@@ -374,6 +385,7 @@ class CreateProjectRequest(BaseModel):
     description: Optional[str] = None
     framework: Optional[str] = None
     repository_url: Optional[str] = None
+    settings: Optional[dict] = None  # Accept settings from frontend
 
 
 class UpdateProjectRequest(BaseModel):
@@ -387,7 +399,18 @@ class UpdateProjectRequest(BaseModel):
 
 @app.post("/api/projects")
 async def create_project(request: CreateProjectRequest):
-    """Create project / 创建项目"""
+    """Create project"""
+    # Parse settings from request or use defaults
+    settings_data = request.settings or {}
+    project_settings = ProjectSettings(
+        auto_review=settings_data.get("auto_review", True),
+        review_on_push=settings_data.get("review_on_push", True),
+        review_on_pr=settings_data.get("review_on_pr", True),
+        severity_threshold=settings_data.get("severity_threshold", "warning"),
+        enabled_rules=settings_data.get("enabled_rules", []),
+        ignored_paths=settings_data.get("ignored_paths", ["node_modules", ".git", "__pycache__", "dist", "build"])
+    )
+    
     project = Project(
         id=f"proj_{secrets.token_hex(4)}",
         name=request.name,
@@ -397,24 +420,18 @@ async def create_project(request: CreateProjectRequest):
         repository_url=request.repository_url or "",
         status="active",
         issues_count=0,
-        settings=ProjectSettings(
-            auto_review=True,
-            review_on_push=True,
-            review_on_pr=True,
-            severity_threshold="warning",
-            enabled_rules=[],
-            ignored_paths=["node_modules", ".git", "__pycache__", "dist", "build"]
-        ),
+        settings=project_settings,
         created_at=datetime.now(),
         updated_at=datetime.now()
     )
     mock_projects.append(project)
+    logger.info(f"Created project: {project.id} - {project.name}")
     return project
 
 
 @app.put("/api/projects/{project_id}")
 async def update_project(project_id: str, request: UpdateProjectRequest):
-    """Update project / 更新项目"""
+    """Update project"""
     for project in mock_projects:
         if project.id == project_id:
             if request.name:
@@ -434,7 +451,7 @@ async def update_project(project_id: str, request: UpdateProjectRequest):
 
 @app.delete("/api/projects/{project_id}")
 async def delete_project(project_id: str):
-    """Delete project / 删除项目"""
+    """Delete project"""
     for i, project in enumerate(mock_projects):
         if project.id == project_id:
             mock_projects.pop(i)
@@ -443,7 +460,136 @@ async def delete_project(project_id: str):
 
 
 # ============================================
-# Analysis / 分析
+# Project Team, Webhooks, API Keys
+# ============================================
+
+@app.get("/api/projects/{project_id}/team")
+async def get_project_team(project_id: str):
+    """Get project team members"""
+    return {
+        "items": [
+            {
+                "id": "member_1",
+                "user_id": "user_1",
+                "name": "John Doe",
+                "email": "john@example.com",
+                "role": "owner",
+                "avatar": None,
+                "joined_at": (datetime.now() - timedelta(days=30)).isoformat()
+            },
+            {
+                "id": "member_2",
+                "user_id": "user_2",
+                "name": "Jane Smith",
+                "email": "jane@example.com",
+                "role": "admin",
+                "avatar": None,
+                "joined_at": (datetime.now() - timedelta(days=15)).isoformat()
+            }
+        ]
+    }
+
+
+@app.post("/api/projects/{project_id}/team")
+async def invite_team_member(project_id: str):
+    """Invite team member"""
+    return {
+        "id": f"member_{secrets.token_hex(4)}",
+        "message": "Invitation sent"
+    }
+
+
+@app.get("/api/projects/{project_id}/webhooks")
+async def get_project_webhooks(project_id: str):
+    """Get project webhooks"""
+    return {
+        "items": [
+            {
+                "id": "webhook_1",
+                "name": "CI/CD Pipeline",
+                "url": "https://ci.example.com/webhook",
+                "events": ["push", "pull_request"],
+                "is_active": True,
+                "created_at": (datetime.now() - timedelta(days=10)).isoformat()
+            }
+        ]
+    }
+
+
+@app.post("/api/projects/{project_id}/webhooks")
+async def create_project_webhook(project_id: str):
+    """Create project webhook"""
+    return {
+        "id": f"webhook_{secrets.token_hex(4)}",
+        "message": "Webhook created"
+    }
+
+
+@app.get("/api/projects/{project_id}/api-keys")
+async def get_project_api_keys(project_id: str):
+    """Get project API keys"""
+    return {
+        "items": [
+            {
+                "id": "key_1",
+                "name": "Production Key",
+                "key_prefix": "sk_prod_****",
+                "scopes": ["read", "write"],
+                "created_at": (datetime.now() - timedelta(days=5)).isoformat(),
+                "last_used_at": datetime.now().isoformat(),
+                "expires_at": None
+            }
+        ]
+    }
+
+
+@app.post("/api/projects/{project_id}/api-keys")
+async def create_project_api_key(project_id: str):
+    """Create project API key"""
+    key = f"sk_{secrets.token_hex(16)}"
+    return {
+        "id": f"key_{secrets.token_hex(4)}",
+        "key": key,
+        "message": "API key created"
+    }
+
+
+@app.get("/api/projects/{project_id}/activity")
+async def get_project_activity(project_id: str, page: int = 1, limit: int = 20):
+    """Get project activity log"""
+    return {
+        "items": [
+            {
+                "id": f"activity_{i}",
+                "type": random.choice(["analysis_complete", "settings_updated", "member_added", "webhook_triggered"]),
+                "message": f"Activity {i}",
+                "user": {"id": "user_1", "name": "John Doe"},
+                "created_at": (datetime.now() - timedelta(hours=i)).isoformat()
+            }
+            for i in range(min(limit, 10))
+        ],
+        "total": 50,
+        "page": page,
+        "limit": limit
+    }
+
+
+@app.get("/api/projects/{project_id}/stats")
+async def get_project_stats(project_id: str):
+    """Get project statistics"""
+    return {
+        "total_analyses": random.randint(10, 100),
+        "issues_found": random.randint(5, 50),
+        "issues_resolved": random.randint(3, 40),
+        "resolution_rate": round(random.uniform(0.6, 0.95), 2),
+        "avg_analysis_time": round(random.uniform(10, 60), 1),
+        "code_quality_score": round(random.uniform(70, 95), 1),
+        "last_analysis": (datetime.now() - timedelta(hours=random.randint(1, 48))).isoformat()
+    }
+
+
+# ============================================
+# Analysis
 # ============================================
 
 class AnalyzeRequest(BaseModel):
@@ -453,7 +599,7 @@ class AnalyzeRequest(BaseModel):
 
 @app.post("/api/projects/{project_id}/analyze")
 async def start_analysis(project_id: str, request: Optional[AnalyzeRequest] = None):
-    """Start analysis / 开始分析"""
+    """Start analysis"""
     session_id = f"session_{secrets.token_hex(8)}"
     return {
         "id": session_id,
@@ -467,7 +613,7 @@ async def start_analysis(project_id: str, request: Optional[AnalyzeRequest] = No
 
 @app.get("/api/analyze/{session_id}")
 async def get_analysis_session(session_id: str):
-    """Get analysis session / 获取分析会话"""
+    """Get analysis session"""
     return {
         "id": session_id,
         "status": "completed",
@@ -479,7 +625,7 @@ async def get_analysis_session(session_id: str):
 
 @app.get("/api/analyze/{session_id}/issues")
 async def get_analysis_issues(session_id: str):
-    """Get analysis issues / 获取分析问题"""
+    """Get analysis issues"""
     return {
         "items": [
             {
@@ -499,12 +645,12 @@ async def get_analysis_issues(session_id: str):
 
 
 # ============================================
-# Project Files / 项目文件
+# Project Files
 # ============================================
 
 @app.get("/api/projects/{project_id}/files")
 async def get_project_files(project_id: str, path: Optional[str] = None):
-    """Get project file tree / 获取项目文件树"""
+    """Get project file tree"""
     return {
         "path": path or "",
         "items": [
@@ -519,7 +665,7 @@ async def get_project_files(project_id: str, path: Optional[str] = None):
 
 @app.get("/api/projects/{project_id}/files/{file_path:path}")
 async def get_project_file(project_id: str, file_path: str):
-    """Get file content / 获取文件内容"""
+    """Get file content"""
     # Sample code based on file type
     if file_path.endswith('.py'):
         content = '''# Sample Python Code
@@ -580,7 +726,7 @@ function processData(data: any) {
 
 
 # ============================================
-# OAuth / OAuth认证
+# OAuth
 # ============================================
 
 mock_oauth_connections = []
@@ -618,13 +764,138 @@ mock_repositories = [
 ]
 
 
+# ============================================
+# Core Authentication Endpoints
+# ============================================
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+    remember_me: bool = False
+
+
+class RegisterRequest(BaseModel):
+    email: str
+    password: str
+    name: str
+    invitation_code: Optional[str] = None
+
+
+# Mock authenticated user session
+mock_current_user = {
+    "id": "user_1",
+    "email": "demo@example.com",
+    "name": "Demo User",
+    "role": "admin",
+    "avatar": None,
+    "emailVerified": True,
+    "twoFactorEnabled": False,
+    "createdAt": datetime.now().isoformat(),
+    "lastLoginAt": datetime.now().isoformat()
+}
+
+
+@app.post("/api/auth/login")
+async def login(request: LoginRequest, response: Response):
+    """User login - sets httpOnly cookie"""
+    # In dev mode, accept any login
+    logger.info(f"Login attempt for: {request.email}")
+    
+    # Set a mock session cookie
+    response.set_cookie(
+        key="session",
+        value="mock_session_token",
+        httponly=True,
+        secure=False,  # Set to True in production
+        samesite="lax",
+        max_age=86400 * 7 if request.remember_me else 86400
+    )
+    
+    return {
+        "user": mock_current_user,
+        "message": "Login successful"
+    }
+
+
+@app.post("/api/auth/register")
+async def register(request: RegisterRequest, response: Response):
+    """User registration"""
+    logger.info(f"Registration for: {request.email}")
+    
+    new_user = {
+        **mock_current_user,
+        "id": f"user_{secrets.token_hex(4)}",
+        "email": request.email,
+        "name": request.name,
+        "role": "user"
+    }
+    
+    response.set_cookie(
+        key="session",
+        value="mock_session_token",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=86400
+    )
+    
+    return {
+        "user": new_user,
+        "message": "Registration successful"
+    }
+
+
+@app.post("/api/auth/refresh")
+async def refresh_token(response: Response):
+    """Refresh authentication token"""
+    # In dev mode, always succeed and extend session
+    response.set_cookie(
+        key="session",
+        value="mock_session_token_refreshed",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=86400
+    )
+    
+    return {
+        "user": mock_current_user,
+        "message": "Token refreshed"
+    }
+
+
+@app.post("/api/auth/logout")
+async def logout(response: Response):
+    """User logout - clears session"""
+    response.delete_cookie(key="session")
+    return {"message": "Logged out successfully"}
+
+
+@app.get("/api/auth/me")
+async def get_current_user():
+    """Get current authenticated user"""
+    return mock_current_user
+
+
 @app.get("/api/auth/oauth/providers")
 async def get_oauth_providers():
-    """Get available OAuth providers / 获取可用的OAuth提供商"""
+    """
+    Get available OAuth providers and their configuration status.
+    
+    Each user can connect their own GitHub/GitLab account.
+    The CLIENT_ID/SECRET are for the APPLICATION, not individual users.
+    """
     # Check which providers are configured
     github_configured = bool(GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET)
     gitlab_configured = bool(GITLAB_CLIENT_ID and GITLAB_CLIENT_SECRET)
-    bitbucket_configured = bool(BITBUCKET_API_TOKEN)  # Bitbucket uses API Token
+    bitbucket_configured = bool(BITBUCKET_API_TOKEN)
+    
+    # Check current user's connections (from token storage)
+    user_id = "user_1"  # In production, get from session
+    user_connections = user_oauth_tokens.get(user_id, {})
+    
+    github_connected = "github" in user_connections
+    gitlab_connected = "gitlab" in user_connections
     
     return {
         "providers": [
@@ -632,68 +903,112 @@ async def get_oauth_providers():
                 "name": "github",
                 "display_name": "GitHub",
                 "icon": "github",
-                "connected": False,
+                "connected": github_connected,
                 "configured": github_configured,
                 "auth_type": "oauth",
-                "message": "Ready to connect" if github_configured else "OAuth not configured - set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET"
+                "username": user_connections.get("github", {}).get("user_info", {}).get("username") if github_connected else None,
+                "message": (
+                    f"Connected as {user_connections['github']['user_info']['username']}" if github_connected
+                    else "Ready - Click to connect your GitHub account" if github_configured
+                    else "Not configured. Create an OAuth App at github.com/settings/developers and set GITHUB_CLIENT_ID & GITHUB_CLIENT_SECRET in .env"
+                ),
+                "setup_url": "https://github.com/settings/developers" if not github_configured else None
             },
             {
                 "name": "gitlab",
                 "display_name": "GitLab",
                 "icon": "gitlab",
-                "connected": False,
+                "connected": gitlab_connected,
                 "configured": gitlab_configured,
                 "auth_type": "oauth",
-                "message": "Ready to connect" if gitlab_configured else "OAuth not configured - set GITLAB_CLIENT_ID and GITLAB_CLIENT_SECRET"
+                "username": user_connections.get("gitlab", {}).get("user_info", {}).get("username") if gitlab_connected else None,
+                "message": (
+                    f"Connected as {user_connections['gitlab']['user_info']['username']}" if gitlab_connected
+                    else "Ready - Click to connect your GitLab account" if gitlab_configured
+                    else "Not configured. Create an OAuth App at gitlab.com/-/profile/applications"
+                ),
+                "setup_url": "https://gitlab.com/-/profile/applications" if not gitlab_configured else None
             },
             {
                 "name": "bitbucket",
                 "display_name": "Bitbucket",
                 "icon": "bitbucket",
-                "connected": bitbucket_configured,  # API Token = already connected
+                "connected": bitbucket_configured,
                 "configured": bitbucket_configured,
                 "auth_type": "api_token",
-                "message": "Connected via API Token" if bitbucket_configured else "API Token not configured - set BITBUCKET_API_TOKEN"
+                "message": "Connected via API Token" if bitbucket_configured else "Add your Bitbucket API token in Settings"
             },
-        ]
+        ],
+        "setup_instructions": {
+            "github": {
+                "steps": [
+                    "Go to https://github.com/settings/developers",
+                    "Click 'New OAuth App'",
+                    "Set Homepage URL to: http://localhost:5173",
+                    "Set Callback URL to: http://localhost:5173/oauth/callback/github",
+                    "Copy Client ID and Client Secret to your .env file"
+                ]
+            }
+        }
     }
 
 
 @app.get("/api/auth/oauth/connect/{provider}")
 async def initiate_oauth(provider: str, return_url: str = "/"):
-    """Initiate OAuth flow / 启动OAuth流程"""
+    """
+    Initiate OAuth flow for a user to connect their own GitHub/GitLab account.
+    
+    This uses APPLICATION credentials (CLIENT_ID/SECRET) to redirect the user
+    to GitHub, where THEY authorize YOUR app to access THEIR account.
+    Each user binds their own account.
+    """
     state = secrets.token_urlsafe(32)
-    # Use port 5173 for Vite dev server, 3000 for production
+    # Use port 5173 for Vite dev server
     callback_url = f"http://localhost:5173/oauth/callback/{provider}"
+    
+    # Store state for CSRF protection (with return URL)
+    oauth_states[state] = {
+        "provider": provider,
+        "return_url": return_url,
+        "created_at": datetime.now().isoformat()
+    }
     
     # Get OAuth configuration based on provider
     if provider == "github":
         if not GITHUB_CLIENT_ID:
             raise HTTPException(
                 status_code=400,
-                detail="GitHub OAuth not configured. Please set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET environment variables."
+                detail="GitHub OAuth not configured. Create an OAuth App at https://github.com/settings/developers and set GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET."
             )
-        auth_url = f"https://github.com/login/oauth/authorize?client_id={GITHUB_CLIENT_ID}&scope=repo,user:email&state={state}&redirect_uri={callback_url}"
+        # Redirect user to GitHub to authorize YOUR app to access THEIR account
+        auth_url = (
+            f"https://github.com/login/oauth/authorize"
+            f"?client_id={GITHUB_CLIENT_ID}"
+            f"&scope=repo,user:email,read:user"
+            f"&state={state}"
+            f"&redirect_uri={callback_url}"
+        )
+        logger.info(f"Initiating GitHub OAuth for user, redirecting to GitHub...")
+        
     elif provider == "gitlab":
         if not GITLAB_CLIENT_ID:
             raise HTTPException(
                 status_code=400,
-                detail="GitLab OAuth not configured. Please set GITLAB_CLIENT_ID and GITLAB_CLIENT_SECRET environment variables."
+                detail="GitLab OAuth not configured. Create an OAuth App at GitLab and set GITLAB_CLIENT_ID and GITLAB_CLIENT_SECRET."
             )
-        auth_url = f"https://gitlab.com/oauth/authorize?client_id={GITLAB_CLIENT_ID}&scope=read_user+read_repository+api&response_type=code&state={state}&redirect_uri={callback_url}"
+        auth_url = (
+            f"https://gitlab.com/oauth/authorize"
+            f"?client_id={GITLAB_CLIENT_ID}"
+            f"&scope=read_user+read_repository+api"
+            f"&response_type=code"
+            f"&state={state}"
+            f"&redirect_uri={callback_url}"
+        )
     elif provider == "bitbucket":
-        # Bitbucket uses API Token instead of OAuth (since Sep 2025)
-        if not BITBUCKET_API_TOKEN:
-            raise HTTPException(
-                status_code=400,
-                detail="Bitbucket API Token not configured. Please set BITBUCKET_API_TOKEN environment variable."
-            )
-        # No OAuth flow needed - API Token is used directly
-        return {
-            "message": "Bitbucket uses API Token authentication. Already connected.",
-            "connected": True,
-            "auth_type": "api_token"
-        }
+        raise HTTPException(
+            status_code=400,
+            detail="Bitbucket uses personal API tokens. Please add your API token in Settings."
+        )
     else:
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
     
@@ -705,25 +1020,163 @@ async def initiate_oauth(provider: str, return_url: str = "/"):
 
 
 @app.get("/api/auth/oauth/callback/{provider}")
-async def oauth_callback(provider: str, code: str = "", state: str = ""):
-    """Handle OAuth callback / 处理OAuth回调"""
-    # Simulate successful OAuth
-    mock_oauth_connections.append({
-        "provider": provider,
-        "username": f"user_{provider}",
-        "email": f"user@{provider}.com",
-        "connected_at": datetime.now().isoformat()
-    })
+async def oauth_callback(provider: str, code: str = "", state: str = "", error: str = ""):
+    """
+    Handle OAuth callback after user authorizes the app on GitHub/GitLab.
+    
+    This endpoint:
+    1. Validates the state parameter (CSRF protection)
+    2. Exchanges the code for an access token
+    3. Fetches the user's GitHub profile
+    4. Stores the connection for THIS user
+    """
+    # Check for OAuth errors
+    if error:
+        logger.error(f"OAuth error from {provider}: {error}")
+        return {
+            "success": False,
+            "error": error,
+            "message": f"Authorization denied or failed"
+        }
+    
+    # Validate state (CSRF protection)
+    if state not in oauth_states:
+        logger.warning(f"Invalid OAuth state: {state}")
+        # For demo, continue anyway but log warning
+    else:
+        state_data = oauth_states.pop(state)
+        logger.info(f"Valid OAuth callback for provider: {state_data['provider']}")
+    
+    if not code:
+        return {
+            "success": False,
+            "error": "no_code",
+            "message": "No authorization code received"
+        }
+    
+    # Exchange code for access token
+    if provider == "github":
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                # Exchange code for token
+                token_response = await client.post(
+                    "https://github.com/login/oauth/access_token",
+                    data={
+                        "client_id": GITHUB_CLIENT_ID,
+                        "client_secret": GITHUB_CLIENT_SECRET,
+                        "code": code,
+                        "redirect_uri": f"http://localhost:5173/oauth/callback/{provider}"
+                    },
+                    headers={"Accept": "application/json"}
+                )
+                token_data = token_response.json()
+                
+                if "error" in token_data:
+                    logger.error(f"GitHub token error: {token_data}")
+                    return {
+                        "success": False,
+                        "error": token_data.get("error"),
+                        "message": token_data.get("error_description", "Token exchange failed")
+                    }
+                
+                access_token = token_data.get("access_token")
+                
+                # Fetch user info from GitHub
+                user_response = await client.get(
+                    "https://api.github.com/user",
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Accept": "application/vnd.github.v3+json"
+                    }
+                )
+                github_user = user_response.json()
+                
+                # Fetch user emails
+                email_response = await client.get(
+                    "https://api.github.com/user/emails",
+                    headers={
+                        "Authorization": f"Bearer {access_token}",
+                        "Accept": "application/vnd.github.v3+json"
+                    }
+                )
+                emails = email_response.json()
+                primary_email = next((e["email"] for e in emails if e.get("primary")), github_user.get("email"))
+                
+                # Store the connection for this user
+                user_id = "user_1"  # In production, get from session/JWT
+                if user_id not in user_oauth_tokens:
+                    user_oauth_tokens[user_id] = {}
+                
+                user_oauth_tokens[user_id]["github"] = {
+                    "access_token": access_token,
+                    "token_type": token_data.get("token_type", "bearer"),
+                    "scope": token_data.get("scope", ""),
+                    "user_info": {
+                        "id": github_user.get("id"),
+                        "username": github_user.get("login"),
+                        "name": github_user.get("name"),
+                        "email": primary_email,
+                        "avatar_url": github_user.get("avatar_url"),
+                    },
+                    "connected_at": datetime.now().isoformat()
+                }
+                
+                # Also add to mock connections for backward compatibility
+                mock_oauth_connections.append({
+                    "provider": "github",
+                    "username": github_user.get("login"),
+                    "email": primary_email,
+                    "avatar_url": github_user.get("avatar_url"),
+                    "connected_at": datetime.now().isoformat()
+                })
+                
+                logger.info(f"Successfully connected GitHub for user: {github_user.get('login')}")
+                
+                return {
+                    "success": True,
+                    "message": f"Connected to GitHub as {github_user.get('login')}",
+                    "is_new_user": False,
+                    "user": {
+                        "username": github_user.get("login"),
+                        "email": primary_email,
+                        "avatar_url": github_user.get("avatar_url")
+                    }
+                }
+                
+        except Exception as e:
+            logger.error(f"GitHub OAuth error: {str(e)}")
+            return {
+                "success": False,
+                "error": "exchange_failed",
+                "message": f"Failed to complete GitHub authorization: {str(e)}"
+            }
+    
+    # GitLab handling (similar pattern)
+    elif provider == "gitlab":
+        # Simplified - just mark as connected for now
+        mock_oauth_connections.append({
+            "provider": "gitlab",
+            "username": f"gitlab_user",
+            "email": f"user@gitlab.com",
+            "connected_at": datetime.now().isoformat()
+        })
+        return {
+            "success": True,
+            "message": f"Connected to GitLab",
+            "is_new_user": False
+        }
+    
     return {
-        "success": True,
-        "message": f"Connected to {provider}",
-        "is_new_user": False
+        "success": False,
+        "error": "unknown_provider",
+        "message": f"Unknown provider: {provider}"
     }
 
 
 @app.get("/api/auth/oauth/connections")
 async def get_oauth_connections():
-    """Get connected OAuth accounts / 获取已连接的OAuth账户"""
+    """Get connected OAuth accounts"""
     return {
         "connections": mock_oauth_connections if mock_oauth_connections else [
             {"provider": "github", "username": "demo_user", "email": "demo@github.com", "connected_at": datetime.now().isoformat()}
@@ -733,12 +1186,12 @@ async def get_oauth_connections():
 
 @app.delete("/api/auth/oauth/connections/{provider}")
 async def disconnect_oauth(provider: str):
-    """Disconnect OAuth provider / 断开OAuth提供商连接"""
+    """Disconnect OAuth provider"""
     return {"message": f"Disconnected from {provider}"}
 
 
 # ============================================
-# Repositories / 仓库管理
+# Repositories
 # ============================================
 
 @app.get("/api/repositories")
@@ -747,7 +1200,7 @@ async def list_repositories(
     limit: int = Query(20, ge=1, le=100),
     project_id: Optional[str] = None
 ):
-    """List repositories / 列出仓库"""
+    """List repositories"""
     repos = mock_repositories
     if project_id:
         repos = [r for r in repos if r.get("project_id") == project_id]
@@ -765,7 +1218,7 @@ async def create_repository(
     name: Optional[str] = None,
     project_id: Optional[str] = None
 ):
-    """Create repository from URL / 从URL创建仓库"""
+    """Create repository from URL"""
     repo_id = f"repo_{secrets.token_hex(4)}"
     # Determine provider from URL
     if "github" in url:
@@ -798,7 +1251,7 @@ async def connect_repository(
     repo_full_name: str = "",
     project_id: Optional[str] = None
 ):
-    """Connect repository from OAuth provider / 从OAuth提供商连接仓库"""
+    """Connect repository from OAuth provider"""
     repo_id = f"repo_{secrets.token_hex(4)}"
     _, name = repo_full_name.split("/") if "/" in repo_full_name else ("user", repo_full_name)
     repo = {
@@ -820,7 +1273,7 @@ async def connect_repository(
 
 @app.get("/api/repositories/{repo_id}")
 async def get_repository(repo_id: str):
-    """Get repository by ID / 通过ID获取仓库"""
+    """Get repository by ID"""
     for repo in mock_repositories:
         if repo["id"] == repo_id:
             return repo
@@ -829,7 +1282,7 @@ async def get_repository(repo_id: str):
 
 @app.delete("/api/repositories/{repo_id}")
 async def delete_repository(repo_id: str):
-    """Delete repository / 删除仓库"""
+    """Delete repository"""
     for i, repo in enumerate(mock_repositories):
         if repo["id"] == repo_id:
             mock_repositories.pop(i)
@@ -839,13 +1292,54 @@ async def delete_repository(repo_id: str):
 
 @app.post("/api/repositories/{repo_id}/sync")
 async def sync_repository(repo_id: str):
-    """Sync repository with remote / 与远程同步仓库"""
+    """Sync repository with remote"""
     return {"message": "Sync started", "id": repo_id, "status": "syncing"}
+
+
+class RepositoryAnalyzeRequest(BaseModel):
+    files: Optional[List[str]] = None
+    branch: Optional[str] = None
+
+
+@app.post("/api/repositories/{repo_id}/analyze")
+async def analyze_repository(repo_id: str, request: Optional[RepositoryAnalyzeRequest] = None):
+    """
+    Start code analysis for a repository.
+    
+    This triggers an AI-powered code review on the repository files.
+    """
+    # Find repo to get info
+    repo = None
+    for r in mock_repositories:
+        if r["id"] == repo_id:
+            repo = r
+            break
+    
+    if not repo:
+        raise HTTPException(status_code=404, detail="Repository not found")
+    
+    session_id = f"analysis_{secrets.token_hex(8)}"
+    
+    # Update repo status
+    repo["status"] = "analyzing"
+    repo["analysis_status"] = "pending"
+    
+    return {
+        "id": session_id,
+        "session_id": session_id,
+        "repository_id": repo_id,
+        "repository_name": repo.get("name", "unknown"),
+        "status": "started",
+        "branch": request.branch if request else repo.get("default_branch", "main"),
+        "files": request.files if request else None,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "message": f"Analysis started for repository {repo.get('name', repo_id)}"
+    }
 
 
 @app.get("/api/repositories/{repo_id}/tree")
 async def get_repository_tree(repo_id: str, path: str = ""):
-    """Get repository file tree / 获取仓库文件树"""
+    """Get repository file tree"""
     return {
         "path": path,
         "items": [
@@ -870,9 +1364,58 @@ async def get_repository_file(repo_id: str, file_path: str):
     }
 
 
+@app.get("/api/repositories/{repo_id}/branches")
+async def get_repository_branches(repo_id: str):
+    """Get repository branches"""
+    return {
+        "branches": [
+            {"name": "main", "protected": True, "default": True},
+            {"name": "develop", "protected": False, "default": False},
+            {"name": "feature/auth", "protected": False, "default": False},
+            {"name": "feature/analysis", "protected": False, "default": False},
+        ]
+    }
+
+
+@app.get("/api/repositories/{repo_id}/commits")
+async def get_repository_commits(
+    repo_id: str,
+    branch: str = "main",
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100)
+):
+    """Get repository commits"""
+    return {
+        "commits": [
+            {
+                "sha": "abc123def456",
+                "message": "feat: add code analysis feature",
+                "author": {"name": "John Doe", "email": "john@example.com"},
+                "date": (datetime.now() - timedelta(hours=2)).isoformat(),
+            },
+            {
+                "sha": "789xyz012345",
+                "message": "fix: resolve authentication bug",
+                "author": {"name": "Jane Smith", "email": "jane@example.com"},
+                "date": (datetime.now() - timedelta(days=1)).isoformat(),
+            },
+            {
+                "sha": "qwe456rty789",
+                "message": "docs: update README",
+                "author": {"name": "John Doe", "email": "john@example.com"},
+                "date": (datetime.now() - timedelta(days=2)).isoformat(),
+            },
+        ],
+        "total": 3,
+        "page": page,
+        "limit": limit,
+        "branch": branch
+    }
+
+
 @app.get("/api/repositories/oauth/{provider}")
 async def list_oauth_repositories(provider: str):
-    """List repositories from OAuth provider / 列出OAuth提供商的仓库"""
+    """List repositories from OAuth provider"""
     # Simulated repositories from the provider
     return {
         "repositories": [
@@ -1138,7 +1681,7 @@ async def delete_account():
 
 @app.get("/api/experiments")
 async def list_experiments():
-    """List experiments / 列出实验"""
+    """List experiments"""
     return {
         "items": [
             {
@@ -1174,7 +1717,7 @@ async def list_experiments():
 
 @app.get("/api/admin/users")
 async def list_users(page: int = 1, limit: int = 10, search: Optional[str] = None):
-    """List all users (Admin) / 列出所有用户（管理员）"""
+    """List all users (Admin)"""
     users = [
         {
             "id": "user_1",
@@ -1255,7 +1798,7 @@ async def deactivate_user(user_id: str):
 
 @app.get("/api/admin/projects")
 async def admin_list_projects(page: int = 1, limit: int = 10, search: Optional[str] = None):
-    """List all projects (Admin) / 列出所有项目（管理员）"""
+    """List all projects (Admin)"""
     projects = [
         {
             "id": "proj_1",
@@ -1314,7 +1857,7 @@ async def get_audit_logs(page: int = 1, limit: int = 20):
 
 @app.get("/api/admin/providers")
 async def list_providers():
-    """List AI providers (Admin) / 列出AI提供商（管理员）"""
+    """List AI providers (Admin)"""
     return {
         "items": [
             {
@@ -1384,7 +1927,7 @@ async def get_admin_stats():
 
 @app.get("/api/admin/invitations")
 async def list_invitations():
-    """List invitation codes (Admin) / 列出邀请码（管理员）"""
+    """List invitation codes (Admin)"""
     return {
         "items": [
             {
@@ -1495,7 +2038,7 @@ async def ai_chat(message: str = "", code: str = "", language: str = "typescript
 
 @app.get("/api/ai/models")
 async def list_ai_models():
-    """List available AI models / 列出可用AI模型"""
+    """List available AI models"""
     return {
         "items": [
             {"id": "gpt-4-turbo", "name": Literals.GPT4_TURBO, "provider": "OpenAI", "status": "active"},
@@ -1512,7 +2055,7 @@ async def list_ai_models():
 
 @app.get("/api/admin/ai-models")
 async def admin_list_ai_models():
-    """List all AI models (Admin) / 列出所有AI模型（管理员）"""
+    """List all AI models (Admin)"""
     return {
         "items": [
             {
@@ -1694,7 +2237,7 @@ async def admin_get_ai_model_versions(model_id: str):
 
 @app.get("/api/admin/ai-models/metrics/overview")
 async def admin_ai_models_metrics_overview():
-    """Get AI models metrics overview / 获取AI模型指标概览"""
+    """Get AI models metrics overview"""
     return {
         "total_requests_today": 2080,
         "total_cost_today": 78.50,
@@ -1724,12 +2267,103 @@ async def admin_ai_models_metrics_overview():
 
 
 # ============================================
-# API Keys / API密钥
+# Admin AI Chat
+# ============================================
+
+@app.post("/api/admin/ai-chat")
+async def admin_ai_chat(message: str = "", model: str = "gpt-4-turbo", context: str = "version_control"):
+    """Admin AI Chat for version control assistance"""
+    # Mock AI responses based on message content
+    responses = {
+        "promotion": "Based on current metrics, models in V1 with accuracy >85%, error rate <5%, and latency p95 <3s are ready for promotion to V2 Production.",
+        "metrics": "Current V2 Production metrics:\n- GPT-4 Turbo: 94% accuracy, 2.3s p95 latency, 2% error rate\n- Claude 3 Opus: 92% accuracy, 3.1s p95 latency, 3% error rate",
+        "import": "To import a model via API:\n1. Configure the API endpoint\n2. Set authentication credentials\n3. Test connectivity\n4. The model will be available for Code Review Chat only.",
+        "default": "I can help you with model management, version control, promotions, and monitoring. What would you like to know?"
+    }
+    
+    response_key = "default"
+    message_lower = message.lower()
+    if "promot" in message_lower or "ready" in message_lower:
+        response_key = "promotion"
+    elif "metric" in message_lower or "performance" in message_lower or "v2" in message_lower:
+        response_key = "metrics"
+    elif "import" in message_lower or "api" in message_lower:
+        response_key = "import"
+    
+    return {
+        "response": responses[response_key],
+        "model": model,
+        "context": context,
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+# ============================================
+# Admin Model Import
+# ============================================
+
+@app.post("/api/admin/ai-models/import")
+async def admin_import_model(
+    name: str = "",
+    provider: str = "",
+    api_endpoint: str = "",
+    api_key: str = "",
+    model_id: str = "",
+    config: dict = None
+):
+    """Import external AI model via API"""
+    imported_model = {
+        "id": f"imported_{secrets.token_hex(4)}",
+        "name": name or "Imported Model",
+        "provider": provider or "custom",
+        "api_endpoint": api_endpoint,
+        "api_key_configured": bool(api_key),
+        "model_id": model_id,
+        "config": config or {"max_tokens": 4096, "temperature": 0.7, "top_p": 0.9},
+        "status": "active",
+        "scope": "code_review_chat_only",
+        "created_at": datetime.now().isoformat()
+    }
+    return {
+        "success": True,
+        "message": "Model imported successfully",
+        "model": imported_model
+    }
+
+
+@app.get("/api/admin/ai-models/imported")
+async def admin_list_imported_models():
+    """List imported external models"""
+    return {
+        "items": [
+            {
+                "id": "imported_1",
+                "name": "Custom CodeLlama 34B",
+                "provider": "ollama",
+                "api_endpoint": "http://localhost:11434/api/chat",
+                "api_key_configured": False,
+                "status": "active",
+                "scope": "code_review_chat_only",
+                "created_at": (datetime.now() - timedelta(days=7)).isoformat()
+            }
+        ],
+        "total": 1
+    }
+
+
+@app.delete("/api/admin/ai-models/imported/{model_id}")
+async def admin_delete_imported_model(model_id: str):
+    """Delete imported model"""
+    return {"success": True, "message": f"Imported model {model_id} deleted"}
+
+
+# ============================================
+# API Keys
 # ============================================
 
 @app.get("/api/user/api-keys")
 async def list_api_keys():
-    """List user API keys / 列出用户API密钥"""
+    """List user API keys"""
     return {
         "items": [
             {
@@ -1782,11 +2416,12 @@ async def revoke_api_key(key_id: str):
 
 @app.get("/api/user/integrations")
 async def list_integrations():
-    """List integrations / 列出集成"""
+    """List integrations"""
     return {
         "items": [
-            {"id": "int_1", "name": "GitHub", "provider": "github", "status": "connected"},
-            {"id": "int_2", "name": "Slack", "provider": "slack", "status": "connected"}
+            {"id": "int_1", "name": "GitHub", "type": "github", "provider": "github", "status": "connected", "connected": True},
+            {"id": "int_2", "name": "Slack", "type": "slack", "provider": "slack", "status": "connected", "connected": True},
+            {"id": "int_3", "name": "Microsoft Teams", "type": "teams", "provider": "teams", "status": "disconnected", "connected": False}
         ]
     }
 
@@ -1805,7 +2440,7 @@ async def disconnect_integration(integration_id: str):
 
 @app.get("/api/user/webhooks")
 async def list_webhooks():
-    """List webhooks / 列出Webhooks"""
+    """List webhooks"""
     return {
         "items": [
             {
@@ -1850,7 +2485,7 @@ async def test_webhook(webhook_id: str):
 
 @app.get("/api/teams")
 async def list_teams():
-    """List teams / 列出团队"""
+    """List teams"""
     return {
         "items": [
             {
@@ -1919,7 +2554,7 @@ async def remove_team_member(team_id: str, member_id: str):
 
 @app.get("/api/reports")
 async def list_reports():
-    """List reports / 列出报告"""
+    """List reports"""
     return {
         "items": [
             {
@@ -1955,7 +2590,7 @@ async def delete_report(report_id: str):
 
 @app.get("/api/reports/scheduled")
 async def list_scheduled_reports():
-    """List scheduled reports / 列出定时报告"""
+    """List scheduled reports"""
     return {
         "items": [
             {
@@ -1983,7 +2618,7 @@ async def create_scheduled_report():
 
 @app.get("/api/security/vulnerabilities")
 async def list_vulnerabilities():
-    """List vulnerabilities / 列出漏洞"""
+    """List vulnerabilities"""
     return {
         "items": [
             {
@@ -2052,7 +2687,7 @@ async def get_analytics_trends():
 
 @app.get("/api/activity")
 async def list_activities():
-    """List activities / 列出活动"""
+    """List activities"""
     return {
         "items": [
             {
@@ -2095,7 +2730,7 @@ async def list_activities():
 
 @app.get("/api/repositories")
 async def list_repositories():
-    """List repositories / 列出仓库"""
+    """List repositories"""
     return {
         "items": [
             {
@@ -2174,7 +2809,7 @@ async def get_repository_branches(repo_id: str):
 
 @app.get("/api/pull-requests")
 async def list_pull_requests():
-    """List pull requests / 列出拉取请求"""
+    """List pull requests"""
     return {
         "items": [
             {
@@ -2248,7 +2883,7 @@ async def get_pr_review(pr_id: str):
 
 @app.get("/api/admin/auto-fix")
 async def list_auto_fixes():
-    """List auto-fixes / 列出自动修复"""
+    """List auto-fixes"""
     return {
         "items": [
             {
@@ -2324,7 +2959,7 @@ async def start_fix_cycle():
 
 @app.get("/api/admin/auto-fix/cycles")
 async def list_fix_cycles():
-    """List fix cycles / 列出修复周期"""
+    """List fix cycles"""
     return {
         "items": [
             {
@@ -2354,7 +2989,7 @@ async def list_fix_cycles():
 
 @app.get("/api/deployments")
 async def list_deployments():
-    """List deployments / 列出部署"""
+    """List deployments"""
     return {
         "items": [
             {
@@ -2476,7 +3111,7 @@ async def compare_code(base: str = "main", head: str = "develop"):
 
 @app.get("/api/rules")
 async def list_rules():
-    """List code quality rules / 列出代码质量规则"""
+    """List code quality rules"""
     return {
         "items": [
             {
@@ -2584,7 +3219,7 @@ async def upgrade_plan():
 
 @app.get("/api/notifications")
 async def list_notifications():
-    """List notifications / 列出通知"""
+    """List notifications"""
     return {
         "items": [
             {
@@ -2779,7 +3414,7 @@ async def ai_chat():
 
 @app.get("/api/ai/conversations")
 async def list_conversations():
-    """List AI conversations / 列出AI对话"""
+    """List AI conversations"""
     return {
         "items": [
             {"id": "conv_1", "title": "SQL Injection Fix", "timestamp": datetime.now().isoformat()},
@@ -2794,7 +3429,7 @@ async def list_conversations():
 
 @app.get("/api/webhooks")
 async def list_webhooks():
-    """List webhooks / 列出Webhook"""
+    """List webhooks"""
     return {
         "items": [
             {
@@ -2875,7 +3510,7 @@ async def get_metrics_trends():
 
 @app.get("/api/jobs")
 async def list_jobs():
-    """List scheduled jobs / 列出计划任务"""
+    """List scheduled jobs"""
     return {
         "items": [
             {
@@ -2946,7 +3581,7 @@ async def import_config():
 
 @app.get("/api/backups")
 async def list_backups():
-    """List backups / 列出备份"""
+    """List backups"""
     return {
         "items": [
             {"id": "1", "name": "Full Backup - March 2024", "createdAt": datetime.now().isoformat(), "size": "45.2 MB"},
@@ -2973,7 +3608,7 @@ async def restore_backup(backup_id: str):
 
 @app.get("/api/audit-logs")
 async def list_audit_logs():
-    """List audit logs / 列出审计日志"""
+    """List audit logs"""
     return {
         "items": [
             {

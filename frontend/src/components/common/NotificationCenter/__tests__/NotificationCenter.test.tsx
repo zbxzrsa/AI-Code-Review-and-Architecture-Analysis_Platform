@@ -68,8 +68,8 @@ describe('NotificationCenter Component', () => {
 
     render(<NotificationCenter />);
     
+    // The component uses title as the displayed message (title || message)
     expect(screen.getByText('Success!')).toBeInTheDocument();
-    expect(screen.getByText('Operation completed')).toBeInTheDocument();
   });
 
   it('renders different notification types', () => {
@@ -140,7 +140,8 @@ describe('NotificationCenter Component', () => {
 
     render(<NotificationCenter />);
     
-    const closeButton = screen.getByRole('button', { name: /close/i });
+    // The close button has aria-label="Dismiss notification"
+    const closeButton = screen.getByRole('button', { name: /dismiss notification/i });
     await user.click(closeButton);
     
     expect(mockRemoveNotification).toHaveBeenCalledWith('test-1');

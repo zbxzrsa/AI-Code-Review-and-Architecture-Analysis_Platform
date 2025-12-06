@@ -172,6 +172,46 @@ class SemanticCacheService:
             return 0.0
         return float(np.dot(embedding1, embedding2) / (norm1 * norm2))
     
+    def _find_best_match(self, query_embedding: np.ndarray) -> Tuple[float, Optional[str]]:
+        """Find the most similar cached entry."""
+        best_similarity = 0.0
+        best_key = None
+        
+        for key, cached_embedding in self.embedding_index.items():
+            similarity = self._compute_similarity(query_embedding, cached_embedding)
+            if similarity > best_similarity:
+                best_similarity = similarity
+                best_key = key
+        
+        return best_similarity, best_key
+    
+    def _validate_cache_match(
+        self,
+        data: Dict[bytes, bytes],
+        language: str,
+        model_version: Optional[str],
+        prompt_version: Optional[str]
+    ) -> bool:
+        """Validate that cached entry matches requirements."""
+        # Check language match
+        cached_language = data.get(b'language', b'').decode()
+        if cached_language != language:
+            return False
+        
+        # Check model version if specified
+        if model_version:
+            cached_model = data.get(b'model_version', b'').decode()
+            if cached_model != model_version:
+                return False
+        
+        # Check prompt version if specified
+        if prompt_version:
+            cached_prompt = data.get(b'prompt_version', b'').decode()
+            if cached_prompt != prompt_version:
+                return False
+        
+        return True
+    
     async def lookup(
         self,
         code: str,
@@ -185,53 +225,32 @@ class SemanticCacheService:
         Returns:
             (hit, result, similarity, cache_key)
         """
-        # Get embedding for query code
         query_embedding = await self.get_embedding(code)
-        
-        # Find most similar cached entry
-        best_similarity = 0.0
-        best_key = None
-        
-        for key, cached_embedding in self.embedding_index.items():
-            similarity = self._compute_similarity(query_embedding, cached_embedding)
-            
-            if similarity > best_similarity:
-                best_similarity = similarity
-                best_key = key
+        best_similarity, best_key = self._find_best_match(query_embedding)
         
         # Check if similarity meets threshold
-        if best_similarity >= self.similarity_threshold and best_key:
-            # Get cached result from Redis
-            data = await self.redis_client.hgetall(best_key)
-            if data:
-                # Check language match
-                cached_language = data.get(b'language', b'').decode()
-                if cached_language != language:
-                    return False, None, best_similarity, None
-                
-                # Optional: check model/prompt version
-                if model_version:
-                    cached_model = data.get(b'model_version', b'').decode()
-                    if cached_model != model_version:
-                        return False, None, best_similarity, None
-                
-                if prompt_version:
-                    cached_prompt = data.get(b'prompt_version', b'').decode()
-                    if cached_prompt != prompt_version:
-                        return False, None, best_similarity, None
-                
-                # Return cached result
-                result_json = data.get(b'analysis_result', b'{}').decode()
-                result = json.loads(result_json)
-                
-                # Update access time
-                await self.redis_client.hset(best_key, 'last_accessed', datetime.now(timezone.utc).isoformat())
-                
-                logger.info(f"Cache hit: similarity={best_similarity:.4f}, key={best_key}")
-                return True, result, best_similarity, best_key
+        if best_similarity < self.similarity_threshold or not best_key:
+            logger.debug(f"Cache miss: best_similarity={best_similarity:.4f}")
+            return False, None, best_similarity, None
         
-        logger.debug(f"Cache miss: best_similarity={best_similarity:.4f}")
-        return False, None, best_similarity, None
+        # Get cached result from Redis
+        data = await self.redis_client.hgetall(best_key)
+        if not data:
+            return False, None, best_similarity, None
+        
+        # Validate cache match
+        if not self._validate_cache_match(data, language, model_version, prompt_version):
+            return False, None, best_similarity, None
+        
+        # Return cached result
+        result_json = data.get(b'analysis_result', b'{}').decode()
+        result = json.loads(result_json)
+        
+        # Update access time
+        await self.redis_client.hset(best_key, 'last_accessed', datetime.now(timezone.utc).isoformat())
+        
+        logger.info(f"Cache hit: similarity={best_similarity:.4f}, key={best_key}")
+        return True, result, best_similarity, best_key
     
     async def store(
         self,

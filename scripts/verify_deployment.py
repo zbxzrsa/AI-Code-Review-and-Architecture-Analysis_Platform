@@ -361,74 +361,67 @@ class DeploymentVerifier:
                 message=f"Shadow traffic check failed: {e}"
             )
     
+    async def _query_prometheus_metric(self, query: str) -> Optional[float]:
+        """Query a single metric from Prometheus and return its value."""
+        try:
+            response = await self.client.get(
+                f"{self.prometheus_url}/api/v1/query",
+                params={"query": query}
+            )
+            if response.status_code != 200:
+                return None
+            data = response.json()
+            results = data.get('data', {}).get('result', [])
+            if results:
+                return float(results[0]['value'][1])
+            return None
+        except (KeyError, IndexError, ValueError):
+            return None
+    
+    def _check_slo_thresholds(self, error_rate: float, latency_ms: float) -> CheckResult:
+        """Check SLO thresholds and return result."""
+        error_ok = error_rate < 0.02
+        latency_ok = latency_ms < 3000
+        details = {"error_rate": error_rate, "p95_latency_ms": latency_ms}
+        
+        if error_ok and latency_ok:
+            return CheckResult(
+                name=CHECK_SLO_METRICS, passed=True,
+                message=f"SLOs met: error={error_rate:.4f}, p95={latency_ms:.0f}ms",
+                details=details
+            )
+        
+        issues = []
+        if not error_ok:
+            issues.append(f"error rate {error_rate:.4f} > 0.02")
+        if not latency_ok:
+            issues.append(f"p95 latency {latency_ms:.0f}ms > 3000ms")
+        
+        return CheckResult(
+            name=CHECK_SLO_METRICS, passed=False,
+            message=f"SLO violations: {', '.join(issues)}", details=details
+        )
+    
     async def check_slo_metrics(self) -> CheckResult:
         """Check SLO metrics for V2"""
         try:
-            # Check error rate
-            error_query = 'slo:v2:error_rate:ratio_rate5m'
-            response = await self.client.get(
-                f"{self.prometheus_url}/api/v1/query",
-                params={"query": error_query}
-            )
-            
-            if response.status_code == 200:
-                data = response.json()
-                results = data.get('data', {}).get('result', [])
-                if results:
-                    error_rate = float(results[0]['value'][1])
-                    
-                    # Check latency
-                    latency_query = 'slo:v2:latency_p95:histogram_quantile_5m'
-                    lat_response = await self.client.get(
-                        f"{self.prometheus_url}/api/v1/query",
-                        params={"query": latency_query}
-                    )
-                    latency_ms = 0
-                    if lat_response.status_code == 200:
-                        lat_data = lat_response.json()
-                        lat_results = lat_data.get('data', {}).get('result', [])
-                        if lat_results:
-                            latency_ms = float(lat_results[0]['value'][1])
-                    
-                    # Check thresholds
-                    error_ok = error_rate < 0.02
-                    latency_ok = latency_ms < 3000
-                    
-                    if error_ok and latency_ok:
-                        return CheckResult(
-                            name=CHECK_SLO_METRICS,
-                            passed=True,
-                            message=f"SLOs met: error={error_rate:.4f}, p95={latency_ms:.0f}ms",
-                            details={"error_rate": error_rate, "p95_latency_ms": latency_ms}
-                        )
-                    else:
-                        issues = []
-                        if not error_ok:
-                            issues.append(f"error rate {error_rate:.4f} > 0.02")
-                        if not latency_ok:
-                            issues.append(f"p95 latency {latency_ms:.0f}ms > 3000ms")
-                        return CheckResult(
-                            name=CHECK_SLO_METRICS,
-                            passed=False,
-                            message=f"SLO violations: {', '.join(issues)}",
-                            details={"error_rate": error_rate, "p95_latency_ms": latency_ms}
-                        )
-                
+            # Query error rate
+            error_rate = await self._query_prometheus_metric('slo:v2:error_rate:ratio_rate5m')
+            if error_rate is None:
                 return CheckResult(
-                    name=CHECK_SLO_METRICS,
-                    passed=True,
+                    name=CHECK_SLO_METRICS, passed=True,
                     message="No SLO metrics available yet (new deployment)"
                 )
             
-            return CheckResult(
-                name=CHECK_SLO_METRICS,
-                passed=False,
-                message="Cannot query SLO metrics"
-            )
+            # Query latency
+            latency_ms = await self._query_prometheus_metric('slo:v2:latency_p95:histogram_quantile_5m')
+            if latency_ms is None:
+                latency_ms = 0.0
+            
+            return self._check_slo_thresholds(error_rate, latency_ms)
         except Exception as e:
             return CheckResult(
-                name=CHECK_SLO_METRICS,
-                passed=False,
+                name=CHECK_SLO_METRICS, passed=False,
                 message=f"SLO check failed: {e}"
             )
     

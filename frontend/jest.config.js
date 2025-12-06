@@ -1,8 +1,9 @@
 /**
  * Jest Configuration for Frontend Testing
  * 
- * Coverage Target: 50%+
+ * Coverage Target: 80%+ (TD-001 requirement)
  * Test Framework: Jest + React Testing Library
+ * Test Execution Time Target: < 5 minutes
  */
 
 module.exports = {
@@ -66,13 +67,13 @@ module.exports = {
     '!src/**/*.stories.{ts,tsx}',
   ],
   
-  // Coverage thresholds
+  // Coverage thresholds (TD-001: 80%+ requirement)
   coverageThreshold: {
     global: {
-      branches: 50,
-      functions: 50,
-      lines: 50,
-      statements: 50,
+      branches: 80,
+      functions: 80,
+      lines: 80,
+      statements: 80,
     },
   },
   

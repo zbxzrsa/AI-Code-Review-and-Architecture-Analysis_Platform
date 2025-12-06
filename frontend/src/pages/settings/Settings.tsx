@@ -897,8 +897,10 @@ const IntegrationsSection: React.FC = () => {
     setWebhookModalOpen(true);
   };
 
-  const slackIntegration = integrations?.find(i => i.type === 'slack');
-  const teamsIntegration = integrations?.find(i => i.type === 'teams');
+  // Safely handle integrations data - ensure it's always an array
+  const integrationsList = Array.isArray(integrations) ? integrations : [];
+  const slackIntegration = integrationsList.find(i => i.type === 'slack' || i.provider === 'slack');
+  const teamsIntegration = integrationsList.find(i => i.type === 'teams' || i.provider === 'teams');
 
   const webhookEvents = [
     { value: 'analysis.completed', label: 'Analysis Completed' },

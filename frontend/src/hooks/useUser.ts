@@ -37,6 +37,33 @@ function getErrorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
+/**
+ * Safely extract array from API response
+ * Handles both direct arrays and { items: [...] } / { connections: [...] } formats
+ */
+function extractArray<T>(data: unknown, key = "items"): T[] {
+  if (Array.isArray(data)) {
+    return data as T[];
+  }
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj[key])) {
+      return obj[key] as T[];
+    }
+    // Also check common keys
+    if (Array.isArray(obj.items)) {
+      return obj.items as T[];
+    }
+    if (Array.isArray(obj.connections)) {
+      return obj.connections as T[];
+    }
+    if (Array.isArray(obj.data)) {
+      return obj.data as T[];
+    }
+  }
+  return [];
+}
+
 // Query Keys
 export const userKeys = {
   all: ["user"] as const,
@@ -278,7 +305,7 @@ export function useOAuthConnections() {
     queryKey: userKeys.oauthConnections(),
     queryFn: async () => {
       const response = await apiService.user.getOAuthConnections();
-      return response.data as OAuthConnection[];
+      return extractArray<OAuthConnection>(response.data, "connections");
     },
   });
 }
@@ -479,7 +506,7 @@ export function useSessions() {
     queryKey: userKeys.sessions(),
     queryFn: async () => {
       const response = await apiService.user.getSessions();
-      return response.data as Session[];
+      return extractArray<Session>(response.data, "items");
     },
   });
 }
@@ -566,7 +593,7 @@ export function useApiKeys() {
     queryKey: userKeys.apiKeys(),
     queryFn: async () => {
       const response = await apiService.user.getApiKeys();
-      return response.data as UserApiKey[];
+      return extractArray<UserApiKey>(response.data, "items");
     },
   });
 }
@@ -645,7 +672,7 @@ export function useIntegrations() {
     queryKey: userKeys.integrations(),
     queryFn: async () => {
       const response = await apiService.user.getIntegrations();
-      return response.data as Integration[];
+      return extractArray<Integration>(response.data, "items");
     },
   });
 }
@@ -744,7 +771,7 @@ export function useUserWebhooks() {
     queryKey: userKeys.webhooks(),
     queryFn: async () => {
       const response = await apiService.user.getWebhooks();
-      return response.data as UserWebhook[];
+      return extractArray<UserWebhook>(response.data, "items");
     },
   });
 }

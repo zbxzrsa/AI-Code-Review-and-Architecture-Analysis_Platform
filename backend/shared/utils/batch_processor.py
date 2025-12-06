@@ -116,6 +116,10 @@ class BatchProcessor(Generic[T, R]):
                 await self._batch_task
             except asyncio.CancelledError:
                 logger.info("Batch processor task cancelled")
+                # Process remaining items before re-raising
+                if self._pending:
+                    await self._process_pending_batch()
+                raise
         
         # Process any remaining items
         if self._pending:

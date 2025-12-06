@@ -673,6 +673,66 @@ async def sync_repository_task(repo_id: str, clone_url: str, branch: str):
 
 
 # ============================================
+# Analysis Endpoints
+# ============================================
+
+class AnalyzeRepositoryRequest(BaseModel):
+    """Request model for repository analysis."""
+    files: Optional[List[str]] = None
+    branch: Optional[str] = None
+
+
+@app.post("/api/repositories/{repo_id}/analyze")
+async def analyze_repository(
+    repo_id: str,
+    request: Optional[AnalyzeRepositoryRequest] = None,
+    background_tasks: BackgroundTasks = None,
+    current_user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_async_session),
+):
+    """
+    Start code analysis for a repository.
+    
+    Triggers an AI-powered code review on the repository files.
+    """
+    try:
+        repo = await db.get(Repository, uuid.UUID(repo_id))
+        if not repo or str(repo.owner_id) != current_user_id:
+            raise HTTPException(status_code=404, detail=REPOSITORY_NOT_FOUND)
+        
+        # Generate analysis session ID
+        session_id = f"analysis_{uuid.uuid4().hex[:16]}"
+        
+        # Update repository status
+        repo.status = RepositoryStatus.SYNCING  # Use SYNCING as "analyzing" placeholder
+        await db.commit()
+        
+        # In production, this would trigger the analysis service
+        # background_tasks.add_task(run_analysis_task, repo_id, session_id, request)
+        
+        return {
+            "id": session_id,
+            "session_id": session_id,
+            "repository_id": repo_id,
+            "repository_name": repo.name,
+            "status": "started",
+            "branch": request.branch if request else (repo.default_branch or "main"),
+            "files": request.files if request else None,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "message": f"Analysis started for repository {repo.name}",
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error starting analysis for repository {repo_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e),
+        )
+
+
+# ============================================
 # File Browsing Endpoints
 # ============================================
 

@@ -235,6 +235,7 @@ class OnlineLearningModule:
                 await self._learning_task
             except asyncio.CancelledError:
                 logger.info("Learning task cancelled")
+                raise
         logger.info("Stopped online learning")
     
     async def _learning_loop(self):

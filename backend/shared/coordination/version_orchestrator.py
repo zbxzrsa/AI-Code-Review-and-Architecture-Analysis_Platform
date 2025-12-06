@@ -233,6 +233,7 @@ class VersionOrchestrator:
                 await self._evolution_task
             except asyncio.CancelledError:
                 logger.info("Evolution task cancelled")
+                raise
         
         logger.info("Version Evolution Cycle stopped")
     

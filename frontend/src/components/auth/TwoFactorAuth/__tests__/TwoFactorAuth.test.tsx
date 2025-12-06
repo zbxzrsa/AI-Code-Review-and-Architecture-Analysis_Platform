@@ -206,7 +206,8 @@ describe('TwoFactorVerify', () => {
     );
 
     const verifyButton = screen.getByRole('button', { name: /verify/i });
-    expect(verifyButton).toBeDisabled();
+    // Ant Design loading buttons have the loading class rather than disabled attribute
+    expect(verifyButton).toHaveClass('ant-btn-loading');
   });
 });
 

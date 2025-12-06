@@ -141,6 +141,60 @@ class GoldSetEvaluator:
             logger.error(f"Failed to load gold-sets: {e}")
             self.gold_sets = {}
     
+    def _calculate_set_metrics(self, set_results: List[TestCaseResult], gold_set: Dict) -> Dict[str, Any]:
+        """Calculate metrics for a single gold-set."""
+        total = len(set_results)
+        if total == 0:
+            return self._empty_set_metrics(gold_set)
+        
+        passed = sum(1 for r in set_results if r.result == TestResult.PASSED)
+        pass_rate = passed / total
+        required = gold_set.get('required_pass_rate', 0.9)
+        
+        return {
+            'gold_set_id': gold_set.get('id', 'unknown'),
+            'name': gold_set['name'],
+            'total_tests': total,
+            'passed_tests': passed,
+            'pass_rate': pass_rate,
+            'required_pass_rate': required,
+            'meets_requirement': pass_rate >= required,
+            'avg_precision': sum(r.precision for r in set_results) / total,
+            'avg_recall': sum(r.recall for r in set_results) / total,
+            'avg_f1': sum(r.f1_score for r in set_results) / total,
+        }
+    
+    def _empty_set_metrics(self, gold_set: Dict) -> Dict[str, Any]:
+        """Return empty metrics for a gold-set."""
+        return {
+            'gold_set_id': gold_set.get('id', 'unknown'),
+            'name': gold_set['name'],
+            'total_tests': 0,
+            'passed_tests': 0,
+            'pass_rate': 0,
+            'required_pass_rate': gold_set.get('required_pass_rate', 0.9),
+            'meets_requirement': False,
+            'avg_precision': 0,
+            'avg_recall': 0,
+            'avg_f1': 0,
+        }
+    
+    def _calculate_overall_metrics(self, test_results: List[TestCaseResult]) -> Dict[str, float]:
+        """Calculate overall metrics from test results."""
+        total = len(test_results)
+        if total == 0:
+            return {'precision': 0, 'recall': 0, 'f1': 0, 'latency': 0, 'cost': 0, 'pass_rate': 0}
+        
+        passed = sum(1 for r in test_results if r.result == TestResult.PASSED)
+        return {
+            'precision': sum(r.precision for r in test_results) / total,
+            'recall': sum(r.recall for r in test_results) / total,
+            'f1': sum(r.f1_score for r in test_results) / total,
+            'latency': sum(r.latency_ms for r in test_results) / total,
+            'cost': sum(r.cost_usd for r in test_results),
+            'pass_rate': passed / total,
+        }
+    
     async def evaluate_version(
         self,
         version_id: str,
@@ -158,61 +212,30 @@ class GoldSetEvaluator:
         test_results: List[TestCaseResult] = []
         category_results: Dict[str, Dict[str, Any]] = {}
         
-        # Filter gold-sets if specified
+        # Run gold-sets
         sets_to_run = test_sets or list(self.gold_sets.keys())
-        
         for set_id in sets_to_run:
             if set_id not in self.gold_sets:
                 logger.warning(f"Gold-set {set_id} not found, skipping")
                 continue
                 
             gold_set = self.gold_sets[set_id]
-            category = gold_set['category']
-            
             logger.info(f"Running gold-set: {gold_set['name']}")
             
-            set_results = await self._run_gold_set(
-                gold_set,
-                version_id,
-                model_version,
-                prompt_version
-            )
-            
+            set_results = await self._run_gold_set(gold_set, version_id, model_version, prompt_version)
             test_results.extend(set_results)
             
-            # Aggregate category results
-            passed = sum(1 for r in set_results if r.result == TestResult.PASSED)
-            total = len(set_results)
-            
-            category_results[category] = {
-                'gold_set_id': set_id,
-                'name': gold_set['name'],
-                'total_tests': total,
-                'passed_tests': passed,
-                'pass_rate': passed / total if total > 0 else 0,
-                'required_pass_rate': gold_set.get('required_pass_rate', 0.9),
-                'meets_requirement': (passed / total if total > 0 else 0) >= gold_set.get('required_pass_rate', 0.9),
-                'avg_precision': sum(r.precision for r in set_results) / total if total > 0 else 0,
-                'avg_recall': sum(r.recall for r in set_results) / total if total > 0 else 0,
-                'avg_f1': sum(r.f1_score for r in set_results) / total if total > 0 else 0,
-            }
+            gold_set['id'] = set_id  # Add ID for metrics calculation
+            category_results[gold_set['category']] = self._calculate_set_metrics(set_results, gold_set)
         
         # Calculate overall metrics
+        metrics = self._calculate_overall_metrics(test_results)
         total_tests = len(test_results)
         passed_tests = sum(1 for r in test_results if r.result == TestResult.PASSED)
         
-        avg_precision = sum(r.precision for r in test_results) / total_tests if total_tests > 0 else 0
-        avg_recall = sum(r.recall for r in test_results) / total_tests if total_tests > 0 else 0
-        avg_f1 = sum(r.f1_score for r in test_results) / total_tests if total_tests > 0 else 0
-        avg_latency = sum(r.latency_ms for r in test_results) / total_tests if total_tests > 0 else 0
-        total_cost = sum(r.cost_usd for r in test_results)
-        
-        overall_pass_rate = passed_tests / total_tests if total_tests > 0 else 0
-        
         # Check promotion criteria
         promotion_recommended, recommendation_reason = self._check_promotion_criteria(
-            overall_pass_rate,
-            category_results
+            metrics['pass_rate'], category_results
         )
         
         return EvaluationReport(
@@ -222,17 +245,17 @@ class GoldSetEvaluator:
             started_at=started_at,
             completed_at=datetime.now(timezone.utc),
             status="completed",
-            overall_pass_rate=overall_pass_rate,
+            overall_pass_rate=metrics['pass_rate'],
             total_tests=total_tests,
             passed_tests=passed_tests,
             failed_tests=total_tests - passed_tests,
             category_results=category_results,
             test_results=test_results,
-            avg_precision=avg_precision,
-            avg_recall=avg_recall,
-            avg_f1=avg_f1,
-            avg_latency_ms=avg_latency,
-            total_cost_usd=total_cost,
+            avg_precision=metrics['precision'],
+            avg_recall=metrics['recall'],
+            avg_f1=metrics['f1'],
+            avg_latency_ms=metrics['latency'],
+            total_cost_usd=metrics['cost'],
             promotion_recommended=promotion_recommended,
             recommendation_reason=recommendation_reason
         )

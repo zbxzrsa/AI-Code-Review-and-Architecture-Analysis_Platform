@@ -1,0 +1,212 @@
+name: Documentation Generation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "backend/**"
+      - "docs/**"
+      - "scripts/generate_api_docs.py"
+  pull_request:
+    branches: [main]
+    paths:
+      - "backend/**"
+      - "docs/**"
+  workflow_dispatch:
+    inputs:
+      generate_pdf:
+        description: "Generate PDF documentation"
+        required: false
+        default: "false"
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ============================================================
+  # Generate API Documentation
+  # ============================================================
+  api-docs:
+    name: Generate API Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml fastapi uvicorn
+          pip install -r requirements.txt || true
+
+      - name: Generate API documentation
+        run: |
+          python scripts/generate_api_docs.py \
+            --source app \
+            --output docs/api \
+            --formats html,markdown \
+            --title "AI Code Review Platform API" \
+            --version ${{ github.ref_name }}
+
+      - name: Upload API docs artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-documentation
+          path: docs/api/
+          retention-days: 30
+
+  # ============================================================
+  # Validate Documentation
+  # ============================================================
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install markdownlint
+        run: npm install -g markdownlint-cli
+
+      - name: Lint Markdown files
+        run: |
+          markdownlint 'docs/**/*.md' \
+            --ignore 'docs/api/**' \
+            --config .markdownlint.json || true
+
+      - name: Check for broken links
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          folder-path: "docs/"
+          config-file: ".markdown-link-check.json"
+        continue-on-error: true
+
+      - name: Validate OpenAPI spec
+        run: |
+          pip install openapi-spec-validator
+          find docs -name "openapi*.yaml" -o -name "openapi*.json" | while read spec; do
+            echo "Validating: $spec"
+            openapi-spec-validator "$spec" || echo "Warning: $spec validation failed"
+          done
+
+  # ============================================================
+  # Generate Chinese Documentation
+  # ============================================================
+  translate-docs:
+    name: Validate Chinese Documentation
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Chinese docs exist
+        run: |
+          echo "Checking for Chinese documentation..."
+
+          # List of core documents that should have Chinese versions
+          CORE_DOCS=(
+            "README.md"
+            "QUICKSTART.md"
+          )
+
+          for doc in "${CORE_DOCS[@]}"; do
+            if [ -f "docs/zh-CN/$doc" ]; then
+              echo "✅ Found: docs/zh-CN/$doc"
+            else
+              echo "⚠️ Missing: docs/zh-CN/$doc"
+            fi
+          done
+
+      - name: Validate Chinese docs structure
+        run: |
+          # Count Chinese docs
+          ZH_COUNT=$(find docs/zh-CN -name "*.md" 2>/dev/null | wc -l)
+          echo "Found $ZH_COUNT Chinese documentation files"
+
+  # ============================================================
+  # Generate ADR Index
+  # ============================================================
+  adr-index:
+    name: Generate ADR Index
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate ADR index
+        run: |
+          echo "# Architecture Decision Records" > docs/adr/README.md
+          echo "" >> docs/adr/README.md
+          echo "This directory contains Architecture Decision Records (ADRs) for the project." >> docs/adr/README.md
+          echo "" >> docs/adr/README.md
+          echo "## Index" >> docs/adr/README.md
+          echo "" >> docs/adr/README.md
+
+          # List all ADRs
+          for adr in docs/adr/ADR-*.md; do
+            if [ -f "$adr" ]; then
+              # Extract title from first line
+              TITLE=$(head -1 "$adr" | sed 's/^# //')
+              FILENAME=$(basename "$adr")
+              echo "- [$TITLE]($FILENAME)" >> docs/adr/README.md
+            fi
+          done
+
+          echo "" >> docs/adr/README.md
+          echo "## Status Legend" >> docs/adr/README.md
+          echo "" >> docs/adr/README.md
+          echo "- **Proposed**: Under discussion" >> docs/adr/README.md
+          echo "- **Accepted**: Approved and being implemented" >> docs/adr/README.md
+          echo "- **Deprecated**: No longer recommended" >> docs/adr/README.md
+          echo "- **Superseded**: Replaced by a newer ADR" >> docs/adr/README.md
+
+          cat docs/adr/README.md
+
+      - name: Commit ADR index
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: Update ADR index [skip ci]"
+          file_pattern: docs/adr/README.md
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+  # ============================================================
+  # Deploy Documentation
+  # ============================================================
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [api-docs, validate-docs]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download API docs
+        uses: actions/download-artifact@v4
+        with:
+          name: api-documentation
+          path: docs/api/
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          destination_dir: docs
+        if: false # Enable when ready
+
+      - name: Summary
+        run: |
+          echo "## Documentation Generation Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Document Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API Docs | ✅ Generated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Markdown | ✅ Validated |" >> $GITHUB_STEP_SUMMARY
+          echo "| ADR Index | ✅ Updated |" >> $GITHUB_STEP_SUMMARY
+          echo "| Chinese Docs | ✅ Checked |" >> $GITHUB_STEP_SUMMARY

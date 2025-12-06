@@ -92,6 +92,37 @@ class SecurityTestSuite:
     # A1: Injection
     # =========================================================================
     
+    async def _send_test_request(
+        self, 
+        client: httpx.AsyncClient, 
+        endpoint: str, 
+        method: str, 
+        params: Dict[str, str]
+    ) -> Optional[httpx.Response]:
+        """Send a test request and return response or None on error."""
+        try:
+            if method == "GET":
+                return await client.get(
+                    f"{self.base_url}{endpoint}",
+                    params=params,
+                    headers=self._headers(),
+                )
+            return await client.post(
+                f"{self.base_url}{endpoint}",
+                json=params,
+                headers=self._headers(auth=False),
+            )
+        except (httpx.RequestError, httpx.HTTPStatusError):
+            return None
+    
+    def _check_sql_error_response(self, resp: httpx.Response) -> bool:
+        """Check if response indicates SQL error."""
+        if resp.status_code != 500:
+            return False
+        body = resp.text.lower()
+        sql_errors = ['sql', 'syntax', 'query', 'mysql', 'postgresql', 'sqlite']
+        return any(err in body for err in sql_errors)
+    
     async def test_sql_injection(self, client: httpx.AsyncClient):
         """Test for SQL injection vulnerabilities."""
         print("Testing SQL Injection...")
@@ -112,42 +143,31 @@ class SecurityTestSuite:
         ]
         
         for endpoint, method, params in endpoints:
-            for payload in sql_payloads:
-                try:
-                    test_params = {
-                        k: v.replace(PAYLOAD_PLACEHOLDER, payload) 
-                        for k, v in params.items()
-                    }
-                    
-                    if method == "GET":
-                        resp = await client.get(
-                            f"{self.base_url}{endpoint}",
-                            params=test_params,
-                            headers=self._headers(),
-                        )
-                    else:
-                        resp = await client.post(
-                            f"{self.base_url}{endpoint}",
-                            json=test_params,
-                            headers=self._headers(auth=False),
-                        )
-                    
-                    # Check for SQL error indicators
-                    if resp.status_code == 500:
-                        body = resp.text.lower()
-                        sql_errors = ['sql', 'syntax', 'query', 'mysql', 'postgresql', 'sqlite']
-                        if any(err in body for err in sql_errors):
-                            self._add_finding(
-                                category="Injection",
-                                severity="critical",
-                                title=f"SQL Injection at {endpoint}",
-                                description=f"SQL error returned with payload: {payload}",
-                                evidence=f"Status: {resp.status_code}, Body: {resp.text[:200]}",
-                                remediation="Use parameterized queries",
-                                owasp="A1:2021-Injection",
-                            )
-                except (httpx.RequestError, httpx.HTTPStatusError):
-                    pass  # Endpoint might not exist or be unreachable
+            await self._test_injection_payloads(client, endpoint, method, params, sql_payloads)
+    
+    async def _test_injection_payloads(
+        self,
+        client: httpx.AsyncClient,
+        endpoint: str,
+        method: str,
+        params: Dict[str, str],
+        payloads: List[str]
+    ):
+        """Test injection payloads against an endpoint."""
+        for payload in payloads:
+            test_params = {k: v.replace(PAYLOAD_PLACEHOLDER, payload) for k, v in params.items()}
+            resp = await self._send_test_request(client, endpoint, method, test_params)
+            
+            if resp and self._check_sql_error_response(resp):
+                self._add_finding(
+                    category="Injection",
+                    severity="critical",
+                    title=f"SQL Injection at {endpoint}",
+                    description=f"SQL error returned with payload: {payload}",
+                    evidence=f"Status: {resp.status_code}, Body: {resp.text[:200]}",
+                    remediation="Use parameterized queries",
+                    owasp="A1:2021-Injection",
+                )
     
     async def test_command_injection(self, client: httpx.AsyncClient):
         """Test for command injection."""

@@ -344,6 +344,48 @@ class ShadowComparator:
     
     # ==================== Promotion Decision ====================
     
+    def _evaluate_accuracy(self, metrics, reasons: List[str], blockers: List[str]) -> float:
+        """Evaluate accuracy metrics and return confidence delta."""
+        if metrics.accuracy_delta >= self.accuracy_threshold:
+            reasons.append(f"Accuracy improved by {metrics.accuracy_delta:.1%}")
+            return 0.3
+        if metrics.accuracy_delta >= 0:
+            reasons.append(f"Accuracy maintained ({metrics.accuracy_delta:.1%})")
+            return 0.2
+        blockers.append(f"Accuracy regression: {metrics.accuracy_delta:.1%}")
+        return 0.0
+    
+    def _evaluate_latency(self, metrics, reasons: List[str], blockers: List[str]) -> float:
+        """Evaluate latency metrics and return confidence delta."""
+        if metrics.latency_improvement_pct > 0:
+            reasons.append(f"Latency improved by {metrics.latency_improvement_pct:.1f}%")
+            return 0.2
+        if metrics.latency_improvement_pct > -self.max_latency_increase:
+            reasons.append(f"Latency acceptable ({metrics.latency_improvement_pct:.1f}%)")
+            return 0.1
+        blockers.append(f"Latency regression too high: {-metrics.latency_improvement_pct:.1f}%")
+        return 0.0
+    
+    def _evaluate_cost(self, metrics, reasons: List[str], blockers: List[str]) -> float:
+        """Evaluate cost metrics and return confidence delta."""
+        if metrics.cost_delta_pct <= 0:
+            reasons.append(f"Cost reduced by {-metrics.cost_delta_pct:.1f}%")
+            return 0.2
+        if metrics.cost_delta_pct <= self.max_cost_increase:
+            reasons.append(f"Cost increase acceptable ({metrics.cost_delta_pct:.1f}%)")
+            return 0.1
+        blockers.append(f"Cost increase too high: {metrics.cost_delta_pct:.1f}%")
+        return 0.0
+    
+    def _check_evaluation_duration(self, version_id: str, blockers: List[str]) -> None:
+        """Check if minimum evaluation duration is met."""
+        start_time = self.version_evaluations.get(version_id)
+        if not start_time:
+            return
+        elapsed_hours = (datetime.now(timezone.utc) - start_time).total_seconds() / 3600
+        if elapsed_hours < self.min_hours:
+            blockers.append(f"Minimum evaluation time not met: {elapsed_hours:.1f}/{self.min_hours}h")
+    
     def evaluate_promotion(
         self,
         version_id: str
@@ -354,75 +396,31 @@ class ShadowComparator:
         This is the main decision point for the V1 → V2 transition.
         """
         metrics = self.compute_metrics(version_id)
-        
-        reasons = []
-        blockers = []
-        confidence = 0.0
+        reasons: List[str] = []
+        blockers: List[str] = []
         
         # Check minimum data requirements
         if metrics.complete_pairs < self.min_pairs:
-            blockers.append(
-                f"Insufficient data: {metrics.complete_pairs}/{self.min_pairs} pairs"
-            )
+            blockers.append(f"Insufficient data: {metrics.complete_pairs}/{self.min_pairs} pairs")
             return PromotionRecommendation(
-                recommend_promotion=False,
-                confidence=0.0,
-                reasons=reasons,
-                blockers=blockers,
-                metrics=metrics,
-                next_evaluation_in_hours=6
+                recommend_promotion=False, confidence=0.0, reasons=reasons,
+                blockers=blockers, metrics=metrics, next_evaluation_in_hours=6
             )
         
-        # Check evaluation duration
-        start_time = self.version_evaluations.get(version_id)
-        if start_time:
-            elapsed_hours = (datetime.now(timezone.utc) - start_time).total_seconds() / 3600
-            if elapsed_hours < self.min_hours:
-                blockers.append(
-                    f"Minimum evaluation time not met: {elapsed_hours:.1f}/{self.min_hours}h"
-                )
-        
-        # Evaluate accuracy
-        if metrics.accuracy_delta >= self.accuracy_threshold:
-            reasons.append(f"Accuracy improved by {metrics.accuracy_delta:.1%}")
-            confidence += 0.3
-        elif metrics.accuracy_delta >= 0:
-            reasons.append(f"Accuracy maintained ({metrics.accuracy_delta:.1%})")
-            confidence += 0.2
-        else:
-            blockers.append(f"Accuracy regression: {metrics.accuracy_delta:.1%}")
-        
-        # Evaluate latency
-        if metrics.latency_improvement_pct > 0:
-            reasons.append(f"Latency improved by {metrics.latency_improvement_pct:.1f}%")
-            confidence += 0.2
-        elif metrics.latency_improvement_pct > -self.max_latency_increase:
-            reasons.append(f"Latency acceptable ({metrics.latency_improvement_pct:.1f}%)")
-            confidence += 0.1
-        else:
-            blockers.append(
-                f"Latency regression too high: {-metrics.latency_improvement_pct:.1f}%"
-            )
-        
-        # Evaluate cost
-        if metrics.cost_delta_pct <= 0:
-            reasons.append(f"Cost reduced by {-metrics.cost_delta_pct:.1f}%")
-            confidence += 0.2
-        elif metrics.cost_delta_pct <= self.max_cost_increase:
-            reasons.append(f"Cost increase acceptable ({metrics.cost_delta_pct:.1f}%)")
-            confidence += 0.1
-        else:
-            blockers.append(
-                f"Cost increase too high: {metrics.cost_delta_pct:.1f}%"
-            )
+        # Run evaluations
+        self._check_evaluation_duration(version_id, blockers)
+        confidence = (
+            self._evaluate_accuracy(metrics, reasons, blockers) +
+            self._evaluate_latency(metrics, reasons, blockers) +
+            self._evaluate_cost(metrics, reasons, blockers)
+        )
         
         # Statistical significance
         if metrics.is_statistically_significant:
             reasons.append("Results statistically significant")
             confidence += 0.2
-        else:
-            if metrics.complete_pairs >= self.min_pairs:
-                blockers.append("Results not statistically significant")
+        elif metrics.complete_pairs >= self.min_pairs:
+            blockers.append("Results not statistically significant")
         
         # Final decision
         recommend = len(blockers) == 0 and confidence >= 0.5
@@ -483,3 +481,157 @@ class ShadowComparator:
                 "max_cost_increase_pct": self.max_cost_increase,
             }
         }
+
+    def compute_detailed_metrics(
+        self,
+        version_id: str,
+        time_window_hours: int = 24
+    ) -> Dict[str, Any]:
+        """
+        Compute detailed comparison metrics with breakdown.
+        
+        Args:
+            version_id: Version ID to compute metrics for
+            time_window_hours: Time window for filtering pairs
+            
+        Returns:
+            Dictionary containing:
+            - basic_metrics: Standard ComparisonMetrics
+            - issue_breakdown: Issues categorized by severity and type
+            - latency_distribution: Latency statistics (min, max, median, std)
+            - hourly_trends: Hourly aggregated metrics
+        """
+        basic = self.compute_metrics(version_id, time_window_hours)
+        
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=time_window_hours)
+        relevant_pairs = [
+            p for p in self.complete_pairs
+            if p.v1_output and p.v1_output.version_id == version_id
+            and p.v1_output.timestamp >= cutoff
+        ]
+        
+        if not relevant_pairs:
+            return {
+                "basic_metrics": basic.__dict__ if hasattr(basic, '__dict__') else {},
+                "issue_breakdown": {},
+                "latency_distribution": {},
+                "hourly_trends": {}
+            }
+        
+        # Issue breakdown by severity and type
+        issue_by_severity: Dict[str, Dict[str, int]] = {}
+        issue_by_type: Dict[str, Dict[str, int]] = {}
+        
+        for pair in relevant_pairs:
+            for issue in (pair.v1_output.issues or []):
+                sev = issue.get("severity", "unknown")
+                typ = issue.get("type", "unknown")
+                
+                if sev not in issue_by_severity:
+                    issue_by_severity[sev] = {"v1": 0, "v2": 0}
+                issue_by_severity[sev]["v1"] += 1
+                
+                if typ not in issue_by_type:
+                    issue_by_type[typ] = {"v1": 0, "v2": 0}
+                issue_by_type[typ]["v1"] += 1
+            
+            for issue in (pair.v2_output.issues or []):
+                sev = issue.get("severity", "unknown")
+                typ = issue.get("type", "unknown")
+                
+                if sev not in issue_by_severity:
+                    issue_by_severity[sev] = {"v1": 0, "v2": 0}
+                issue_by_severity[sev]["v2"] += 1
+                
+                if typ not in issue_by_type:
+                    issue_by_type[typ] = {"v1": 0, "v2": 0}
+                issue_by_type[typ]["v2"] += 1
+        
+        # Latency distribution
+        v1_latencies = [p.v1_output.latency_ms for p in relevant_pairs]
+        v2_latencies = [p.v2_output.latency_ms for p in relevant_pairs]
+        
+        def calc_stats(data: List[float]) -> Dict[str, float]:
+            if not data:
+                return {"min": 0, "max": 0, "median": 0, "std": 0}
+            return {
+                "min": min(data),
+                "max": max(data),
+                "median": statistics.median(data),
+                "std": statistics.stdev(data) if len(data) > 1 else 0,
+            }
+        
+        latency_dist = {
+            "v1": calc_stats(v1_latencies),
+            "v2": calc_stats(v2_latencies),
+        }
+        
+        # Hourly trends
+        hourly: Dict[str, Dict[str, Any]] = {}
+        for pair in relevant_pairs:
+            hour_key = pair.v1_output.timestamp.strftime("%Y-%m-%d %H:00")
+            if hour_key not in hourly:
+                hourly[hour_key] = {
+                    "count": 0,
+                    "v1_latencies": [],
+                    "v2_latencies": [],
+                    "v1_issues": 0,
+                    "v2_issues": 0,
+                }
+            hourly[hour_key]["count"] += 1
+            hourly[hour_key]["v1_latencies"].append(pair.v1_output.latency_ms)
+            hourly[hour_key]["v2_latencies"].append(pair.v2_output.latency_ms)
+            hourly[hour_key]["v1_issues"] += len(pair.v1_output.issues or [])
+            hourly[hour_key]["v2_issues"] += len(pair.v2_output.issues or [])
+        
+        # Compute hourly averages
+        hourly_trends = {}
+        for hour, data in hourly.items():
+            hourly_trends[hour] = {
+                "count": data["count"],
+                "v1_avg_latency": statistics.mean(data["v1_latencies"]) if data["v1_latencies"] else 0,
+                "v2_avg_latency": statistics.mean(data["v2_latencies"]) if data["v2_latencies"] else 0,
+                "v1_avg_issues": data["v1_issues"] / data["count"] if data["count"] > 0 else 0,
+                "v2_avg_issues": data["v2_issues"] / data["count"] if data["count"] > 0 else 0,
+            }
+        
+        return {
+            "basic_metrics": basic.__dict__ if hasattr(basic, '__dict__') else {},
+            "issue_breakdown": {
+                "by_severity": issue_by_severity,
+                "by_type": issue_by_type,
+            },
+            "latency_distribution": latency_dist,
+            "hourly_trends": hourly_trends,
+        }
+
+    def get_promotion_history(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Get history of promotion recommendations.
+        
+        Args:
+            limit: Maximum number of entries to return
+            
+        Returns:
+            List of historical promotion recommendations
+        """
+        history = []
+        for version_id, start_time in self.version_evaluations.items():
+            recommendation = self.evaluate_promotion(version_id)
+            history.append({
+                "version_id": version_id,
+                "evaluation_start": start_time.isoformat(),
+                "recommendation": {
+                    "recommend_promotion": recommendation.recommend_promotion,
+                    "confidence": recommendation.confidence,
+                    "reasons": recommendation.reasons,
+                    "blockers": recommendation.blockers,
+                },
+                "metrics_summary": {
+                    "complete_pairs": recommendation.metrics.complete_pairs,
+                    "accuracy_delta": recommendation.metrics.accuracy_delta,
+                    "latency_improvement_pct": recommendation.metrics.latency_improvement_pct,
+                    "cost_delta_pct": recommendation.metrics.cost_delta_pct,
+                }
+            })
+        return history[:limit]

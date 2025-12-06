@@ -198,6 +198,7 @@ class SpiralEvolutionManager:
                 await self._cycle_task
             except asyncio.CancelledError:
                 logger.info("Evolution cycle task cancelled")
+                raise
         
         logger.info("Spiral evolution cycle stopped")
     

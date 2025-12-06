@@ -281,6 +281,7 @@
     "analytics": "数据分析"
   },
   "code_review": {
+    "title": "代码审查",
     "untitled": "未命名",
     "analyze": "分析",
     "export": "导出",
@@ -291,6 +292,10 @@
     "quick_fix": "可快速修复",
     "fix": "修复",
     "apply_fix": "应用修复",
+    "ai_assistant": "AI 助手",
+    "chat_with_ai": "与 AI 对话",
+    "chat_placeholder": "询问 AI 关于这段代码...",
+    "code_editor": "代码编辑器",
     "severity": {
       "critical": "严重",
       "high": "高",
@@ -305,6 +310,15 @@
       "style": "风格",
       "documentation": "文档"
     }
+  },
+  "codeReview": {
+    "title": "代码审查",
+    "analyze": "分析",
+    "issues": "问题",
+    "ai_assistant": "AI 助手",
+    "chat_with_ai": "与 AI 对话",
+    "chat_placeholder": "询问 AI 关于这段代码...",
+    "code_editor": "代码编辑器"
   },
   "code_editor": {
     "apply_fix": "应用修复",

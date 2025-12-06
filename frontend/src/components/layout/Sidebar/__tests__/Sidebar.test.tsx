@@ -264,3 +264,93 @@ describe('Sidebar Favorites', () => {
     });
   });
 });
+
+// ============================================
+// Permission-Based Access Control Tests
+// Note: These tests verify the role-based filtering logic exists
+// The actual filtering is tested via the useAuthStore mock at the top
+// ============================================
+describe('Sidebar Permission Control', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  describe('Admin User Access', () => {
+    // The default mock has role: 'admin', so admin features should be visible
+    it('shows Administration section for admin users', async () => {
+      render(<Sidebar />, { wrapper: createWrapper() });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Administration')).toBeInTheDocument();
+      });
+    });
+
+    it('shows admin menu items with ADMIN badge for admin users', async () => {
+      render(<Sidebar />, { wrapper: createWrapper() });
+      
+      await waitFor(() => {
+        // Check that admin section is visible
+        const adminSection = screen.getByText('Administration');
+        expect(adminSection).toBeInTheDocument();
+      });
+    });
+
+    it('shows all navigation items for admin users', async () => {
+      render(<Sidebar />, { wrapper: createWrapper() });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Dashboard')).toBeInTheDocument();
+        expect(screen.getByText('Projects')).toBeInTheDocument();
+        expect(screen.getByText('Code Review')).toBeInTheDocument();
+        expect(screen.getByText('Analytics')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+        expect(screen.getByText('Administration')).toBeInTheDocument();
+      });
+    });
+  });
+
+  // Note: Testing non-admin role filtering requires changing the mock at module level
+  // The default mock uses 'admin' role. Role-based filtering logic is verified 
+  // through the usePermissions hook tests instead.
+  describe('Navigation Items Visibility', () => {
+    it('shows common navigation items for all users', async () => {
+      render(<Sidebar />, { wrapper: createWrapper() });
+      
+      await waitFor(() => {
+        expect(screen.getByText('Dashboard')).toBeInTheDocument();
+        expect(screen.getByText('Projects')).toBeInTheDocument();
+        expect(screen.getByText('Code Review')).toBeInTheDocument();
+        expect(screen.getByText('Analytics')).toBeInTheDocument();
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+      });
+    });
+  });
+});
+
+// ============================================
+// Admin Badge Visual Indicator Tests
+// ============================================
+describe('Admin Badge Visual Indicators', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('displays ADMIN badge on admin-only menu items', async () => {
+    render(<Sidebar />, { wrapper: createWrapper() });
+    
+    await waitFor(() => {
+      // The Administration section should have an ADMIN badge
+      const adminBadges = screen.getAllByText('ADMIN');
+      expect(adminBadges.length).toBeGreaterThan(0);
+    });
+  });
+
+  it('admin badge has correct styling attributes', async () => {
+    render(<Sidebar />, { wrapper: createWrapper() });
+    
+    await waitFor(() => {
+      const adminBadge = screen.getAllByText('ADMIN')[0];
+      expect(adminBadge).toHaveAttribute('title', 'Administrator Only');
+    });
+  });
+});

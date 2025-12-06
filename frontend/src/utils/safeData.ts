@@ -25,6 +25,10 @@ export function ensureArray<T>(data: unknown, fallback: T[] = []): T[] {
     if (Array.isArray(obj.results)) return obj.results as T[];
     if (Array.isArray(obj.list)) return obj.list as T[];
     if (Array.isArray(obj.records)) return obj.records as T[];
+    if (Array.isArray(obj.connections)) return obj.connections as T[];
+    if (Array.isArray(obj.integrations)) return obj.integrations as T[];
+    if (Array.isArray(obj.webhooks)) return obj.webhooks as T[];
+    if (Array.isArray(obj.sessions)) return obj.sessions as T[];
   }
 
   return fallback;

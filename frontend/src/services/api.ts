@@ -618,6 +618,13 @@ export const apiService = {
       id: string,
       params?: { branch?: string; page?: number; limit?: number }
     ) => api.get(`/repositories/${id}/commits`, { params }),
+
+    /**
+     * Analyze repository code
+     * Starts an analysis session for the repository
+     */
+    analyze: (id: string, options?: { files?: string[]; branch?: string }) =>
+      api.post(`/repositories/${id}/analyze`, options),
   },
 
   // Analysis

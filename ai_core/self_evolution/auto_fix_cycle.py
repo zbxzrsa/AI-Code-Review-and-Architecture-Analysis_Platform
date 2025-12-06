@@ -173,6 +173,8 @@ class AutoFixCycle:
                 await self._cycle_task
             except asyncio.CancelledError:
                 logger.info("Fix cycle task cancelled")
+                self._phase = FixCyclePhase.IDLE
+                raise
         
         self._phase = FixCyclePhase.IDLE
         logger.info("Auto-fix cycle stopped")
