@@ -335,6 +335,41 @@ class BidirectionalProtocol:
         
         await self.outbound_queue.put(response)
     
+    async def _handle_response_message(self, message: ProtocolMessage) -> bool:
+        """Handle response message type. Returns True if handled."""
+        if message.message_type == MessageType.RESPONSE:
+            if message.correlation_id in self.pending_requests:
+                self.pending_requests[message.correlation_id].set_result(message)
+            return True
+        return False
+    
+    async def _execute_action_handler(self, message: ProtocolMessage, handler: Callable) -> Any:
+        """Execute action handler (async or sync)."""
+        if asyncio.iscoroutinefunction(handler):
+            return await handler(message)
+        return handler(message)
+    
+    async def _handle_action_message(self, message: ProtocolMessage) -> None:
+        """Handle action message type."""
+        if message.action not in self.action_handlers:
+            return
+            
+        handler = self.action_handlers[message.action]
+        try:
+            result = await self._execute_action_handler(message, handler)
+            
+            # Send response if it was a request
+            if message.message_type == MessageType.REQUEST:
+                await self.respond(message, result or {})
+        except Exception as e:
+            logger.error(f"Handler error: {e}")
+            if message.message_type == MessageType.REQUEST:
+                await self.respond(
+                    message,
+                    {"error": str(e)},
+                    success=False
+                )
+    
     async def _process_messages(self) -> None:
         """Process inbound messages"""
         while self.status == ChannelStatus.CONNECTED:
@@ -349,32 +384,12 @@ class BidirectionalProtocol:
                     logger.warning(f"Invalid checksum: {message.message_id}")
                     continue
                 
-                # Handle response
-                if message.message_type == MessageType.RESPONSE:
-                    if message.correlation_id in self.pending_requests:
-                        self.pending_requests[message.correlation_id].set_result(message)
+                # Handle response messages
+                if await self._handle_response_message(message):
                     continue
                 
-                # Handle action
-                if message.action in self.action_handlers:
-                    handler = self.action_handlers[message.action]
-                    try:
-                        if asyncio.iscoroutinefunction(handler):
-                            result = await handler(message)
-                        else:
-                            result = handler(message)
-                        
-                        # Send response if it was a request
-                        if message.message_type == MessageType.REQUEST:
-                            await self.respond(message, result or {})
-                    except Exception as e:
-                        logger.error(f"Handler error: {e}")
-                        if message.message_type == MessageType.REQUEST:
-                            await self.respond(
-                                message,
-                                {"error": str(e)},
-                                success=False
-                            )
+                # Handle action messages
+                await self._handle_action_message(message)
                 
             except asyncio.TimeoutError:
                 continue

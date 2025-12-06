@@ -289,8 +289,8 @@ class ContinuousLearner:
         
         for idx in indices:
             self.replay_buffer.append({
-                'input': inputs[idx].cpu(),
-                'target': targets[idx].cpu(),
+                'input': inputs[idx].detach().cpu(),
+                'target': targets[idx].detach().cpu(),
                 'task_id': task_id
             })
     

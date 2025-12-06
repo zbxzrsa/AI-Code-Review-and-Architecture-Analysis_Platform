@@ -233,7 +233,7 @@ class OnlineLearningModule:
             try:
                 await self._learning_task
             except asyncio.CancelledError:
-                pass
+                raise  # Re-raise CancelledError after cleanup
         logger.info("Stopped online learning")
     
     async def _learning_loop(self):
@@ -1342,7 +1342,7 @@ class AutonomousLearningAgent:
             try:
                 await self._main_task
             except asyncio.CancelledError:
-                pass
+                raise  # Re-raise CancelledError after cleanup
         
         logger.info("Autonomous learning agent stopped")
     

@@ -823,7 +823,7 @@ class RetrainingScheduler:
             try:
                 await self._scheduler_task
             except asyncio.CancelledError:
-                pass
+                raise  # Re-raise CancelledError after cleanup
         
         logger.info("Stopped retraining scheduler")
     
@@ -1180,7 +1180,7 @@ class HealthChecker:
             try:
                 await self._check_task
             except asyncio.CancelledError:
-                pass
+                raise  # Re-raise CancelledError after cleanup
     
     async def _check_loop(self):
         """Main health check loop."""

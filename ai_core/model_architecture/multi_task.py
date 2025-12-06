@@ -593,7 +593,7 @@ class TransferLearning:
                 inputs = inputs.to(device)
                 features = self.target_model.extract_features(inputs)
                 
-                all_features.append(features.cpu())
+                all_features.append(features.detach().cpu())
                 all_labels.append(labels)
         
         return torch.cat(all_features), torch.cat(all_labels)

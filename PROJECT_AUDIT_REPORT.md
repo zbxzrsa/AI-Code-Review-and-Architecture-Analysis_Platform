@@ -633,3 +633,42 @@ timestamp = datetime.now(timezone.utc)  # ✅ Works
 
 **更新日期**: December 5, 2025 (Phase 7 - Datetime Timezone Fixes)
 **代码质量评分**: A (生产就绪)
+
+---
+
+## 14. Tensor Copy Operations Fix (Phase 8)
+
+### 14.1 SonarQube Blocker Fix
+
+**问题**: PyTorch tensor 复制操作未使用 `.detach()` 可能导致内存泄漏和梯度追踪问题。
+
+### 14.2 修复的文件
+
+| 文件                                                 | 行号    | 修复                                               |
+| ---------------------------------------------------- | ------- | -------------------------------------------------- |
+| `ai_core/model_architecture/multi_task.py`           | 596     | `features.cpu()` → `features.detach().cpu()`       |
+| `ai_core/model_architecture/distributed_training.py` | 477     | `param.cpu()` → `param.detach().cpu()`             |
+| `ai_core/continuous_learning/continuous_learner.py`  | 292-293 | `inputs[idx].cpu()` → `inputs[idx].detach().cpu()` |
+
+### 14.3 修复统计
+
+| 指标     | 数量            |
+| -------- | --------------- |
+| 修复文件 | 3               |
+| 修复类型 | Tensor 复制操作 |
+| 风险级别 | 关键 (内存泄漏) |
+| 回归测试 | ✅ 通过         |
+
+### 14.4 累计修复总数
+
+| Phase                 | 修复数量 |
+| --------------------- | -------- |
+| Phase 1-6             | 60+      |
+| Phase 7 (Timezone)    | 77+      |
+| Phase 8 (Tensor Copy) | 4        |
+| **总计**              | **141+** |
+
+---
+
+**更新日期**: December 5, 2025 (Phase 8 - Tensor Copy Fixes)
+**代码质量评分**: A (生产就绪)

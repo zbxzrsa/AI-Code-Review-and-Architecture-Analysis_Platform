@@ -474,7 +474,7 @@ class ModelParallel:
         state = {}
         for i, part in enumerate(self.model_parts):
             for name, param in part.state_dict().items():
-                state[f'part_{i}.{name}'] = param.cpu()
+                state[f'part_{i}.{name}'] = param.detach().cpu()
         return state
     
     def load_state_dict(self, state: Dict[str, Any]) -> None:
