@@ -152,6 +152,150 @@ class VersionControlAIModel(nn.Module):
     def set_input_embeddings(self, value: nn.Embedding):
         self.embed_tokens = value
     
+    def _prepare_inputs(
+        self,
+        input_ids: torch.Tensor,
+        position_ids: Optional[torch.Tensor],
+        past_key_values: Optional[Tuple],
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Prepare position IDs and embeddings"""
+        batch_size, seq_len = input_ids.shape
+        device = input_ids.device
+        
+        # Create position IDs
+        if position_ids is None:
+            past_length = past_key_values[0][0].shape[2] if past_key_values else 0
+            position_ids = torch.arange(
+                past_length, past_length + seq_len, device=device
+            ).unsqueeze(0).expand(batch_size, -1)
+        
+        # Get embeddings
+        hidden_states = self.embed_tokens(input_ids)
+        hidden_states = hidden_states + self.embed_positions(position_ids)
+        
+        # Create causal mask
+        causal_mask = self._create_causal_mask(seq_len, device)
+        
+        return hidden_states, causal_mask, device
+    
+    def _process_layers(
+        self,
+        hidden_states: torch.Tensor,
+        causal_mask: torch.Tensor,
+        position_ids: torch.Tensor,
+        past_key_values: Optional[Tuple],
+        use_cache: bool,
+        output_attentions: bool,
+        output_hidden_states: bool,
+    ) -> Tuple:
+        """Process through transformer layers"""
+        all_hidden_states = () if output_hidden_states else None
+        all_attentions = () if output_attentions else None
+        new_past_key_values = () if use_cache else None
+        total_aux_loss = 0.0
+        
+        for i, layer in enumerate(self.layers):
+            if output_hidden_states:
+                all_hidden_states += (hidden_states,)
+            
+            past_key_value = past_key_values[i] if past_key_values else None
+            
+            # Apply layer with optional gradient checkpointing
+            layer_outputs = self._apply_layer(
+                layer, hidden_states, causal_mask,
+                position_ids, past_key_value, output_attentions
+            )
+            
+            hidden_states = layer_outputs[0]
+            
+            if use_cache:
+                new_past_key_values += (layer_outputs[-1],)
+            if output_attentions:
+                all_attentions += (layer_outputs[1],)
+            
+            # Accumulate MoE auxiliary loss
+            if hasattr(layer, 'aux_loss') and layer.aux_loss:
+                total_aux_loss += layer.aux_loss
+        
+        return hidden_states, all_hidden_states, all_attentions, new_past_key_values, total_aux_loss
+    
+    def _apply_layer(
+        self,
+        layer,
+        hidden_states: torch.Tensor,
+        causal_mask: torch.Tensor,
+        position_ids: torch.Tensor,
+        past_key_value: Optional[Tuple],
+        output_attentions: bool,
+    ):
+        """Apply single transformer layer with optional gradient checkpointing"""
+        if self.gradient_checkpointing and self.training:
+            return self._gradient_checkpointing_func(
+                layer, hidden_states, causal_mask,
+                position_ids, past_key_value, output_attentions
+            )
+        return layer(
+            hidden_states,
+            attention_mask=causal_mask,
+            position_ids=position_ids,
+            past_key_value=past_key_value,
+            output_attentions=output_attentions,
+        )
+    
+    def _compute_multi_task_outputs(
+        self,
+        hidden_states: torch.Tensor,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Compute LM and multi-task outputs"""
+        logits = self.lm_head(hidden_states)
+        pooled_output = self.pooler(hidden_states[:, 0, :])  # CLS token
+        change_type_logits = self.change_type_head(pooled_output)
+        impact_logits = self.impact_head(pooled_output)
+        return logits, pooled_output, change_type_logits, impact_logits
+    
+    def _compute_losses(
+        self,
+        logits: torch.Tensor,
+        change_type_logits: torch.Tensor,
+        impact_logits: torch.Tensor,
+        labels: Optional[torch.Tensor],
+        change_type_labels: Optional[torch.Tensor],
+        impact_labels: Optional[torch.Tensor],
+        total_aux_loss: float,
+        device: torch.device,
+    ) -> Tuple[Optional[torch.Tensor], Optional[torch.Tensor]]:
+        """Compute all losses (LM, change type, impact, auxiliary)"""
+        loss = None
+        
+        # Language modeling loss
+        if labels is not None:
+            shift_logits = logits[..., :-1, :].contiguous()
+            shift_labels = labels[..., 1:].contiguous()
+            loss = F.cross_entropy(
+                shift_logits.view(-1, self.config.vocab_size),
+                shift_labels.view(-1),
+                ignore_index=-100,
+            )
+        
+        # Change type classification loss
+        if change_type_labels is not None:
+            change_type_loss = F.cross_entropy(change_type_logits, change_type_labels)
+            loss = loss + change_type_loss if loss is not None else change_type_loss
+        
+        # Impact prediction loss
+        if impact_labels is not None:
+            impact_loss = F.cross_entropy(impact_logits, impact_labels)
+            loss = loss + impact_loss if loss is not None else impact_loss
+        
+        # Auxiliary loss (MoE)
+        aux_loss = None
+        if total_aux_loss > 0:
+            aux_loss = torch.tensor(total_aux_loss, device=device)
+            if loss is not None:
+                loss = loss + self.config.lora.lora_alpha * aux_loss / 1000
+        
+        return loss, aux_loss
+    
     def forward(
         self,
         input_ids: torch.Tensor,
@@ -166,111 +310,32 @@ class VersionControlAIModel(nn.Module):
         output_hidden_states: bool = False,
         return_dict: bool = True,
     ) -> Union[ModelOutput, Tuple]:
-        batch_size, seq_len = input_ids.shape
-        device = input_ids.device
-        
-        # Create position IDs
-        if position_ids is None:
-            if past_key_values is not None:
-                past_length = past_key_values[0][0].shape[2]
-            else:
-                past_length = 0
-            position_ids = torch.arange(
-                past_length, past_length + seq_len, device=device
-            ).unsqueeze(0).expand(batch_size, -1)
-        
-        # Get embeddings
-        hidden_states = self.embed_tokens(input_ids)
-        hidden_states = hidden_states + self.embed_positions(position_ids)
-        
-        # Create causal mask
-        if attention_mask is None:
-            attention_mask = torch.ones((batch_size, seq_len), device=device)  # noqa: F841
-        
-        causal_mask = self._create_causal_mask(seq_len, device)
+        """Forward pass - orchestrates the computation"""
+        # Prepare inputs
+        hidden_states, causal_mask, device = self._prepare_inputs(
+            input_ids, position_ids, past_key_values
+        )
         
         # Process through layers
-        all_hidden_states = () if output_hidden_states else None
-        all_attentions = () if output_attentions else None
-        new_past_key_values = () if use_cache else None
-        total_aux_loss = 0.0
-        
-        for i, layer in enumerate(self.layers):
-            if output_hidden_states:
-                all_hidden_states += (hidden_states,)
-            
-            past_key_value = past_key_values[i] if past_key_values is not None else None
-            
-            if self.gradient_checkpointing and self.training:
-                layer_outputs = self._gradient_checkpointing_func(
-                    layer,
-                    hidden_states,
-                    causal_mask,
-                    position_ids,
-                    past_key_value,
-                    output_attentions,
-                )
-            else:
-                layer_outputs = layer(
-                    hidden_states,
-                    attention_mask=causal_mask,
-                    position_ids=position_ids,
-                    past_key_value=past_key_value,
-                    output_attentions=output_attentions,
-                )
-            
-            hidden_states = layer_outputs[0]
-            
-            if use_cache:
-                new_past_key_values += (layer_outputs[-1],)
-            
-            if output_attentions:
-                all_attentions += (layer_outputs[1],)
-            
-            # Accumulate MoE auxiliary loss
-            if hasattr(layer, 'aux_loss') and layer.aux_loss is not None:
-                total_aux_loss += layer.aux_loss
+        hidden_states, all_hidden_states, all_attentions, new_past_key_values, total_aux_loss = self._process_layers(
+            hidden_states, causal_mask, position_ids, past_key_values,
+            use_cache, output_attentions, output_hidden_states
+        )
         
         # Final layer norm
         hidden_states = self.norm(hidden_states)
-        
         if output_hidden_states:
             all_hidden_states += (hidden_states,)
         
-        # LM head
-        logits = self.lm_head(hidden_states)
-        
-        # Multi-task outputs (using pooled representation)
-        pooled_output = self.pooler(hidden_states[:, 0, :])  # CLS token
-        change_type_logits = self.change_type_head(pooled_output)
-        impact_logits = self.impact_head(pooled_output)
+        # Compute outputs
+        logits, pooled_output, change_type_logits, impact_logits = self._compute_multi_task_outputs(hidden_states)
         
         # Compute losses
-        loss = None
-        if labels is not None:
-            shift_logits = logits[..., :-1, :].contiguous()
-            shift_labels = labels[..., 1:].contiguous()
-            loss = F.cross_entropy(
-                shift_logits.view(-1, self.config.vocab_size),
-                shift_labels.view(-1),
-                ignore_index=-100,
-            )
-        
-        if change_type_labels is not None:
-            change_type_loss = F.cross_entropy(change_type_logits, change_type_labels)
-            loss = loss + change_type_loss if loss is not None else change_type_loss
-        
-        if impact_labels is not None:
-            impact_loss = F.cross_entropy(impact_logits, impact_labels)
-            loss = loss + impact_loss if loss is not None else impact_loss
-        
-        # Add auxiliary loss
-        if total_aux_loss > 0:
-            aux_loss = torch.tensor(total_aux_loss, device=device)
-            if loss is not None:
-                loss = loss + self.config.lora.lora_alpha * aux_loss / 1000
-        else:
-            aux_loss = None
+        loss, aux_loss = self._compute_losses(
+            logits, change_type_logits, impact_logits,
+            labels, change_type_labels, impact_labels,
+            total_aux_loss, device
+        )
         
         if return_dict:
             return ModelOutput(

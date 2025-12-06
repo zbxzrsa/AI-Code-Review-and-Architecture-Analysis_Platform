@@ -359,6 +359,66 @@ class CodeCommitTokenizer:
         combined = f"{SpecialTokens.COMMIT} {message} {SpecialTokens.DIFF} {diff}"
         return self.encode(combined, max_length=max_length)
     
+    def _initialize_char_vocabulary(self, texts: List[str]) -> int:
+        """Initialize vocabulary with character tokens"""
+        char_freq: Dict[str, int] = {}
+        for text in texts:
+            for char in text:
+                char_freq[char] = char_freq.get(char, 0) + 1
+        
+        current_vocab_size = len(self.token_to_id)
+        for char, freq in sorted(char_freq.items(), key=lambda x: -x[1]):
+            if freq >= self.min_frequency and char not in self.token_to_id:
+                self.token_to_id[char] = current_vocab_size
+                self.id_to_token[current_vocab_size] = char
+                current_vocab_size += 1
+        
+        return current_vocab_size
+    
+    def _compute_word_frequencies(self, texts: List[str]) -> Dict[str, int]:
+        """Compute word frequencies from texts"""
+        word_freqs: Dict[str, int] = {}
+        for text in texts:
+            for word in self._pre_tokenize(text):
+                word_freqs[word] = word_freqs.get(word, 0) + 1
+        return word_freqs
+    
+    def _count_pair_frequencies(
+        self,
+        word_freqs: Dict[str, int],
+        splits: Dict[str, List[str]]
+    ) -> Dict[Tuple[str, str], int]:
+        """Count frequencies of adjacent token pairs"""
+        pair_freqs: Dict[Tuple[str, str], int] = {}
+        for word, freq in word_freqs.items():
+            split = splits[word]
+            if len(split) < 2:
+                continue
+            for i in range(len(split) - 1):
+                pair = (split[i], split[i + 1])
+                pair_freqs[pair] = pair_freqs.get(pair, 0) + freq
+        return pair_freqs
+    
+    def _merge_pair_in_splits(
+        self,
+        splits: Dict[str, List[str]],
+        best_pair: Tuple[str, str],
+        new_token: str
+    ) -> None:
+        """Update splits by merging best pair"""
+        for word in splits:
+            split = splits[word]
+            new_split = []
+            i = 0
+            while i < len(split):
+                if i < len(split) - 1 and (split[i], split[i + 1]) == best_pair:
+                    new_split.append(new_token)
+                    i += 2
+                else:
+                    new_split.append(split[i])
+                    i += 1
+            splits[word] = new_split
+    
     def train(
         self,
         texts: List[str],
@@ -373,67 +433,36 @@ class CodeCommitTokenizer:
         """
         vocab_size = vocab_size or self.vocab_size
         
-        # Count initial character frequencies
-        char_freq: Dict[str, int] = {}
-        for text in texts:
-            for char in text:
-                char_freq[char] = char_freq.get(char, 0) + 1
-        
         # Initialize vocabulary with characters
-        current_vocab_size = len(self.token_to_id)
-        for char, freq in sorted(char_freq.items(), key=lambda x: -x[1]):
-            if freq >= self.min_frequency and char not in self.token_to_id:
-                self.token_to_id[char] = current_vocab_size
-                self.id_to_token[current_vocab_size] = char
-                current_vocab_size += 1
+        current_vocab_size = self._initialize_char_vocabulary(texts)
         
-        # Learn BPE merges
-        word_freqs: Dict[str, int] = {}
-        for text in texts:
-            for word in self._pre_tokenize(text):
-                word_freqs[word] = word_freqs.get(word, 0) + 1
+        # Compute word frequencies
+        word_freqs = self._compute_word_frequencies(texts)
         
         # Convert words to character lists
         splits = {word: list(word) for word in word_freqs}
         
+        # Learn BPE merges
         merge_rank = 0
         while current_vocab_size < vocab_size:
             # Count pair frequencies
-            pair_freqs: Dict[Tuple[str, str], int] = {}
-            for word, freq in word_freqs.items():
-                split = splits[word]
-                if len(split) < 2:
-                    continue
-                for i in range(len(split) - 1):
-                    pair = (split[i], split[i + 1])
-                    pair_freqs[pair] = pair_freqs.get(pair, 0) + freq
+            pair_freqs = self._count_pair_frequencies(word_freqs, splits)
             
             if not pair_freqs:
                 break
             
-            # Find most frequent pair
+            # Find most frequent pair and create new token
             best_pair = max(pair_freqs, key=pair_freqs.get)
-            
-            # Create new token
             new_token = best_pair[0] + best_pair[1]
+            
+            # Update vocabulary and merges
             self.token_to_id[new_token] = current_vocab_size
             self.id_to_token[current_vocab_size] = new_token
             self.merges[best_pair] = new_token
             self.merge_ranks[best_pair] = merge_rank
             
-            # Update splits
-            for word in splits:
-                split = splits[word]
-                new_split = []
-                i = 0
-                while i < len(split):
-                    if i < len(split) - 1 and (split[i], split[i + 1]) == best_pair:
-                        new_split.append(new_token)
-                        i += 2
-                    else:
-                        new_split.append(split[i])
-                        i += 1
-                splits[word] = new_split
+            # Update splits with new token
+            self._merge_pair_in_splits(splits, best_pair, new_token)
             
             current_vocab_size += 1
             merge_rank += 1

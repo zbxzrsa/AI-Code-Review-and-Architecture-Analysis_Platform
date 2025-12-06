@@ -307,12 +307,34 @@ class CacheService {
   }
 
   /**
+   * Helper: Invalidate from storage by tag
+   */
+  private invalidateStorageByTag(storage: Storage, tag: string): number {
+    let count = 0;
+    for (let i = storage.length - 1; i >= 0; i--) {
+      const key = storage.key(i);
+      if (!key?.startsWith("cache:")) continue;
+
+      try {
+        const entry = JSON.parse(storage.getItem(key) || "{}");
+        if (entry.tags?.includes(tag)) {
+          storage.removeItem(key);
+          count++;
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    return count;
+  }
+
+  /**
    * Invalidate by tag
    */
   invalidateByTag(tag: string): number {
     let count = 0;
 
-    // Clear from memory
+    // Clear from memory cache
     for (const [key, entry] of this.memoryCache.entries()) {
       if (entry.tags?.includes(tag)) {
         this.memoryCache.delete(key);
@@ -320,37 +342,9 @@ class CacheService {
       }
     }
 
-    // Clear from session storage
-    for (let i = sessionStorage.length - 1; i >= 0; i--) {
-      const key = sessionStorage.key(i);
-      if (key?.startsWith("cache:")) {
-        try {
-          const entry = JSON.parse(sessionStorage.getItem(key) || "{}");
-          if (entry.tags?.includes(tag)) {
-            sessionStorage.removeItem(key);
-            count++;
-          }
-        } catch {
-          // Ignore parse errors
-        }
-      }
-    }
-
-    // Clear from local storage
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i);
-      if (key?.startsWith("cache:")) {
-        try {
-          const entry = JSON.parse(localStorage.getItem(key) || "{}");
-          if (entry.tags?.includes(tag)) {
-            localStorage.removeItem(key);
-            count++;
-          }
-        } catch {
-          // Ignore parse errors
-        }
-      }
-    }
+    // Clear from session and local storage
+    count += this.invalidateStorageByTag(sessionStorage, tag);
+    count += this.invalidateStorageByTag(localStorage, tag);
 
     return count;
   }

@@ -257,14 +257,115 @@ class SecurityService {
   // ==================== Input Validation ====================
 
   /**
+   * Type-specific validators
+   */
+  private validateString(
+    value: unknown,
+    rules: ValidationRule
+  ): { valid: boolean; error?: string; sanitized?: unknown } | null {
+    if (typeof value !== "string") {
+      return { valid: false, error: "Must be a string" };
+    }
+
+    const sanitized = rules.sanitize ? this.sanitizeHTML(value) : value;
+
+    if (rules.minLength && value.length < rules.minLength) {
+      return {
+        valid: false,
+        error: `Minimum ${rules.minLength} characters required`,
+      };
+    }
+
+    if (rules.maxLength && value.length > rules.maxLength) {
+      return {
+        valid: false,
+        error: `Maximum ${rules.maxLength} characters allowed`,
+      };
+    }
+
+    if (rules.pattern && !rules.pattern.test(value)) {
+      return { valid: false, error: rules.message || "Invalid format" };
+    }
+
+    return { valid: true, sanitized };
+  }
+
+  private validateNumber(
+    value: unknown,
+    rules: ValidationRule
+  ): { valid: boolean; error?: string; sanitized?: unknown } {
+    const num = typeof value === "string" ? parseFloat(value) : value;
+    if (typeof num !== "number" || isNaN(num)) {
+      return { valid: false, error: "Must be a number" };
+    }
+
+    if (rules.min !== undefined && num < rules.min) {
+      return { valid: false, error: `Minimum value is ${rules.min}` };
+    }
+
+    if (rules.max !== undefined && num > rules.max) {
+      return { valid: false, error: `Maximum value is ${rules.max}` };
+    }
+
+    return { valid: true, sanitized: num };
+  }
+
+  private validateEmail(value: unknown): {
+    valid: boolean;
+    error?: string;
+    sanitized?: unknown;
+  } {
+    if (typeof value !== "string") {
+      return { valid: false, error: "Must be a string" };
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+      return { valid: false, error: "Invalid email format" };
+    }
+
+    return { valid: true, sanitized: value };
+  }
+
+  private validateUrl(value: unknown): {
+    valid: boolean;
+    error?: string;
+    sanitized?: unknown;
+  } {
+    if (typeof value !== "string") {
+      return { valid: false, error: "Must be a string" };
+    }
+
+    const sanitizedUrl = this.sanitizeURL(value);
+    if (!sanitizedUrl) {
+      return { valid: false, error: "Invalid URL" };
+    }
+
+    return { valid: true, sanitized: sanitizedUrl };
+  }
+
+  private validatePattern(
+    value: unknown,
+    rules: ValidationRule
+  ): { valid: boolean; error?: string; sanitized?: unknown } {
+    if (typeof value !== "string") {
+      return { valid: false, error: "Must be a string" };
+    }
+
+    if (rules.pattern && !rules.pattern.test(value)) {
+      return { valid: false, error: rules.message || "Invalid format" };
+    }
+
+    return { valid: true, sanitized: value };
+  }
+
+  /**
    * Validate input against rules
    */
   validate(
     value: unknown,
     rules: ValidationRule
   ): { valid: boolean; error?: string; sanitized?: unknown } {
-    let sanitized = value;
-
     // Required check
     if (
       rules.required &&
@@ -273,94 +374,30 @@ class SecurityService {
       return { valid: false, error: rules.message || "This field is required" };
     }
 
+    // Empty value is valid if not required
     if (value === null || value === undefined || value === "") {
       return { valid: true, sanitized: value };
     }
 
-    switch (rules.type) {
-      case "string":
-        if (typeof value !== "string") {
-          return { valid: false, error: "Must be a string" };
-        }
+    // Type-specific validation using strategy pattern
+    const validators: Record<
+      string,
+      () => { valid: boolean; error?: string; sanitized?: unknown } | null
+    > = {
+      string: () => this.validateString(value, rules),
+      number: () => this.validateNumber(value, rules),
+      email: () => this.validateEmail(value),
+      url: () => this.validateUrl(value),
+      pattern: () => this.validatePattern(value, rules),
+    };
 
-        if (rules.sanitize) {
-          sanitized = this.sanitizeHTML(value);
-        }
-
-        if (rules.minLength && value.length < rules.minLength) {
-          return {
-            valid: false,
-            error: `Minimum ${rules.minLength} characters required`,
-          };
-        }
-
-        if (rules.maxLength && value.length > rules.maxLength) {
-          return {
-            valid: false,
-            error: `Maximum ${rules.maxLength} characters allowed`,
-          };
-        }
-
-        if (rules.pattern && !rules.pattern.test(value)) {
-          return { valid: false, error: rules.message || "Invalid format" };
-        }
-        break;
-
-      case "number": {
-        const num = typeof value === "string" ? parseFloat(value) : value;
-        if (typeof num !== "number" || isNaN(num)) {
-          return { valid: false, error: "Must be a number" };
-        }
-
-        sanitized = num;
-
-        if (rules.min !== undefined && num < rules.min) {
-          return { valid: false, error: `Minimum value is ${rules.min}` };
-        }
-
-        if (rules.max !== undefined && num > rules.max) {
-          return { valid: false, error: `Maximum value is ${rules.max}` };
-        }
-        break;
-      }
-
-      case "email": {
-        if (typeof value !== "string") {
-          return { valid: false, error: "Must be a string" };
-        }
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(value)) {
-          return { valid: false, error: "Invalid email format" };
-        }
-        break;
-      }
-
-      case "url": {
-        if (typeof value !== "string") {
-          return { valid: false, error: "Must be a string" };
-        }
-
-        const sanitizedUrl = this.sanitizeURL(value);
-        if (!sanitizedUrl) {
-          return { valid: false, error: "Invalid URL" };
-        }
-        sanitized = sanitizedUrl;
-        break;
-      }
-
-      case "pattern":
-        if (typeof value !== "string") {
-          return { valid: false, error: "Must be a string" };
-        }
-
-        if (rules.pattern && !rules.pattern.test(value)) {
-          return { valid: false, error: rules.message || "Invalid format" };
-        }
-        break;
+    const validator = validators[rules.type];
+    if (validator) {
+      const result = validator();
+      if (result) return result;
     }
 
-    return { valid: true, sanitized };
+    return { valid: true, sanitized: value };
   }
 
   /**

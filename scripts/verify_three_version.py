@@ -54,6 +54,39 @@ def get_project_root() -> Path:
     return script_path.parent.parent
 
 
+def check_file_contains(
+    file_path: Path,
+    patterns: List[str],
+    name: str,
+    any_pattern: bool = False
+) -> Tuple[bool, int, int]:
+    """
+    Check if file exists and contains required patterns.
+    
+    Args:
+        file_path: Path to file
+        patterns: List of patterns to search for
+        name: Display name for result
+        any_pattern: If True, any pattern match is success; if False, all must match
+    
+    Returns:
+        Tuple of (exists, passed_count, failed_count)
+    """
+    if not file_path.exists():
+        print_result(f"{name} exists", False, MSG_FILE_NOT_FOUND)
+        return False, 0, 1
+    
+    content = file_path.read_text(encoding='utf-8')
+    
+    if any_pattern:
+        has_pattern = any(p in content for p in patterns)
+    else:
+        has_pattern = all(p in content for p in patterns)
+    
+    print_result(name, has_pattern)
+    return True, (1 if has_pattern else 0), (0 if has_pattern else 1)
+
+
 # =============================================================================
 # File Structure Verification
 # =============================================================================
@@ -173,65 +206,24 @@ def verify_configurations() -> Tuple[int, int]:
     passed = 0
     failed = 0
     
-    # Check docker-compose.yml
-    docker_compose = root / "docker-compose.yml"
-    if docker_compose.exists():
-        content = docker_compose.read_text(encoding='utf-8')
-        has_service = "three-version-service" in content
-        print_result("docker-compose.yml has three-version-service", has_service)
-        passed += 1 if has_service else 0
-        failed += 0 if has_service else 1
-    else:
-        print_result("docker-compose.yml exists", False, MSG_FILE_NOT_FOUND)
-        failed += 1
+    # Define checks: (path, patterns, name, any_pattern)
+    checks = [
+        (root / "docker-compose.yml", ["three-version-service"], 
+         "docker-compose.yml has three-version-service", False),
+        (root / "gateway" / "nginx.conf", ["evolution_service", "/api/v1/evolution"], 
+         "nginx.conf has evolution route", True),
+        (root / "observability" / "prometheus.yml", ["three-version-service"], 
+         "prometheus.yml has scrape config", False),
+        (root / ".github" / "workflows" / "ci-cd.yml", ["three-version-service"], 
+         "ci-cd.yml has three-version-service build", False),
+        (root / "charts" / "coderev-platform" / "values.yaml", ["threeVersionService"], 
+         "Helm values.yaml has threeVersionService config", False),
+    ]
     
-    # Check nginx.conf
-    nginx_conf = root / "gateway" / "nginx.conf"
-    if nginx_conf.exists():
-        content = nginx_conf.read_text(encoding='utf-8')
-        has_route = "evolution_service" in content or "/api/v1/evolution" in content
-        print_result("nginx.conf has evolution route", has_route)
-        passed += 1 if has_route else 0
-        failed += 0 if has_route else 1
-    else:
-        print_result("gateway/nginx.conf exists", False, MSG_FILE_NOT_FOUND)
-        failed += 1
-    
-    # Check prometheus.yml
-    prometheus_yml = root / "observability" / "prometheus.yml"
-    if prometheus_yml.exists():
-        content = prometheus_yml.read_text(encoding='utf-8')
-        has_scrape = "three-version-service" in content
-        print_result("prometheus.yml has scrape config", has_scrape)
-        passed += 1 if has_scrape else 0
-        failed += 0 if has_scrape else 1
-    else:
-        print_result("observability/prometheus.yml exists", False, MSG_FILE_NOT_FOUND)
-        failed += 1
-    
-    # Check CI/CD
-    cicd = root / ".github" / "workflows" / "ci-cd.yml"
-    if cicd.exists():
-        content = cicd.read_text(encoding='utf-8')
-        has_build = "three-version-service" in content
-        print_result("ci-cd.yml has three-version-service build", has_build)
-        passed += 1 if has_build else 0
-        failed += 0 if has_build else 1
-    else:
-        print_result(".github/workflows/ci-cd.yml exists", False, MSG_FILE_NOT_FOUND)
-        failed += 1
-    
-    # Check Helm values
-    helm_values = root / "charts" / "coderev-platform" / "values.yaml"
-    if helm_values.exists():
-        content = helm_values.read_text(encoding='utf-8')
-        has_config = "threeVersionService" in content
-        print_result("Helm values.yaml has threeVersionService config", has_config)
-        passed += 1 if has_config else 0
-        failed += 0 if has_config else 1
-    else:
-        print_result("charts/coderev-platform/values.yaml exists", False, "File not found")
-        failed += 1
+    for file_path, patterns, name, any_pattern in checks:
+        _, p, f = check_file_contains(file_path, patterns, name, any_pattern)
+        passed += p
+        failed += f
     
     return passed, failed
 
@@ -245,68 +237,33 @@ def verify_frontend() -> Tuple[int, int]:
     print_header("Frontend Verification")
     
     root = get_project_root()
+    frontend = root / "frontend"
     passed = 0
     failed = 0
     
-    # Check App.tsx
-    app_tsx = root / "frontend" / "src" / "App.tsx"
-    if app_tsx.exists():
-        content = app_tsx.read_text(encoding='utf-8')
-        has_route = "ThreeVersionControl" in content and "/admin/three-version" in content
-        print_result("App.tsx has ThreeVersionControl route", has_route)
-        passed += 1 if has_route else 0
-        failed += 0 if has_route else 1
-    else:
-        print_result("frontend/src/App.tsx exists", False, "File not found")
-        failed += 1
+    # Define checks: (path, patterns, name, any_pattern)
+    checks = [
+        (frontend / "src" / "App.tsx", 
+         ["ThreeVersionControl", "/admin/three-version"],
+         "App.tsx has ThreeVersionControl route", False),
+        (frontend / "src" / "components" / "layout" / "Sidebar" / "Sidebar.tsx",
+         ["three-version", "three_version"],
+         "Sidebar.tsx has three-version nav item", True),
+        (frontend / "src" / "services" / "index.ts",
+         ["threeVersionService"],
+         "services/index.ts exports threeVersionService", False),
+        (frontend / "public" / "locales" / "en" / "translation.json",
+         ["three_version"],
+         "English translation has three_version keys", False),
+        (frontend / "public" / "locales" / "zh-CN" / "translation.json",
+         ["three_version"],
+         "Chinese translation has three_version keys", False),
+    ]
     
-    # Check Sidebar
-    sidebar = root / "frontend" / "src" / "components" / "layout" / "Sidebar" / "Sidebar.tsx"
-    if sidebar.exists():
-        content = sidebar.read_text(encoding='utf-8')
-        has_nav = "three-version" in content or "three_version" in content
-        print_result("Sidebar.tsx has three-version nav item", has_nav)
-        passed += 1 if has_nav else 0
-        failed += 0 if has_nav else 1
-    else:
-        print_result("Sidebar.tsx exists", False, "File not found")
-        failed += 1
-    
-    # Check services index
-    services_index = root / "frontend" / "src" / "services" / "index.ts"
-    if services_index.exists():
-        content = services_index.read_text(encoding='utf-8')
-        has_export = "threeVersionService" in content
-        print_result("services/index.ts exports threeVersionService", has_export)
-        passed += 1 if has_export else 0
-        failed += 0 if has_export else 1
-    else:
-        print_result("frontend/src/services/index.ts exists", False, "File not found")
-        failed += 1
-    
-    # Check i18n English
-    en_json = root / "frontend" / "public" / "locales" / "en" / "translation.json"
-    if en_json.exists():
-        content = en_json.read_text(encoding='utf-8')
-        has_i18n = "three_version" in content
-        print_result("English translation has three_version keys", has_i18n)
-        passed += 1 if has_i18n else 0
-        failed += 0 if has_i18n else 1
-    else:
-        print_result("English translation file exists", False, "File not found")
-        failed += 1
-    
-    # Check i18n Chinese
-    zh_json = root / "frontend" / "public" / "locales" / "zh-CN" / "translation.json"
-    if zh_json.exists():
-        content = zh_json.read_text(encoding='utf-8')
-        has_i18n = "three_version" in content
-        print_result("Chinese translation has three_version keys", has_i18n)
-        passed += 1 if has_i18n else 0
-        failed += 0 if has_i18n else 1
-    else:
-        print_result("Chinese translation file exists", False, "File not found")
-        failed += 1
+    for file_path, patterns, name, any_pattern in checks:
+        _, p, f = check_file_contains(file_path, patterns, name, any_pattern)
+        passed += p
+        failed += f
     
     return passed, failed
 

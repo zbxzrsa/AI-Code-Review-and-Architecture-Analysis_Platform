@@ -396,6 +396,58 @@ class ErrorLoggingService {
   }
 
   /**
+   * Execute retry recovery
+   */
+  private async executeRetry(
+    strategy: RecoveryStrategy,
+    retryFn?: () => Promise<unknown>
+  ): Promise<{ success: boolean; result?: unknown }> {
+    if (!retryFn || !strategy.maxRetries) {
+      return { success: false };
+    }
+
+    for (let i = 0; i < strategy.maxRetries; i++) {
+      try {
+        await new Promise((resolve) =>
+          setTimeout(resolve, strategy.delayMs || 1000)
+        );
+        const result = await retryFn();
+        return { success: true, result };
+      } catch {
+        if (i === strategy.maxRetries - 1) {
+          return { success: false };
+        }
+      }
+    }
+    return { success: false };
+  }
+
+  /**
+   * Execute redirect recovery
+   */
+  private executeRedirect(strategy: RecoveryStrategy): {
+    success: boolean;
+    result?: unknown;
+  } {
+    if (strategy.redirectUrl && typeof window !== "undefined") {
+      window.location.href = strategy.redirectUrl;
+      return { success: true };
+    }
+    return { success: false };
+  }
+
+  /**
+   * Execute refresh recovery
+   */
+  private executeRefresh(): { success: boolean; result?: unknown } {
+    if (typeof window !== "undefined") {
+      window.location.reload();
+      return { success: true };
+    }
+    return { success: false };
+  }
+
+  /**
    * Execute recovery strategy
    */
   public async executeRecovery(
@@ -404,40 +456,13 @@ class ErrorLoggingService {
   ): Promise<{ success: boolean; result?: unknown }> {
     switch (strategy.type) {
       case "retry":
-        if (retryFn && strategy.maxRetries) {
-          for (let i = 0; i < strategy.maxRetries; i++) {
-            try {
-              await new Promise((resolve) =>
-                setTimeout(resolve, strategy.delayMs || 1000)
-              );
-              const result = await retryFn();
-              return { success: true, result };
-            } catch {
-              if (i === strategy.maxRetries - 1) {
-                return { success: false };
-              }
-            }
-          }
-        }
-        return { success: false };
-
+        return this.executeRetry(strategy, retryFn);
       case "redirect":
-        if (strategy.redirectUrl && typeof window !== "undefined") {
-          window.location.href = strategy.redirectUrl;
-          return { success: true };
-        }
-        return { success: false };
-
+        return this.executeRedirect(strategy);
       case "refresh":
-        if (typeof window !== "undefined") {
-          window.location.reload();
-          return { success: true };
-        }
-        return { success: false };
-
+        return this.executeRefresh();
       case "fallback":
         return { success: true, result: strategy.fallbackValue };
-
       case "ignore":
       default:
         return { success: true };
