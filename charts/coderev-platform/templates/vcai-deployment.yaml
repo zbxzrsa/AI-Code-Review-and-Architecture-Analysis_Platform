@@ -30,6 +30,7 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: vcai-{{ $version }}
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -81,7 +82,14 @@ spec:
             - name: LOG_LEVEL
               value: {{ $.Values.vcai.env.LOG_LEVEL | default "INFO" }}
           resources:
-            {{- toYaml $versionConfig.resources | nindent 12 }}
+            limits:
+              cpu: {{ $versionConfig.resources.limits.cpu | default "2000m" }}
+              memory: {{ $versionConfig.resources.limits.memory | default "2Gi" }}
+              ephemeral-storage: {{ $versionConfig.resources.limits.ephemeralStorage | default "2Gi" }}
+            requests:
+              cpu: {{ $versionConfig.resources.requests.cpu | default "1000m" }}
+              memory: {{ $versionConfig.resources.requests.memory | default "1Gi" }}
+              ephemeral-storage: {{ $versionConfig.resources.requests.ephemeralStorage | default "1Gi" }}
           livenessProbe:
             httpGet:
               path: /health

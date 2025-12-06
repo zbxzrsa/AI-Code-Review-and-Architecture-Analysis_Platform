@@ -24,6 +24,7 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: lifecycle-controller
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -59,7 +60,14 @@ spec:
             - name: EVALUATION_INTERVAL_SECONDS
               value: "{{ .Values.lifecycleController.config.evaluationIntervalSeconds }}"
           resources:
-            {{- toYaml .Values.lifecycleController.resources | nindent 12 }}
+            limits:
+              cpu: {{ .Values.lifecycleController.resources.limits.cpu | default "1000m" }}
+              memory: {{ .Values.lifecycleController.resources.limits.memory | default "1Gi" }}
+              ephemeral-storage: {{ .Values.lifecycleController.resources.limits.ephemeralStorage | default "2Gi" }}
+            requests:
+              cpu: {{ .Values.lifecycleController.resources.requests.cpu | default "500m" }}
+              memory: {{ .Values.lifecycleController.resources.requests.memory | default "512Mi" }}
+              ephemeral-storage: {{ .Values.lifecycleController.resources.requests.ephemeralStorage | default "1Gi" }}
           livenessProbe:
             httpGet:
               path: /health
@@ -127,6 +135,7 @@ spec:
         prometheus.io/port: "8080"
     spec:
       serviceAccountName: evaluation-pipeline
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -149,7 +158,14 @@ spec:
                   name: database-credentials
                   key: url
           resources:
-            {{- toYaml .Values.evaluationPipeline.resources | nindent 12 }}
+            limits:
+              cpu: {{ .Values.evaluationPipeline.resources.limits.cpu | default "2000m" }}
+              memory: {{ .Values.evaluationPipeline.resources.limits.memory | default "2Gi" }}
+              ephemeral-storage: {{ .Values.evaluationPipeline.resources.limits.ephemeralStorage | default "2Gi" }}
+            requests:
+              cpu: {{ .Values.evaluationPipeline.resources.requests.cpu | default "1000m" }}
+              memory: {{ .Values.evaluationPipeline.resources.requests.memory | default "1Gi" }}
+              ephemeral-storage: {{ .Values.evaluationPipeline.resources.requests.ephemeralStorage | default "1Gi" }}
           livenessProbe:
             httpGet:
               path: /health

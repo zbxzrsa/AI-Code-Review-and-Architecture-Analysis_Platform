@@ -337,13 +337,14 @@ class DataCleaner:
 class MinHasher:
     """MinHash implementation for near-duplicate detection."""
     
-    def __init__(self, num_perm: int = 128, ngram_size: int = 5):
+    def __init__(self, num_perm: int = 128, ngram_size: int = 5, seed: int = 42):
         self.num_perm = num_perm
         self.ngram_size = ngram_size
         
-        # Generate random hash functions
-        self.a = np.random.randint(1, 2**31, size=num_perm, dtype=np.int64)
-        self.b = np.random.randint(0, 2**31, size=num_perm, dtype=np.int64)
+        # Generate random hash functions with seed for reproducibility
+        rng = np.random.RandomState(seed)
+        self.a = rng.randint(1, 2**31, size=num_perm, dtype=np.int64)
+        self.b = rng.randint(0, 2**31, size=num_perm, dtype=np.int64)
         self.prime = 2**61 - 1
     
     def _get_ngrams(self, text: str) -> Set[str]:

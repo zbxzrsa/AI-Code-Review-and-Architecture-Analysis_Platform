@@ -115,8 +115,10 @@ class RecoveryManager:
             try:
                 await self._recovery_task
             except asyncio.CancelledError:
-                # Expected when we cancel - swallow since we initiated the cancellation
-                pass
+                # Clean up task reference before re-raising
+                self._recovery_task = None
+                # Re-raise to allow proper cancellation propagation
+                raise
             finally:
                 self._recovery_task = None
         

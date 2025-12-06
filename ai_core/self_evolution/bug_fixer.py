@@ -405,7 +405,9 @@ class BugFixerEngine:
             content = file_path.read_text(encoding="utf-8")
             lines = content.splitlines()
         except Exception as e:
-            logger.warning(f"Could not read {file_path}: {e}")  # noqa: LOG001
+            # Avoid logging user-controlled data directly - sanitize file path
+            safe_path = str(file_path.name) if hasattr(file_path, 'name') else "[file]"
+            logger.warning("Could not read file %s: %s", safe_path, str(e))
             return []
         
         # Get applicable patterns

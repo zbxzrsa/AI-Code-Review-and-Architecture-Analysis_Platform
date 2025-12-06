@@ -431,7 +431,7 @@ describe("Array Utilities", () => {
       const shuffled = shuffle(arr);
 
       expect(shuffled).toHaveLength(arr.length);
-      expect(shuffled.sort()).toEqual(arr.sort());
+      expect(shuffled.sort((a, b) => a - b)).toEqual(arr.sort((a, b) => a - b));
     });
 
     it("should not modify original array", () => {

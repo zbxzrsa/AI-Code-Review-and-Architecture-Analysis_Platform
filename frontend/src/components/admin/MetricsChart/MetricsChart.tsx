@@ -80,7 +80,7 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
     // Get all timestamps
     const allTimestamps = [...new Set(
       series.flatMap((s) => s.data.map((d) => d.timestamp))
-    )].sort();
+    )].sort((a, b) => a - b); // Numeric sort instead of alphabetical
 
     const option: EChartsOption = {
       title: title ? {

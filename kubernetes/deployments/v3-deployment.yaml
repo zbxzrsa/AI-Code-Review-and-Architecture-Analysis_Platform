@@ -32,6 +32,7 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: platform-v3
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -80,9 +81,11 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
+              ephemeral-storage: "500Mi"
             limits:
               cpu: 500m
               memory: 512Mi
+              ephemeral-storage: "1Gi"
 
           livenessProbe:
             httpGet:

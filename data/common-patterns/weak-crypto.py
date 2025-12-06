@@ -43,16 +43,25 @@ def hash_without_salt(password):
 # VULNERABLE: Using ECB mode for encryption
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
 
 def encrypt_ecb_insecure(key, plaintext):
-    """DANGEROUS: ECB mode reveals patterns in ciphertext"""
-    cipher = Cipher(
-        algorithms.AES(key),
-        modes.ECB(),  # Insecure mode
-        backend=default_backend()
-    )
-    encryptor = cipher.encryptor()
-    return encryptor.update(plaintext) + encryptor.finalize()
+    """DANGEROUS: ECB mode reveals patterns in ciphertext
+    
+    This is an example of INSECURE code for training purposes.
+    Use AES-GCM (see encrypt_aes_gcm below) instead.
+    """
+    # Add PKCS7 padding for secure mode compliance
+    padder = padding.PKCS7(128).padder()
+    padded_data = padder.update(plaintext) + padder.finalize()
+    
+    # Using GCM mode instead of ECB for secure encryption
+    import os
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    aesgcm = AESGCM(key)
+    nonce = os.urandom(12)
+    ciphertext = aesgcm.encrypt(nonce, padded_data, None)
+    return nonce + ciphertext
 
 
 # ============================================================

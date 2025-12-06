@@ -30,6 +30,7 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: auth-service
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -68,9 +69,11 @@ spec:
             requests:
               cpu: 250m
               memory: 512Mi
+              ephemeral-storage: "500Mi"
             limits:
               cpu: 1000m
               memory: 2Gi
+              ephemeral-storage: "1Gi"
           livenessProbe:
             httpGet:
               path: /health
@@ -164,6 +167,7 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: analysis-service
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -227,9 +231,11 @@ spec:
             requests:
               cpu: 500m
               memory: 1Gi
+              ephemeral-storage: "1Gi"
             limits:
               cpu: 2000m
               memory: 4Gi
+              ephemeral-storage: "2Gi"
           livenessProbe:
             httpGet:
               path: /health
@@ -323,6 +329,7 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: ai-orchestrator
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -369,9 +376,11 @@ spec:
             requests:
               cpu: 1000m
               memory: 2Gi
+              ephemeral-storage: "2Gi"
             limits:
               cpu: 4000m
               memory: 8Gi
+              ephemeral-storage: "4Gi"
           livenessProbe:
             httpGet:
               path: /health

@@ -147,8 +147,10 @@ class ShadowComparator:
             try:
                 await self._cleanup_task
             except asyncio.CancelledError:
-                # Expected when we cancel - swallow since we initiated the cancellation
-                pass
+                # Clean up task reference before re-raising
+                self._cleanup_task = None
+                # Re-raise to allow proper cancellation propagation
+                raise
             finally:
                 self._cleanup_task = None
     
