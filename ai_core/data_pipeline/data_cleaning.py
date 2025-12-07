@@ -1,6 +1,22 @@
 """
-Data Cleaning Pipeline
-Automated data preprocessing and quality improvement
+数据清洗管道 (Data Cleaning Pipeline)
+
+模块功能描述:
+    自动化数据预处理和质量提升。
+
+主要功能:
+    - 文本数据清洗
+    - 代码数据清洗
+    - 质量评估
+    - 重复数据删除
+
+主要组件:
+    - DataCleaner: 数据清洗器抽象基类
+    - TextCleaner: 文本数据清洗器
+    - CodeCleaner: 代码数据清洗器
+    - CleaningResult: 清洗结果数据类
+
+最后修改日期: 2024-12-07
 """
 
 import torch
@@ -20,7 +36,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CleaningResult:
-    """Result of a cleaning operation"""
+    """
+    清洗操作结果数据类
+    
+    功能描述:
+        记录数据清洗操作的结果统计。
+    
+    属性说明:
+        - original_count: 原始数据数量
+        - cleaned_count: 清洗后数据数量
+        - removed_count: 移除的数据数量
+        - modified_count: 修改的数据数量
+        - issues_found: 发现的问题列表
+        - quality_improvement: 质量提升度
+    """
     original_count: int
     cleaned_count: int
     removed_count: int
@@ -30,30 +59,58 @@ class CleaningResult:
 
 
 class DataCleaner(ABC):
-    """Abstract base class for data cleaners"""
+    """
+    数据清洗器抽象基类
+    
+    功能描述:
+        定义数据清洗器的基本接口。
+    
+    抽象方法:
+        - clean(): 清洗数据并返回结果
+        - validate(): 验证数据并返回问题列表
+    """
     
     @abstractmethod
     def clean(self, data: Any) -> Tuple[Any, CleaningResult]:
-        """Clean the data and return result"""
+        """
+        清洗数据并返回结果
+        
+        参数:
+            data: 要清洗的数据
+        
+        返回值:
+            Tuple[Any, CleaningResult]: 清洗后的数据和结果统计
+        """
         pass
     
     @abstractmethod
     def validate(self, data: Any) -> List[str]:
-        """Validate data and return list of issues"""
+        """
+        验证数据并返回问题列表
+        
+        参数:
+            data: 要验证的数据
+        
+        返回值:
+            List[str]: 发现的问题列表
+        """
         pass
 
 
 class TextCleaner(DataCleaner):
     """
-    Text Data Cleaner
+    文本数据清洗器
     
-    Features:
-    - Unicode normalization
-    - HTML/XML removal
-    - Special character handling
-    - Whitespace normalization
-    - Language detection and filtering
-    - Deduplication
+    功能描述:
+        清洗和规范化文本数据。
+    
+    主要特性:
+        - Unicode 规范化
+        - HTML/XML 移除
+        - 特殊字符处理
+        - 空白规范化
+        - 语言检测和过滤
+        - 重复数据删除
     """
     
     def __init__(

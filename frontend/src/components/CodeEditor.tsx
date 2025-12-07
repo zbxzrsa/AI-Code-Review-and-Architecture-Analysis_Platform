@@ -1,3 +1,18 @@
+/**
+ * 代码编辑器组件 (Code Editor Component)
+ * 
+ * 功能描述:
+ *   提供支持多种编程语言的代码编辑器，支持 Monaco 和 CodeMirror 两种引擎。
+ * 
+ * 主要特性:
+ *   - 多语言语法高亮（Python, JavaScript, TypeScript, Java, Rust, C++, Go）
+ *   - 可切换编辑器引擎
+ *   - 只读模式支持
+ *   - 可配置高度
+ * 
+ * 最后修改日期: 2024-12-07
+ */
+
 import { useState } from 'react'
 import { Segmented, Alert } from 'antd'
 import MonacoEditor from '@monaco-editor/react'

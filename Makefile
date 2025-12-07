@@ -42,6 +42,14 @@ help:
 	@echo "  make stop-three-version       - Stop three-version service"
 	@echo "  make logs-three-version       - View three-version service logs"
 	@echo ""
+	@echo "Networked Learning:"
+	@echo "  make verify-networked-learning - Verify all networked learning modules"
+	@echo "  make test-networked-learning   - Run all networked learning tests"
+	@echo "  make test-learning-system      - Test V1/V3 learning system"
+	@echo "  make test-cleansing-pipeline   - Test data cleansing pipeline"
+	@echo "  make test-lifecycle-manager    - Test data lifecycle management"
+	@echo "  make test-tech-elimination     - Test technology elimination"
+	@echo ""
 	@echo "Utilities:"
 	@echo "  make clean         - Clean build artifacts"
 	@echo "  make seal-secrets  - Seal secrets with kubeseal"
@@ -134,6 +142,34 @@ stop-three-version:
 
 logs-three-version:
 	docker-compose logs -f three-version-service
+
+# ============================================================
+# Networked Learning Tests
+# ============================================================
+
+verify-networked-learning:
+	python scripts/verify_networked_learning.py
+
+test-networked-learning:
+	python -m pytest tests/unit/test_auto_network_learning.py -v
+
+test-learning-system:
+	python -m pytest tests/unit/test_auto_network_learning.py::TestV1V3AutoLearningSystem -v
+
+test-cleansing-pipeline:
+	python -m pytest tests/unit/test_auto_network_learning.py::TestDataCleansingPipeline -v
+
+test-lifecycle-manager:
+	python -m pytest tests/unit/test_auto_network_learning.py::TestDataLifecycleManager -v
+
+test-tech-elimination:
+	python -m pytest tests/unit/test_auto_network_learning.py::TestTechEliminationManager -v
+
+test-learning-integration:
+	python -m pytest tests/unit/test_auto_network_learning.py::TestIntegration -v
+
+test-self-evolution:
+	python -m pytest tests/integration/test_self_evolution_cycle.py -v
 
 # ============================================================
 # Build

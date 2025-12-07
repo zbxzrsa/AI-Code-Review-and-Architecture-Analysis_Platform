@@ -1,0 +1,18 @@
+# Monitoring_V1 Configuration
+version: "1.0.0"
+status: experimental
+
+# Metrics Settings
+metrics:
+  prefix: app
+  collection_interval_seconds: 30
+
+# Alert Settings
+alerts:
+  evaluation_interval_seconds: 60
+  default_severity: warning
+
+# Dashboard Settings
+dashboards:
+  max_time_series_points: 1000
+  default_refresh_seconds: 30

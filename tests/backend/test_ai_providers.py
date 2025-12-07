@@ -1,12 +1,22 @@
 """
-Comprehensive tests for AI provider functionality.
+AI 提供者功能综合测试 (Comprehensive tests for AI provider functionality)
 
-Tests cover:
-- Ollama provider integration
-- Provider factory and routing
-- Fallback chain behavior
-- Health checks
-- Response formatting
+模块功能描述:
+    测试所有 AI 提供者的集成和功能。
+
+测试覆盖:
+    - Ollama 提供者集成
+    - 提供者工厂和路由
+    - 回退链行为
+    - 健康检查
+    - 响应格式化
+
+测试类:
+    - TestOllamaProvider: Ollama 提供者测试
+    - TestProviderFactory: 提供者工厂测试
+    - TestFallbackChain: 回退链测试
+
+最后修改日期: 2024-12-07
 """
 import pytest
 import asyncio

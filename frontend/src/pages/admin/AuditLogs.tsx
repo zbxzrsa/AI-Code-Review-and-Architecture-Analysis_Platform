@@ -1,11 +1,17 @@
 ﻿/**
- * Audit Logs Page
+ * 审计日志页面 (Audit Logs Page)
  * 
- * Admin page for viewing audit logs with:
- * - Audit log table with filtering and search
- * - Analytics and charts
- * - Security alerts
- * - Export functionality
+ * 功能描述:
+ *   管理员审计日志查看界面。
+ * 
+ * 主要特性:
+ *   - 审计日志表格（支持筛选和搜索）
+ *   - 分析和图表
+ *   - 安全告警
+ *   - 导出功能
+ *   - 日志详情查看
+ * 
+ * 最后修改日期: 2024-12-07
  */
 
 import React, { useState, useCallback } from 'react';

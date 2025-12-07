@@ -1,15 +1,22 @@
 """
-Semantic Cache Service
+语义缓存服务 (Semantic Cache Service)
 
-Provides semantic similarity-based caching for code analysis results.
-Useful in offline mode to reduce redundant model calls by finding
-similar previously-analyzed code.
+模块功能描述:
+    提供基于语义相似度的代码分析结果缓存。
+    在离线模式下通过查找相似的已分析代码来减少冗余的模型调用。
 
-Features:
-- Embedding-based similarity search
-- Configurable similarity threshold
-- TTL-based expiration
-- Cache warming from common patterns
+主要特性:
+    - 基于嵌入向量的相似度搜索
+    - 可配置的相似度阈值
+    - 基于 TTL 的过期策略
+    - 从常见模式预热缓存
+
+主要组件:
+    - SemanticCache: 语义缓存主类
+    - CacheEntry: 缓存条目数据类
+    - EmbeddingService: 嵌入向量服务
+
+最后修改日期: 2024-12-07
 """
 
 import asyncio
@@ -36,7 +43,20 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class CacheEntry:
-    """A cached analysis result"""
+    """
+    缓存条目数据类
+    
+    功能描述:
+        表示一个缓存的分析结果。
+    
+    属性说明:
+        - code_hash: 代码哈希值
+        - embedding: 嵌入向量
+        - language: 编程语言
+        - analysis_result: 分析结果
+        - model_version: 模型版本
+        - ttl_hours: 过期时间（小时）
+    """
     code_hash: str
     embedding: List[float]
     language: str

@@ -1,3 +1,19 @@
+/**
+ * 仪表板页面 (Dashboard Page)
+ * 
+ * 功能描述:
+ *   主仪表板页面，显示项目概览、指标统计和最近活动。
+ * 
+ * 主要特性:
+ *   - 项目统计和指标展示
+ *   - 最近项目列表
+ *   - 自演化状态小部件
+ *   - 代码质量概览
+ *   - 快速操作入口
+ * 
+ * 最后修改日期: 2024-12-07
+ */
+
 import React, { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {

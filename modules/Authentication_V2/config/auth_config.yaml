@@ -1,0 +1,53 @@
+# Authentication_V2 Configuration
+version: "2.0.0"
+status: production
+
+# Token Settings
+tokens:
+  access_token_ttl_seconds: 900 # 15 minutes
+  refresh_token_ttl_seconds: 604800 # 7 days
+  algorithm: HS256
+
+# Session Management
+sessions:
+  session_ttl_seconds: 3600
+  max_sessions_per_user: 5
+  max_sessions_per_device: 3
+  track_device_info: true
+
+# MFA Settings
+mfa:
+  enabled: true
+  totp_algorithm: SHA1
+  totp_digits: 6
+  totp_period: 30
+  backup_codes_count: 10
+  verification_window: 1
+
+# OAuth Providers
+oauth:
+  google:
+    enabled: true
+    scopes:
+      - openid
+      - email
+      - profile
+  github:
+    enabled: true
+    scopes:
+      - read:user
+      - user:email
+
+# Rate Limiting
+rate_limiting:
+  login_attempts_per_minute: 5
+  lockout_duration_seconds: 900
+  max_failed_attempts: 5
+
+# Security
+security:
+  password_min_length: 8
+  require_special_char: true
+  require_number: true
+  hash_algorithm: sha256
+  salt_length: 16

@@ -1,3 +1,19 @@
+/**
+ * 登录页面 (Login Page)
+ * 
+ * 功能描述:
+ *   用户登录页面，支持邮箱密码登录和邀请码验证。
+ * 
+ * 主要特性:
+ *   - 邮箱/密码登录
+ *   - 邀请码支持
+ *   - OAuth 第三方登录
+ *   - 表单验证
+ *   - 错误提示
+ * 
+ * 最后修改日期: 2024-12-07
+ */
+
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Form, Input, Button, Card, Typography, Alert, Divider } from 'antd';

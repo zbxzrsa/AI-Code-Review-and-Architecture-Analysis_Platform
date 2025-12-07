@@ -1,0 +1,189 @@
+# CodeReviewAI_V1 Configuration
+# Version: 1.0.0
+# Status: Experimental
+
+version: "1.0.0"
+status: experimental
+
+# Review settings
+review:
+  # Maximum findings per review
+  max_findings: 50
+
+  # Minimum confidence threshold (0-1)
+  min_confidence: 0.7
+
+  # Include suggestions in output
+  include_suggestions: true
+
+  # Include explanations in output
+  include_explanations: true
+
+  # Context lines around issues
+  context_lines: 3
+
+  # Default strategy
+  default_strategy: ensemble
+
+# Enabled dimensions
+dimensions:
+  - correctness
+  - security
+  - performance
+  - maintainability
+  - architecture
+  - testing
+
+# Severity weights for scoring
+severity_weights:
+  critical: 25.0
+  high: 15.0
+  medium: 8.0
+  low: 3.0
+  info: 0.5
+
+# Dimension weights for scoring
+dimension_weights:
+  security: 1.5
+  correctness: 1.3
+  performance: 1.0
+  maintainability: 0.8
+  architecture: 0.9
+  testing: 0.7
+
+# Grade thresholds
+grade_thresholds:
+  A: 90
+  B: 80
+  C: 70
+  D: 60
+  F: 0
+
+# Strategy configurations
+strategies:
+  baseline:
+    enabled: true
+    timeout_ms: 5000
+
+  chain_of_thought:
+    enabled: true
+    max_reasoning_steps: 5
+    timeout_ms: 10000
+
+  ensemble:
+    enabled: true
+    strategies:
+      - baseline
+      - chain_of_thought
+    voting_threshold: 0.5
+    timeout_ms: 15000
+
+# Rule configurations
+rules:
+  # Security rules
+  SEC001:
+    enabled: true
+    severity: critical
+    description: "eval() usage detection"
+
+  SEC002:
+    enabled: true
+    severity: critical
+    description: "SQL injection detection"
+
+  SEC003:
+    enabled: true
+    severity: high
+    description: "Hardcoded credentials"
+
+  SEC004:
+    enabled: true
+    severity: high
+    description: "Shell injection risk"
+
+  SEC005:
+    enabled: true
+    severity: medium
+    description: "Unsafe deserialization"
+
+  # Performance rules
+  PERF001:
+    enabled: true
+    severity: medium
+    description: "Nested loop detection"
+
+  PERF002:
+    enabled: true
+    severity: low
+    description: "String concatenation"
+
+  PERF003:
+    enabled: true
+    severity: medium
+    description: "Blocking sleep"
+
+  # Maintainability rules
+  MAINT001:
+    enabled: true
+    severity: low
+    description: "Missing docstring"
+
+  MAINT002:
+    enabled: true
+    severity: medium
+    description: "TODO/FIXME comments"
+
+  MAINT003:
+    enabled: true
+    severity: high
+    description: "Bare except clause"
+
+  # Correctness rules
+  CORR001:
+    enabled: true
+    severity: high
+    description: "None/bool comparison"
+
+  CORR002:
+    enabled: true
+    severity: medium
+    description: "Mutable default argument"
+
+# Language support
+languages:
+  python:
+    enabled: true
+    extensions:
+      - .py
+      - .pyw
+    parser: python_ast
+
+  javascript:
+    enabled: true
+    extensions:
+      - .js
+      - .jsx
+    parser: esprima
+
+  typescript:
+    enabled: true
+    extensions:
+      - .ts
+      - .tsx
+    parser: typescript
+
+# Caching
+cache:
+  enabled: true
+  ttl_seconds: 3600
+  max_size_mb: 100
+
+# Logging
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# Metrics
+metrics:
+  enabled: true
+  export_interval_seconds: 30

@@ -1,10 +1,18 @@
 """
-Redis client with multi-level caching strategy.
+Redis 客户端（多级缓存策略）(Redis client with multi-level caching strategy)
 
-Cache hierarchy:
-- L1: Session cache (5 minutes) - User-specific, frequently accessed
-- L2: Project cache (1 hour) - Project-specific analysis results
-- L3: Global cache (24 hours) - Model responses, provider health
+模块功能描述:
+    提供多级缓存策略的 Redis 客户端。
+
+缓存层次:
+    - L1: 会话缓存（5 分钟）- 用户特定，频繁访问
+    - L2: 项目缓存（1 小时）- 项目特定的分析结果
+    - L3: 全局缓存（24 小时）- 模型响应，提供者健康状态
+
+主要组件:
+    - RedisClient: Redis 客户端主类
+
+最后修改日期: 2024-12-07
 """
 import redis
 import json
@@ -18,10 +26,28 @@ logger = logging.getLogger(__name__)
 
 
 class RedisClient:
-    """Redis client with multi-level caching."""
+    """
+    Redis 多级缓存客户端
+    
+    功能描述:
+        提供多级缓存策略的 Redis 客户端，包含会话级、项目级和全局级缓存。
+    
+    主要方法:
+        - set_session_cache/get_session_cache: 会话级缓存
+        - set_project_cache/get_project_cache: 项目级缓存
+        - set_global_cache/get_global_cache: 全局级缓存
+        - health_check: 健康检查
+    """
 
     def __init__(self, host: str = 'localhost', port: int = 6379, db: int = 0):
-        """Initialize Redis client."""
+        """
+        初始化 Redis 客户端
+        
+        参数:
+            host: Redis 服务器地址
+            port: 端口号
+            db: 数据库索引
+        """
         self.client = redis.Redis(
             host=host,
             port=port,
@@ -34,7 +60,12 @@ class RedisClient:
         self.pipeline = None
 
     def health_check(self) -> bool:
-        """Check Redis connection health."""
+        """
+        检查 Redis 连接健康状态
+        
+        返回值:
+            bool: 连接是否健康
+        """
         try:
             self.client.ping()
             return True

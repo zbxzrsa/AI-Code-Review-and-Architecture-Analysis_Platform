@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar, Union
+from collections import OrderedDict
 import functools
 
 logger = logging.getLogger(__name__)
@@ -268,7 +269,7 @@ class L1MemoryCache:
     
     def __init__(self, max_size: int = 10000, max_memory_mb: int = 512):
         self._cache: Dict[str, CacheEntry] = {}
-        self._access_order: List[str] = []  # LRU tracking
+        self._access_order: OrderedDict[str, None] = OrderedDict()  # LRU tracking O(1)
         self._max_size = max_size
         self._max_memory = max_memory_mb * 1024 * 1024
         self._current_memory = 0
@@ -289,10 +290,11 @@ class L1MemoryCache:
                 self._stats.misses += 1
                 return None
             
-            # Update LRU order
+            # Update LRU order - O(1) with OrderedDict.move_to_end()
             if key in self._access_order:
-                self._access_order.remove(key)
-            self._access_order.append(key)
+                self._access_order.move_to_end(key)
+            else:
+                self._access_order[key] = None
             
             # Update hit stats
             entry.hit_count += 1
@@ -318,7 +320,7 @@ class L1MemoryCache:
                 len(self._cache) >= self._max_size or
                 self._current_memory + size > self._max_memory
             ):
-                if not self._access_order:
+                if len(self._access_order) == 0:
                     break
                 await self._evict_lru()
             
@@ -341,10 +343,11 @@ class L1MemoryCache:
             self._cache[key] = entry
             self._current_memory += size
             
-            # Update LRU order
+            # Update LRU order - O(1) with OrderedDict.move_to_end()
             if key in self._access_order:
-                self._access_order.remove(key)
-            self._access_order.append(key)
+                self._access_order.move_to_end(key)
+            else:
+                self._access_order[key] = None
             
             self._stats.sets += 1
             return True
@@ -362,16 +365,15 @@ class L1MemoryCache:
         entry = self._cache.pop(key)
         self._current_memory -= entry.size_bytes
         
-        if key in self._access_order:
-            self._access_order.remove(key)
+        self._access_order.pop(key, None)  # O(1) delete from OrderedDict
         
         self._stats.deletes += 1
         return True
     
     async def _evict_lru(self):
         """Evict least recently used entry."""
-        if self._access_order:
-            key = self._access_order.pop(0)
+        if len(self._access_order) > 0:
+            key, _ = self._access_order.popitem(last=False)  # O(1) pop oldest
             if key in self._cache:
                 entry = self._cache.pop(key)
                 self._current_memory -= entry.size_bytes
@@ -426,6 +428,7 @@ class L2RedisCache:
         self._config = config
         self._stats = CacheStats()
         self._prefix = "ai_cache:"
+        self._background_tasks: set = set()  # Store tasks to prevent GC
     
     async def get(self, key: str) -> Optional[CacheEntry]:
         """Get entry from Redis cache."""
@@ -454,8 +457,10 @@ class L2RedisCache:
                 tags=entry_dict.get("tags", []),
             )
             
-            # Update hit count in background
-            asyncio.create_task(self._increment_hits(full_key))
+            # Update hit count in background (store task to prevent GC)
+            task = asyncio.create_task(self._increment_hits(full_key))
+            self._background_tasks.add(task)
+            task.add_done_callback(self._background_tasks.discard)
             
             self._stats.hits += 1
             return entry
@@ -828,3 +833,128 @@ def init_ai_cache(redis_client=None, config: Optional[CacheConfig] = None):
     global _cache_instance
     _cache_instance = AIResultCache(redis_client, config)
     return _cache_instance
+
+
+# =============================================================================
+# Connection Pool Manager (P1 Enhancement)
+# =============================================================================
+
+class RedisConnectionPool:
+    """
+    Redis connection pool manager for efficient connection reuse.
+    
+    P1 optimization: Manages connection pooling to reduce connection
+    overhead and improve throughput.
+    
+    Usage:
+        pool = RedisConnectionPool.get_instance()
+        await pool.initialize("redis://localhost:6379")
+        
+        client = await pool.get_client()
+        # Use client...
+        
+        await pool.close()
+    """
+    
+    _instance: Optional["RedisConnectionPool"] = None
+    
+    def __init__(self):
+        self._pool = None
+        self._client = None
+        self._config = {
+            "max_connections": 50,
+            "min_idle_connections": 5,
+            "timeout": 10.0,
+            "retry_on_timeout": True,
+            "health_check_interval": 30,
+        }
+    
+    @classmethod
+    def get_instance(cls) -> "RedisConnectionPool":
+        """Get singleton pool instance."""
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+    
+    async def initialize(
+        self,
+        url: str = "redis://localhost:6379",
+        max_connections: int = 50,
+        min_idle: int = 5,
+    ) -> None:
+        """
+        Initialize connection pool.
+        
+        Args:
+            url: Redis connection URL
+            max_connections: Maximum pool size
+            min_idle: Minimum idle connections to maintain
+        """
+        try:
+            import redis.asyncio as redis
+            
+            self._config["max_connections"] = max_connections
+            self._config["min_idle_connections"] = min_idle
+            
+            self._pool = redis.ConnectionPool.from_url(
+                url,
+                max_connections=max_connections,
+                decode_responses=False,
+            )
+            
+            self._client = redis.Redis(connection_pool=self._pool)
+            
+            # Test connection
+            await self._client.ping()
+            
+            logger.info(
+                f"Redis connection pool initialized: "
+                f"max={max_connections}, min_idle={min_idle}"
+            )
+            
+        except ImportError:
+            logger.warning("redis package not installed, pool not available")
+        except Exception as e:
+            logger.error(f"Failed to initialize Redis pool: {e}")
+            raise
+    
+    async def get_client(self):
+        """Get a Redis client from the pool."""
+        if self._client is None:
+            raise RuntimeError("Connection pool not initialized")
+        return self._client
+    
+    async def close(self) -> None:
+        """Close all connections in the pool."""
+        if self._client:
+            await self._client.close()
+            self._client = None
+        if self._pool:
+            await self._pool.disconnect()
+            self._pool = None
+        logger.info("Redis connection pool closed")
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get pool statistics."""
+        if self._pool is None:
+            return {"status": "not_initialized"}
+        
+        return {
+            "status": "active",
+            "max_connections": self._config["max_connections"],
+            "created_connections": getattr(self._pool, '_created_connections', 0),
+            "available_connections": getattr(self._pool, '_available_connections', 0),
+        }
+
+
+async def init_redis_pool(url: str = "redis://localhost:6379") -> RedisConnectionPool:
+    """Initialize the global Redis connection pool."""
+    pool = RedisConnectionPool.get_instance()
+    await pool.initialize(url)
+    return pool
+
+
+async def get_redis_client():
+    """Get Redis client from the global pool."""
+    pool = RedisConnectionPool.get_instance()
+    return await pool.get_client()

@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar
+from collections import OrderedDict
 import re
 
 logger = logging.getLogger(__name__)
@@ -244,7 +245,7 @@ class QueryResultCache:
     def __init__(self, config: QueryCacheConfig):
         self._config = config
         self._cache: Dict[str, Tuple[Any, datetime, Set[str]]] = {}  # hash -> (result, expires, tables)
-        self._access_order: List[str] = []
+        self._access_order: OrderedDict[str, None] = OrderedDict()  # LRU tracking - O(1)
         self._lock = asyncio.Lock()
         self._stats = {
             "hits": 0,
@@ -292,15 +293,15 @@ class QueryResultCache:
             
             if datetime.now(timezone.utc) > expires:
                 del self._cache[key]
-                if key in self._access_order:
-                    self._access_order.remove(key)
+                self._access_order.pop(key, None)  # O(1) delete from OrderedDict
                 self._stats["misses"] += 1
                 return None
             
-            # Update LRU
+            # Update LRU - O(1) with OrderedDict.move_to_end()
             if key in self._access_order:
-                self._access_order.remove(key)
-            self._access_order.append(key)
+                self._access_order.move_to_end(key)
+            else:
+                self._access_order[key] = None
             
             self._stats["hits"] += 1
             return result
@@ -327,13 +328,13 @@ class QueryResultCache:
         tables = set(QueryNormalizer.extract_tables(query))
         
         async with self._lock:
-            # Evict if at capacity
-            while len(self._cache) >= self._config.max_size and self._access_order:
-                old_key = self._access_order.pop(0)
+            # Evict if at capacity - O(1) per eviction with OrderedDict
+            while len(self._cache) >= self._config.max_size and len(self._access_order) > 0:
+                old_key, _ = self._access_order.popitem(last=False)  # O(1) pop oldest
                 self._cache.pop(old_key, None)
             
             self._cache[key] = (result, expires, tables)
-            self._access_order.append(key)
+            self._access_order[key] = None  # O(1) insert
             self._stats["sets"] += 1
             
         return True
@@ -348,8 +349,7 @@ class QueryResultCache:
             
             for key in keys_to_remove:
                 del self._cache[key]
-                if key in self._access_order:
-                    self._access_order.remove(key)
+                self._access_order.pop(key, None)  # O(1) delete from OrderedDict
             
             self._stats["invalidations"] += len(keys_to_remove)
             return len(keys_to_remove)
@@ -600,6 +600,42 @@ class SlowQueryAnalyzer:
         }
 
 
+def _validate_sql_identifier(identifier: str) -> str:
+    """
+    Validate SQL identifier (table/column name) to prevent SQL injection.
+    
+    Args:
+        identifier: Table or column name to validate
+        
+    Returns:
+        Validated identifier
+        
+    Raises:
+        ValueError: If identifier is invalid
+    """
+    if not identifier:
+        raise ValueError("Identifier cannot be empty")
+    
+    # Allow only alphanumeric, underscore, and dot (for schema.table)
+    if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*(\.[ a-zA-Z_][a-zA-Z0-9_]*)?$', identifier):
+        raise ValueError(
+            f"Invalid SQL identifier: {identifier}. "
+            f"Must start with letter/underscore and contain only "
+            f"alphanumeric characters and underscores."
+        )
+    
+    # Prevent SQL keywords
+    keywords = {
+        'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE',
+        'ALTER', 'TRUNCATE', 'EXEC', 'EXECUTE', 'UNION', 'WHERE',
+        'FROM', 'JOIN', 'INTO', 'VALUES', 'SET', 'TABLE'
+    }
+    if identifier.upper() in keywords:
+        raise ValueError(f"SQL keyword not allowed as identifier: {identifier}")
+    
+    return identifier
+
+
 class QueryOptimizer:
     """
     Main query optimization orchestrator.
@@ -686,6 +722,221 @@ class QueryOptimizer:
             "top_slow_queries": self._slow_analyzer.get_top_queries(10, "avg_time"),
             "index_recommendations": self._slow_analyzer.get_index_recommendations(),
         }
+    
+    # =========================================================================
+    # Batch Operations (P1 Enhancement)
+    # =========================================================================
+    
+    async def batch_insert(
+        self,
+        table: str,
+        columns: List[str],
+        rows: List[tuple],
+        batch_size: int = 1000,
+        on_conflict: Optional[str] = None,
+    ) -> Tuple[int, float]:
+        """
+        Perform batch insert with automatic chunking.
+        
+        P1 optimization: Batch inserts are significantly faster than
+        individual inserts, especially for large datasets.
+        
+        Args:
+            table: Target table name
+            columns: List of column names
+            rows: List of row tuples to insert
+            batch_size: Maximum rows per INSERT statement
+            on_conflict: Optional ON CONFLICT clause (e.g., "DO NOTHING")
+            
+        Returns:
+            Tuple of (total_inserted, total_duration_ms)
+            
+        Raises:
+            ValueError: If table/column names are invalid
+        """
+        if not rows:
+            return 0, 0.0
+        
+        if not self._db:
+            raise RuntimeError("Database connection not configured")
+        
+        # Validate table name
+        table = _validate_sql_identifier(table)
+        
+        # Validate column names
+        validated_columns = [_validate_sql_identifier(col) for col in columns]
+        
+        # Validate row lengths
+        for idx, row in enumerate(rows):
+            if len(row) != len(columns):
+                raise ValueError(
+                    f"Row {idx} has {len(row)} values but {len(columns)} columns expected"
+                )
+        
+        # Validate on_conflict clause
+        if on_conflict:
+            if not re.match(
+                r'^(\([a-zA-Z0-9_, ]+\))?\s*(DO NOTHING|DO UPDATE SET .+)$',
+                on_conflict,
+                re.IGNORECASE
+            ):
+                raise ValueError(f"Invalid ON CONFLICT clause: {on_conflict}")
+        
+        total_inserted = 0
+        total_duration = 0.0
+        
+        # Process in batches
+        for i in range(0, len(rows), batch_size):
+            batch = rows[i:i + batch_size]
+            
+            # Build parameterized query
+            columns_str = ", ".join(validated_columns)
+            placeholders = []
+            params = {}
+            
+            for row_idx, row in enumerate(batch):
+                row_placeholders = []
+                for col_idx, value in enumerate(row):
+                    param_name = f"p{row_idx}_{col_idx}"
+                    row_placeholders.append(f"${param_name}")
+                    params[param_name] = value
+                placeholders.append(f"({', '.join(row_placeholders)})")
+            
+            values_str = ", ".join(placeholders)
+            
+            query = f"INSERT INTO {table} ({columns_str}) VALUES {values_str}"
+            if on_conflict:
+                query += f" ON CONFLICT {on_conflict}"
+            
+            start = time.perf_counter()
+            try:
+                await self._db.execute(query, **params)
+                total_inserted += len(batch)
+            except Exception as e:
+                logger.error(f"Batch insert failed at row {i}: {e}")
+                raise
+            finally:
+                total_duration += (time.perf_counter() - start) * 1000
+        
+        # Invalidate relevant cache entries
+        await self._cache.invalidate_table(table)
+        
+        logger.info(
+            f"Batch insert: {total_inserted} rows into {table} "
+            f"in {total_duration:.2f}ms ({total_inserted / (total_duration / 1000):.0f} rows/sec)"
+        )
+        
+        return total_inserted, total_duration
+    
+    async def batch_update(
+        self,
+        table: str,
+        updates: List[Dict[str, Any]],
+        key_column: str = "id",
+        batch_size: int = 500,
+    ) -> Tuple[int, float]:
+        """
+        Perform batch updates using CASE expressions.
+        
+        Args:
+            table: Target table name
+            updates: List of dicts with key_column value and fields to update
+            key_column: Primary key column name
+            batch_size: Maximum updates per statement
+            
+        Returns:
+            Tuple of (total_updated, total_duration_ms)
+            
+        Raises:
+            ValueError: If table/column names are invalid
+        """
+        if not updates:
+            return 0, 0.0
+        
+        if not self._db:
+            raise RuntimeError("Database connection not configured")
+        
+        # Validate identifiers
+        table = _validate_sql_identifier(table)
+        key_column = _validate_sql_identifier(key_column)
+        
+        total_updated = 0
+        total_duration = 0.0
+        
+        for i in range(0, len(updates), batch_size):
+            batch = updates[i:i + batch_size]
+            
+            # Group by columns being updated
+            update_columns = set()
+            for update in batch:
+                update_columns.update(k for k in update.keys() if k != key_column)
+            
+            if not update_columns:
+                continue
+            
+            # Build CASE expressions for each column
+            case_expressions = []
+            ids = [update[key_column] for update in batch]
+            
+            for col in update_columns:
+                cases = []
+                for update in batch:
+                    if col in update:
+                        cases.append(f"WHEN {key_column} = {update[key_column]} THEN '{update[col]}'")
+                if cases:
+                    case_expressions.append(f"{col} = CASE {' '.join(cases)} ELSE {col} END")
+            
+            ids_str = ", ".join(str(id_val) for id_val in ids)
+            set_clause = ", ".join(case_expressions)
+            
+            query = f"UPDATE {table} SET {set_clause} WHERE {key_column} IN ({ids_str})"
+            
+            start = time.perf_counter()
+            try:
+                await self._db.execute(query)
+                total_updated += len(batch)
+            except Exception as e:
+                logger.error(f"Batch update failed: {e}")
+                raise
+            finally:
+                total_duration += (time.perf_counter() - start) * 1000
+        
+        await self._cache.invalidate_table(table)
+        
+        return total_updated, total_duration
+    
+    async def batch_upsert(
+        self,
+        table: str,
+        columns: List[str],
+        rows: List[tuple],
+        conflict_columns: List[str],
+        update_columns: Optional[List[str]] = None,
+        batch_size: int = 1000,
+    ) -> Tuple[int, float]:
+        """
+        Perform batch upsert (INSERT ... ON CONFLICT ... DO UPDATE).
+        
+        Args:
+            table: Target table name
+            columns: All column names
+            rows: Row data to upsert
+            conflict_columns: Columns that define uniqueness
+            update_columns: Columns to update on conflict (default: all except conflict)
+            batch_size: Maximum rows per statement
+            
+        Returns:
+            Tuple of (total_upserted, total_duration_ms)
+        """
+        if update_columns is None:
+            update_columns = [c for c in columns if c not in conflict_columns]
+        
+        conflict_clause = ", ".join(conflict_columns)
+        update_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_columns)
+        
+        on_conflict = f"({conflict_clause}) DO UPDATE SET {update_clause}"
+        
+        return await self.batch_insert(table, columns, rows, batch_size, on_conflict)
 
 
 def optimized_query(

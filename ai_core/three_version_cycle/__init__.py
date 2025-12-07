@@ -1,30 +1,43 @@
 """
-Three-Version Self-Evolution Cycle
+三版本自演化循环 (Three-Version Self-Evolution Cycle)
 
-Implements the concurrent three-version AI system:
-- V1 Experimentation: New technology testing with trial-and-error
-- V2 Production: Stable user-facing AI with proven technologies  
-- V3 Quarantine: Archive for failed experiments and deprecation
+模块功能描述:
+    实现并发的三版本 AI 系统，支持持续演化和改进。
 
-Each version has its own Version Control AI (VC-AI) and Code Review AI (CR-AI).
+版本说明:
+    - V1 实验版: 新技术测试，允许试错
+    - V2 生产版: 面向用户的稳定 AI，使用经过验证的技术
+    - V3 隔离版: 失败实验和废弃技术的归档
 
-Architecture:
+每个版本都有自己的版本控制 AI (VC-AI) 和代码审查 AI (CR-AI)。
+
+架构图:
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                    THREE-VERSION SPIRAL EVOLUTION                       │
+│                       三版本螺旋演化架构                                  │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  V1 (New/Experiment)     V2 (Stable/Production)    V3 (Old/Quarantine) │
+│  V1 (新/实验)           V2 (稳定/生产)          V3 (旧/隔离)           │
 │  ┌─────────────────┐     ┌─────────────────┐       ┌─────────────────┐ │
-│  │ V1-VCAI (Admin) │     │ V2-VCAI (Admin) │       │ V3-VCAI (Admin) │ │
-│  │ - Experiments   │────▶│ - Fixes V1 bugs │──────▶│ - Compares      │ │
-│  │ - Trial/Error   │     │ - Optimizes     │       │ - Excludes      │ │
+│  │ V1-VCAI (管理)  │     │ V2-VCAI (管理)  │       │ V3-VCAI (管理)  │ │
+│  │ - 实验          │────▶│ - 修复V1错误    │──────▶│ - 比较          │ │
+│  │ - 试错          │     │ - 优化          │       │ - 排除          │ │
 │  └─────────────────┘     └─────────────────┘       └─────────────────┘ │
 │  ┌─────────────────┐     ┌─────────────────┐       ┌─────────────────┐ │
-│  │ V1-CRAI (Test)  │     │ V2-CRAI (Users) │       │ V3-CRAI (Ref)   │ │
-│  │ - Shadow tests  │     │ - Production    │       │ - Baseline      │ │
+│  │ V1-CRAI (测试)  │     │ V2-CRAI (用户)  │       │ V3-CRAI (参考)  │ │
+│  │ - 影子测试      │     │ - 生产          │       │ - 基准          │ │
 │  └─────────────────┘     └─────────────────┘       └─────────────────┘ │
 │                                                                         │
-│  SPIRAL: V1 → V2 (promote) → V3 (degrade) → V1 (re-eval) → ...        │
+│  螺旋: V1 → V2 (升级) → V3 (降级) → V1 (重评估) → ...                 │
 └─────────────────────────────────────────────────────────────────────────┘
+
+主要组件:
+    - VersionManager: 版本管理器
+    - ExperimentFramework: 实验框架
+    - SelfEvolutionCycle: 自演化循环
+    - CrossVersionFeedbackSystem: 跨版本反馈系统
+    - DualAICoordinator: 双AI协调器
+    - SpiralEvolutionManager: 螺旋演化管理器
+
+最后修改日期: 2024-12-07
 """
 
 from .version_manager import (
@@ -92,6 +105,10 @@ from .spiral_evolution_manager import (
     EvolutionEvent,
     EvolutionCycleState,
     SpiralCycleConfig,
+    # Technology Elimination
+    TechEliminationConfig,
+    TechEliminationManager,
+    EliminationRecord,
 )
 
 __all__ = [
@@ -153,4 +170,9 @@ __all__ = [
     "EvolutionEvent",
     "EvolutionCycleState",
     "SpiralCycleConfig",
+    
+    # Technology Elimination
+    "TechEliminationConfig",
+    "TechEliminationManager",
+    "EliminationRecord",
 ]

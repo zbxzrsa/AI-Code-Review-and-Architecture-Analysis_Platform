@@ -1,12 +1,22 @@
 """
-Comprehensive tests for authentication and security features.
+认证和安全功能综合测试 (Comprehensive tests for authentication and security features)
 
-Coverage targets:
-- JWT token creation/verification
-- CSRF protection
-- Rate limiting
-- httpOnly cookie handling
-- Password hashing
+模块功能描述:
+    测试所有认证和安全相关功能。
+
+测试覆盖:
+    - JWT 令牌创建/验证
+    - CSRF 保护
+    - 速率限制
+    - httpOnly cookie 处理
+    - 密码哈希
+
+测试类:
+    - TestSecureAuthManager: 安全认证管理器测试
+    - TestCSRFProtection: CSRF 保护测试
+    - TestRateLimiting: 速率限制测试
+
+最后修改日期: 2024-12-07
 """
 import pytest
 import asyncio

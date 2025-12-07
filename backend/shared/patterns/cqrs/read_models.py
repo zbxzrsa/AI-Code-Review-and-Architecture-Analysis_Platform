@@ -526,7 +526,7 @@ class ReadModelSynchronizer:
             try:
                 await self._sync_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Sync task cancelled")
         logger.info("Read model synchronizer stopped")
     
     async def _sync_loop(self):
@@ -562,7 +562,8 @@ class ReadModelSynchronizer:
                 await asyncio.sleep(self.sync_interval_ms / 1000)
                 
             except asyncio.CancelledError:
-                break
+                logger.debug("Sync loop cancelled")
+                raise
             except Exception as e:
                 logger.error(f"Sync error: {e}")
                 await asyncio.sleep(1)  # Back off on error

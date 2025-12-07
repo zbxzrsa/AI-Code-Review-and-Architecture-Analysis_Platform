@@ -1,11 +1,23 @@
 """
-OAuth Provider Implementations
+OAuth 提供者实现 (OAuth Provider Implementations)
 
-Supports:
-- GitHub OAuth
-- GitLab OAuth
-- Bitbucket OAuth
-- Google OAuth
+模块功能描述:
+    实现多种 OAuth 第三方登录提供者。
+
+支持的提供者:
+    - GitHub OAuth
+    - GitLab OAuth
+    - Bitbucket OAuth
+    - Google OAuth
+
+主要组件:
+    - OAuthProviderBase: 抽象基类
+    - GitHubOAuth: GitHub 实现
+    - GitLabOAuth: GitLab 实现
+    - OAuthToken: 令牌数据类
+    - OAuthUser: 用户数据类
+
+最后修改日期: 2024-12-07
 """
 
 import os
@@ -26,7 +38,17 @@ GITHUB_ACCEPT_HEADER = "application/vnd.github+json"
 
 @dataclass
 class OAuthToken:
-    """OAuth token response."""
+    """
+    OAuth 令牌响应数据类
+    
+    功能描述:
+        存储 OAuth 授权后返回的令牌信息。
+    
+    属性说明:
+        - access_token: 访问令牌
+        - refresh_token: 刷新令牌
+        - expires_in: 过期时间（秒）
+    """
     access_token: str
     token_type: str
     refresh_token: Optional[str] = None
@@ -41,7 +63,18 @@ class OAuthToken:
 
 @dataclass
 class OAuthUser:
-    """OAuth user info."""
+    """
+    OAuth 用户信息数据类
+    
+    功能描述:
+        存储从 OAuth 提供者获取的用户信息。
+    
+    属性说明:
+        - provider: 提供者名称
+        - email: 邮箱
+        - name: 姓名
+        - avatar_url: 头像 URL
+    """
     provider: str
     provider_user_id: str
     email: Optional[str]
@@ -53,7 +86,17 @@ class OAuthUser:
 
 @dataclass
 class OAuthRepository:
-    """OAuth repository info."""
+    """
+    OAuth 仓库信息数据类
+    
+    功能描述:
+        存储从 OAuth 提供者获取的仓库信息。
+    
+    属性说明:
+        - provider: 提供者名称
+        - full_name: 完整名称
+        - clone_url: 克隆 URL
+    """
     provider: str
     provider_repo_id: str
     full_name: str

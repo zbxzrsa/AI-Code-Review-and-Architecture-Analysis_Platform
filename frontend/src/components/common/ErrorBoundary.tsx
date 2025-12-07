@@ -1,3 +1,20 @@
+/**
+ * 错误边界组件 (Error Boundary Component)
+ * 
+ * 功能描述:
+ *   捕获子组件树中的 JavaScript 错误，记录错误并显示备用 UI。
+ * 
+ * 主要特性:
+ *   - 捕获渲染错误和事件处理错误
+ *   - 记录到错误日志服务
+ *   - 友好的错误消息
+ *   - 恢复选项（重试、重新加载、返回首页）
+ *   - 开发模式显示堆栈跟踪
+ *   - WCAG 2.1 AA 无障碍合规
+ * 
+ * 最后修改日期: 2024-12-07
+ */
+
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Result, Button, Typography, Space, Card } from 'antd';
 import { ReloadOutlined, HomeOutlined, BugOutlined } from '@ant-design/icons';
@@ -6,7 +23,7 @@ import { errorLoggingService } from '../../services/errorLogging';
 const { Text, Paragraph } = Typography;
 
 /**
- * Error Boundary Props
+ * 错误边界属性接口 (Error Boundary Props)
  * @interface Props
  */
 interface Props {

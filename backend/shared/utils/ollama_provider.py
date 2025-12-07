@@ -1,11 +1,25 @@
 """
-Ollama Provider - Open-source local LLM inference.
+Ollama 提供者 - 开源本地 LLM 推理 (Ollama Provider - Open-source local LLM inference)
 
-This provider integrates with Ollama for local LLM inference,
-supporting models like CodeLlama, DeepSeek Coder, Llama 3, Mistral, etc.
+模块功能描述:
+    与 Ollama 集成实现本地 LLM 推理。
+
+支持的模型:
+    - CodeLlama (7B/13B/34B)
+    - DeepSeek Coder (6.7B/33B)
+    - Llama 3 (8B/70B)
+    - Mistral (7B)
+    - Mixtral (8x7B)
+
+主要组件:
+    - OllamaProvider: Ollama 提供者主类
+    - OllamaConfig: 配置数据类
+    - OllamaResponse: 响应数据类
 
 GitHub: https://github.com/ollama/ollama (95k+ stars)
 License: MIT
+
+最后修改日期: 2024-12-07
 """
 import asyncio
 import json
@@ -31,7 +45,19 @@ MODEL_MIXTRAL_8X7B = "mixtral:8x7b"
 
 @dataclass
 class OllamaConfig:
-    """Configuration for Ollama provider."""
+    """
+    Ollama 提供者配置数据类
+    
+    功能描述:
+        Ollama 服务的配置参数。
+    
+    属性说明:
+        - base_url: Ollama 服务器 URL
+        - model: 模型名称
+        - temperature: 温度参数
+        - max_tokens: 最大令牌数
+        - timeout: 超时时间（秒）
+    """
     base_url: str = "http://localhost:11434"
     model: str = MODEL_CODELLAMA_34B
     temperature: float = 0.7
@@ -46,7 +72,18 @@ class OllamaConfig:
 
 @dataclass
 class OllamaResponse:
-    """Response from Ollama API."""
+    """
+    Ollama API 响应数据类
+    
+    功能描述:
+        存储 Ollama API 的响应结果。
+    
+    属性说明:
+        - content: 生成的内容
+        - model: 使用的模型
+        - tokens_used: 使用的令牌数
+        - latency_ms: 延迟（毫秒）
+    """
     content: str
     model: str
     tokens_used: int

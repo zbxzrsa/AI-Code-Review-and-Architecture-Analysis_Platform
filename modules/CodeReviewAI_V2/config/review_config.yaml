@@ -1,0 +1,69 @@
+# CodeReviewAI_V2 Configuration
+# Version: 2.0.0
+# Status: Production
+
+version: "2.0.0"
+status: production
+
+# Review settings
+review:
+  max_findings: 50
+  min_confidence: 0.7
+  include_suggestions: true
+  include_explanations: true
+  context_lines: 3
+  default_strategy: production
+
+  # V2: Production settings
+  enable_hallucination_check: true
+  enable_caching: true
+  batch_size: 10
+  retry_count: 3
+
+# SLO Configuration
+slo:
+  timeout_ms: 3000
+  max_critical_issues: 0
+  max_high_issues: 3
+  min_score: 70.0
+  max_issues_per_line: 0.1
+  error_rate_threshold: 0.02
+  availability_target: 0.999
+
+# Hallucination Detection
+hallucination_detection:
+  enabled: true
+  consistency_threshold: 0.7
+  min_verification_confidence: 0.8
+  run_count: 3
+
+# Circuit Breaker
+circuit_breaker:
+  failure_threshold: 5
+  reset_timeout_seconds: 60
+
+# Caching
+cache:
+  enabled: true
+  ttl_seconds: 3600
+  max_size_mb: 100
+
+# OWASP Rules
+owasp:
+  enabled: true
+  categories:
+    - A01 # Broken Access Control
+    - A02 # Cryptographic Failures
+    - A03 # Injection
+    - A04 # Insecure Design
+    - A05 # Security Misconfiguration
+    - A07 # Authentication Failures
+    - A08 # Software Integrity
+    - A09 # Logging Failures
+    - A10 # SSRF
+
+# Metrics
+metrics:
+  enabled: true
+  export_interval_seconds: 15
+  include_slo_metrics: true

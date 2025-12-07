@@ -1,6 +1,27 @@
 """
 Autonomous Learning Agent System
 
+⚠️ REFACTORING NOTICE:
+This file (1,688 lines) is scheduled for modular split before next release.
+A new modular structure is being prepared at:
+
+    ai_core/foundation_model/autonomous/
+    ├── config.py         - Configuration classes and enums
+    ├── online_learning.py - Online learning buffer and module
+    ├── memory/           - Memory subsystems
+    │   ├── episodic.py   - Episodic memory
+    │   ├── semantic.py   - Semantic memory
+    │   └── working.py    - Working memory
+    ├── evaluation.py     - Self-evaluation system
+    ├── knowledge.py      - RAG, tool use, knowledge integration
+    ├── safety.py         - Safety monitor
+    └── agent.py          - Main autonomous agent
+
+For forward compatibility, you can already import from:
+    from ai_core.foundation_model.autonomous import AutonomousLearningAgent
+
+---
+
 Implements self-evolving AI capabilities:
 1. Online Learning Module - Real-time learning from data streams
 2. Memory Management - Long/short-term/episodic memory
@@ -32,6 +53,20 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+# Import vector index for production-ready similarity search
+try:
+    from .vector_index import (
+        BaseVectorIndex,
+        FAISSVectorIndex,
+        IndexConfig,
+        IndexType,
+        NumpyVectorIndex,
+        create_vector_index,
+    )
+    VECTOR_INDEX_AVAILABLE = True
+except ImportError:
+    VECTOR_INDEX_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +162,132 @@ class KnowledgeGap:
 
 
 # =============================================================================
+# Exception Classification System
+# =============================================================================
+
+class ExceptionSeverity(str, Enum):
+    """Exception severity levels for graded handling."""
+    LOW = "low"           # Recoverable, log and continue
+    MEDIUM = "medium"     # Recoverable with retry, may need attention
+    HIGH = "high"         # Serious issue, may require intervention
+    CRITICAL = "critical" # Fatal, must terminate operation
+
+
+class LearningErrorCode(str, Enum):
+    """Error codes for learning system exceptions."""
+    E1001_INVALID_SAMPLE = "E1001"      # Invalid sample format
+    E1002_EMPTY_BUFFER = "E1002"        # Buffer is empty
+    E1003_STREAM_TIMEOUT = "E1003"      # Stream read timeout
+    E1004_DATA_CORRUPTION = "E1004"     # Data integrity issue
+    E2001_FORWARD_PASS = "E2001"        # Forward pass failed
+    E2002_BACKWARD_PASS = "E2002"       # Backward pass failed
+    E2003_GRADIENT_EXPLOSION = "E2003"  # Gradient too large
+    E2004_MODEL_STATE = "E2004"         # Model state corruption
+    E3001_OUT_OF_MEMORY = "E3001"       # GPU/CPU OOM
+    E3002_DEVICE_ERROR = "E3002"        # CUDA/device error
+    E3003_IO_ERROR = "E3003"            # File I/O error
+    E4001_CONFIGURATION = "E4001"       # Configuration error
+    E4002_TIMEOUT = "E4002"             # Operation timeout
+    E4003_UNKNOWN = "E4003"             # Unknown error
+
+
+@dataclass
+class LearningException:
+    """Structured learning exception with context."""
+    error_code: LearningErrorCode
+    severity: ExceptionSeverity
+    message: str
+    original_exception: Optional[Exception] = None
+    context: Optional[Dict[str, Any]] = None
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    recoverable: bool = True
+    retry_count: int = 0
+    max_retries: int = 3
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "error_code": self.error_code.value,
+            "severity": self.severity.value,
+            "message": self.message,
+            "original_exception": str(self.original_exception) if self.original_exception else None,
+            "context": self.context,
+            "timestamp": self.timestamp.isoformat(),
+            "recoverable": self.recoverable,
+        }
+
+
+class ExceptionClassifier:
+    """Classifies exceptions into severity levels and error codes."""
+    
+    @staticmethod
+    def classify(exception: Exception, context: Optional[Dict[str, Any]] = None) -> LearningException:
+        """Classify an exception into a structured LearningException."""
+        exc_str = str(exception).lower()
+        
+        # GPU/Memory Errors - CRITICAL
+        if isinstance(exception, MemoryError) or "cuda" in exc_str and "out of memory" in exc_str:
+            return LearningException(
+                error_code=LearningErrorCode.E3001_OUT_OF_MEMORY,
+                severity=ExceptionSeverity.CRITICAL,
+                message=f"Out of memory: {exception}",
+                original_exception=exception, context=context, recoverable=False,
+            )
+        
+        # CUDA Device Errors - CRITICAL
+        if isinstance(exception, RuntimeError) and "cuda" in exc_str:
+            return LearningException(
+                error_code=LearningErrorCode.E3002_DEVICE_ERROR,
+                severity=ExceptionSeverity.CRITICAL,
+                message=f"CUDA device error: {exception}",
+                original_exception=exception, context=context, recoverable=False,
+            )
+        
+        # Gradient Issues - HIGH
+        if "gradient" in exc_str or "nan" in exc_str or "inf" in exc_str:
+            return LearningException(
+                error_code=LearningErrorCode.E2003_GRADIENT_EXPLOSION,
+                severity=ExceptionSeverity.HIGH,
+                message=f"Gradient error: {exception}",
+                original_exception=exception, context=context, max_retries=2,
+            )
+        
+        # Value/Type Errors - MEDIUM
+        if isinstance(exception, (ValueError, TypeError)):
+            return LearningException(
+                error_code=LearningErrorCode.E1001_INVALID_SAMPLE,
+                severity=ExceptionSeverity.MEDIUM,
+                message=f"Invalid data: {exception}",
+                original_exception=exception, context=context,
+            )
+        
+        # Timeout - LOW
+        if isinstance(exception, (asyncio.TimeoutError, TimeoutError)):
+            return LearningException(
+                error_code=LearningErrorCode.E4002_TIMEOUT,
+                severity=ExceptionSeverity.LOW,
+                message=f"Timeout: {exception}",
+                original_exception=exception, context=context,
+            )
+        
+        # IO Errors - MEDIUM
+        if isinstance(exception, (IOError, OSError)):
+            return LearningException(
+                error_code=LearningErrorCode.E3003_IO_ERROR,
+                severity=ExceptionSeverity.MEDIUM,
+                message=f"I/O error: {exception}",
+                original_exception=exception, context=context,
+            )
+        
+        # Default - Unknown
+        return LearningException(
+            error_code=LearningErrorCode.E4003_UNKNOWN,
+            severity=ExceptionSeverity.MEDIUM,
+            message=f"Unknown error: {exception}",
+            original_exception=exception, context=context,
+        )
+
+
+# =============================================================================
 # Online Learning Module
 # =============================================================================
 
@@ -216,6 +377,12 @@ class OnlineLearningModule:
         # Learning state
         self.is_learning = False
         self._learning_task: Optional[asyncio.Task] = None
+        
+        # Exception tracking for graded handling
+        self._error_log: List[LearningException] = []
+        self._consecutive_errors = 0
+        self._max_consecutive_errors = 5
+        self._last_error_time: Optional[datetime] = None
     
     async def start_learning(self):
         """Start the online learning loop."""
@@ -239,7 +406,26 @@ class OnlineLearningModule:
         logger.info("Stopped online learning")
     
     async def _learning_loop(self):
-        """Main online learning loop."""
+        """
+        Main online learning loop with fine-grained exception handling.
+        
+        Exception Handling Strategy:
+        - LOW: Log and continue immediately
+        - MEDIUM: Log, increment error count, brief pause
+        - HIGH: Log detailed info, longer pause, may skip batch
+        - CRITICAL: Log full context, terminate loop, notify
+        
+        Special Handling:
+        - GPU OOM: Automatically reduce batch size and clear cache
+        - CancelledError: Propagate for proper async cancellation
+        - Gradient issues: Attempt recovery with gradient zeroing
+        """
+        logger.info("Learning loop started with enhanced exception handling")
+        
+        # Track original batch size for potential recovery
+        original_batch_size = self.config.online_batch_size
+        min_batch_size = max(1, original_batch_size // 8)
+        
         while self.is_learning:
             try:
                 # Collect samples from streams
@@ -250,13 +436,282 @@ class OnlineLearningModule:
                     loss = self._update_step()
                     self.learning_curve.append(loss)
                     self.total_updates += 1
+                    
+                    # Reset consecutive errors on success
+                    self._consecutive_errors = 0
+                    
+                    # Gradually restore batch size after successful updates
+                    if (self.total_updates % 100 == 0 and 
+                        self.config.online_batch_size < original_batch_size):
+                        new_size = min(
+                            self.config.online_batch_size * 2,
+                            original_batch_size
+                        )
+                        logger.info(f"Restoring batch size: {self.config.online_batch_size} -> {new_size}")
+                        self.config.online_batch_size = new_size
                 
                 # Small delay to prevent busy waiting
                 await asyncio.sleep(0.1)
+            
+            except asyncio.CancelledError:
+                # Graceful cancellation - must re-raise for proper async handling
+                logger.info("Learning loop cancelled gracefully")
+                raise
+            
+            except (torch.cuda.OutOfMemoryError, RuntimeError) as e:
+                # GPU OOM or CUDA errors - special handling
+                if "out of memory" in str(e).lower() or "CUDA" in str(e):
+                    await self._handle_gpu_oom_error(e, min_batch_size)
+                else:
+                    # Other RuntimeError - classify normally
+                    await self._handle_general_exception(e)
+            
+            except (torch.autograd.detect_anomaly,) if hasattr(torch.autograd, 'detect_anomaly') else () as e:
+                # Gradient anomaly detected
+                logger.error(f"Gradient anomaly detected: {e}")
+                self._attempt_gradient_recovery()
+                await asyncio.sleep(2.0)
                 
             except Exception as e:
-                logger.error(f"Online learning error: {e}")
-                await asyncio.sleep(1.0)
+                await self._handle_general_exception(e)
+                
+                # Check if too many consecutive errors
+                if self._consecutive_errors >= self._max_consecutive_errors:
+                    logger.critical(
+                        f"[{LearningErrorCode.E2004_MODEL_STATE.value}] "
+                        f"Too many consecutive errors ({self._consecutive_errors}). "
+                        f"Terminating learning loop."
+                    )
+                    self.is_learning = False
+                    break
+    
+    async def _handle_gpu_oom_error(self, error: Exception, min_batch_size: int):
+        """
+        Handle GPU Out-of-Memory errors with automatic batch size reduction.
+        
+        Recovery Strategy:
+        1. Clear CUDA cache
+        2. Reduce batch size by half
+        3. Log warning with new batch size
+        4. Continue learning if batch size is valid
+        """
+        logger.error(f"GPU OOM detected: {error}")
+        
+        # Clear CUDA cache
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.synchronize()
+            logger.info("Cleared CUDA cache")
+        
+        # Reduce batch size
+        old_batch_size = self.config.online_batch_size
+        new_batch_size = max(min_batch_size, old_batch_size // 2)
+        
+        if new_batch_size < old_batch_size:
+            self.config.online_batch_size = new_batch_size
+            logger.warning(
+                f"Reduced batch size due to OOM: {old_batch_size} -> {new_batch_size}"
+            )
+            
+            # Log to error tracking
+            self._error_log.append(LearningException(
+                error_code=LearningErrorCode.E2001_OOM,
+                severity=ExceptionSeverity.HIGH,
+                message=f"GPU OOM - batch size reduced to {new_batch_size}",
+                original_exception=error,
+                context={
+                    "old_batch_size": old_batch_size,
+                    "new_batch_size": new_batch_size,
+                    "total_updates": self.total_updates,
+                },
+            ))
+            
+            await asyncio.sleep(1.0)  # Brief pause after OOM
+        else:
+            # Already at minimum batch size - this is critical
+            logger.critical(
+                f"GPU OOM at minimum batch size ({min_batch_size}). "
+                "Cannot reduce further. Consider using a smaller model or more GPU memory."
+            )
+            self._consecutive_errors += 1
+            await asyncio.sleep(5.0)
+    
+    async def _handle_general_exception(self, error: Exception):
+        """Handle general exceptions with classification and appropriate response."""
+        # Classify the exception
+        classified = ExceptionClassifier.classify(
+            error, 
+            context={
+                "total_updates": self.total_updates,
+                "buffer_size": len(self.buffer),
+                "consecutive_errors": self._consecutive_errors,
+                "batch_size": self.config.online_batch_size,
+            }
+        )
+        
+        # Log the structured exception
+        self._error_log.append(classified)
+        self._consecutive_errors += 1
+        self._last_error_time = datetime.now(timezone.utc)
+        
+        # Handle based on severity
+        await self._handle_exception_by_severity(classified)
+    
+    async def _handle_exception_by_severity(self, exc: LearningException):
+        """
+        Handle exception based on its severity level with exponential backoff.
+        
+        Backoff Strategy:
+        - LOW: 0.1s base, no exponential
+        - MEDIUM: 1s base, exponential up to 30s
+        - HIGH: 5s base, exponential up to 60s
+        - CRITICAL: No backoff, terminate immediately
+        """
+        # Calculate exponential backoff based on consecutive errors
+        backoff_factor = min(2 ** min(self._consecutive_errors, 6), 64)
+        
+        if exc.severity == ExceptionSeverity.LOW:
+            # LOW: Log briefly and continue
+            logger.warning(
+                f"[{exc.error_code.value}] Low severity: {exc.message}"
+            )
+            await asyncio.sleep(0.1)
+            
+        elif exc.severity == ExceptionSeverity.MEDIUM:
+            # MEDIUM: Log with context, exponential backoff
+            base_delay = 1.0
+            delay = min(base_delay * backoff_factor, 30.0)
+            
+            logger.warning(
+                f"[{exc.error_code.value}] Medium severity: {exc.message} | "
+                f"Consecutive errors: {self._consecutive_errors} | "
+                f"Backoff: {delay:.1f}s"
+            )
+            await asyncio.sleep(delay)
+            
+        elif exc.severity == ExceptionSeverity.HIGH:
+            # HIGH: Detailed log, longer pause, consider recovery actions
+            base_delay = 5.0
+            delay = min(base_delay * backoff_factor, 60.0)
+            
+            logger.error(
+                f"[{exc.error_code.value}] High severity: {exc.message}\n"
+                f"Context: {exc.context}\n"
+                f"Original exception: {exc.original_exception}\n"
+                f"Consecutive errors: {self._consecutive_errors} | "
+                f"Backoff: {delay:.1f}s"
+            )
+            
+            # Attempt recovery for specific error types
+            if exc.error_code == LearningErrorCode.E2003_GRADIENT_EXPLOSION:
+                self._attempt_gradient_recovery()
+            elif exc.error_code == LearningErrorCode.E2001_OOM:
+                self._attempt_memory_recovery()
+            elif exc.error_code == LearningErrorCode.E2004_MODEL_STATE:
+                self._attempt_model_state_recovery()
+            
+            await asyncio.sleep(delay)
+            
+        elif exc.severity == ExceptionSeverity.CRITICAL:
+            # CRITICAL: Full logging, terminate loop
+            logger.critical(
+                f"[{exc.error_code.value}] CRITICAL ERROR - Terminating learning loop\n"
+                f"Message: {exc.message}\n"
+                f"Context: {exc.context}\n"
+                f"Original exception: {exc.original_exception}\n"
+                f"Error log size: {len(self._error_log)}\n"
+                f"Total updates before failure: {self.total_updates}"
+            )
+            self.is_learning = False
+    
+    def _attempt_memory_recovery(self):
+        """Attempt to recover from memory issues."""
+        logger.info("Attempting memory recovery...")
+        try:
+            # Clear CUDA cache
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+            
+            # Run garbage collection
+            import gc
+            gc.collect()
+            
+            # Clear buffer if too large
+            if len(self.buffer) > self.config.online_buffer_size // 2:
+                logger.info(f"Clearing excess buffer entries: {len(self.buffer)} -> {self.config.online_buffer_size // 4}")
+                while len(self.buffer.buffer) > self.config.online_buffer_size // 4:
+                    self.buffer.buffer.popleft()
+            
+            logger.info("Memory recovery completed")
+        except Exception as e:
+            logger.error(f"Memory recovery failed: {e}")
+    
+    def _attempt_model_state_recovery(self):
+        """Attempt to recover from model state corruption."""
+        logger.info("Attempting model state recovery...")
+        try:
+            # Reset optimizer state
+            self.optimizer.zero_grad()
+            
+            # Check model parameters for NaN/Inf
+            nan_params = 0
+            for name, param in self.model.named_parameters():
+                if torch.isnan(param).any() or torch.isinf(param).any():
+                    nan_params += 1
+                    logger.warning(f"Found NaN/Inf in parameter: {name}")
+            
+            if nan_params > 0:
+                logger.error(f"Model has {nan_params} corrupted parameters. Manual intervention required.")
+            else:
+                logger.info("Model parameters appear healthy")
+                
+        except Exception as e:
+            logger.error(f"Model state recovery failed: {e}")
+    
+    def _attempt_gradient_recovery(self):
+        """Attempt to recover from gradient explosion/NaN issues."""
+        logger.info("Attempting gradient recovery...")
+        try:
+            # Zero gradients
+            self.optimizer.zero_grad()
+            
+            # Clear any NaN in model parameters (reset to small values)
+            with torch.no_grad():
+                for param in self.model.parameters():
+                    if param.grad is not None and (torch.isnan(param.grad).any() or torch.isinf(param.grad).any()):
+                        param.grad.zero_()
+                    if torch.isnan(param).any() or torch.isinf(param).any():
+                        logger.warning("Found NaN/Inf in model parameters, resetting affected values")
+                        param.data = torch.where(
+                            torch.isnan(param) | torch.isinf(param),
+                            torch.zeros_like(param),
+                            param
+                        )
+            
+            logger.info("Gradient recovery completed")
+        except Exception as recovery_error:
+            logger.error(f"Gradient recovery failed: {recovery_error}")
+    
+    def get_error_summary(self) -> Dict[str, Any]:
+        """Get summary of errors encountered during learning."""
+        if not self._error_log:
+            return {"total_errors": 0, "by_severity": {}, "by_code": {}}
+        
+        by_severity = defaultdict(int)
+        by_code = defaultdict(int)
+        
+        for exc in self._error_log:
+            by_severity[exc.severity.value] += 1
+            by_code[exc.error_code.value] += 1
+        
+        return {
+            "total_errors": len(self._error_log),
+            "by_severity": dict(by_severity),
+            "by_code": dict(by_code),
+            "last_error": self._error_log[-1].to_dict() if self._error_log else None,
+            "consecutive_errors": self._consecutive_errors,
+        }
     
     async def _collect_from_streams(self):
         """Collect data from active streams."""
@@ -334,6 +789,115 @@ class OnlineLearningModule:
             "is_learning": self.is_learning,
             "recent_loss": np.mean(self.learning_curve[-100:]) if self.learning_curve else 0,
         }
+    
+    async def real_time_update(
+        self,
+        sample: Dict[str, Any],
+        immediate: bool = True,
+        validate_before_apply: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Perform immediate model update from real-time data stream.
+        
+        ⚠️ PLACEHOLDER: Core real-time learning logic needs implementation.
+        
+        Args:
+            sample: Training sample with 'input_ids' and optional 'labels'
+            immediate: If True, apply update immediately without batching
+            validate_before_apply: Validate update doesn't degrade model
+            
+        Returns:
+            Update result with loss, applied status, and validation metrics
+            
+        Technical Design:
+            1. WebSocket/SSE integration for real-time data
+            2. Micro-batch processing (1-10 samples)
+            3. Asynchronous gradient computation
+            4. Model version pinning during update
+            5. Rollback capability on quality degradation
+            6. Rate limiting to prevent update spam
+            
+        Target Version: v2.2.0
+        
+        Example:
+            ```python
+            result = await module.real_time_update({
+                'input_ids': torch.tensor([...]),
+                'labels': torch.tensor([...]),
+            })
+            if result['applied']:
+                print(f"Update applied, loss: {result['loss']}")
+            ```
+        """
+        logger.info("Processing real-time update request")
+        
+        result = {
+            "applied": False,
+            "loss": None,
+            "validation_passed": None,
+            "reason": None,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        
+        # Placeholder implementation
+        logger.warning(
+            "real_time_update is a placeholder. "
+            "Full implementation with validation and rollback coming in v2.2.0. "
+            "Using add_sample() + standard learning loop as fallback."
+        )
+        
+        # TODO: Implement real-time update logic
+        # 1. Validate sample format
+        # 2. Create model checkpoint (for rollback)
+        # 3. Compute gradients
+        # 4. Validate update quality
+        # 5. Apply or rollback
+        
+        # Fallback: Add to buffer for batch processing
+        try:
+            self.add_sample(sample, priority=2.0)  # Higher priority for real-time
+            result["reason"] = "Added to buffer (real-time update not yet implemented)"
+            return result
+        except Exception as e:
+            result["reason"] = f"Failed to add sample: {e}"
+            logger.error(f"Real-time update failed: {e}")
+            return result
+    
+    async def adaptive_learning_rate(
+        self,
+        recent_losses: Optional[List[float]] = None,
+        min_lr: float = 1e-6,
+        max_lr: float = 1e-3,
+    ) -> float:
+        """
+        Dynamically adjust learning rate based on training progress.
+        
+        ⚠️ PLACEHOLDER: Adaptive LR scheduling needs implementation.
+        
+        Args:
+            recent_losses: Recent loss values for analysis
+            min_lr: Minimum learning rate
+            max_lr: Maximum learning rate
+            
+        Returns:
+            Adjusted learning rate
+            
+        Technical Design:
+            1. Loss plateau detection
+            2. Gradient noise analysis
+            3. Cyclical learning rate support
+            4. Warmup and cooldown phases
+            5. Per-layer adaptive rates
+            
+        Target Version: v2.3.0
+        """
+        logger.warning(
+            "adaptive_learning_rate is a placeholder. "
+            "Returning current learning rate unchanged."
+        )
+        
+        # Placeholder: Return current learning rate
+        return self.config.online_learning_rate
 
 
 # =============================================================================
@@ -360,18 +924,55 @@ class EpisodicMemory:
     - Few-shot learning
     - Experience replay
     - Contextual recall
+    
+    Supports production-grade vector indexing with:
+    - FAISS: For high-performance CPU/GPU search
+    - Milvus: For distributed scalability
+    - NumPy fallback: For development/testing
     """
     
-    def __init__(self, max_size: int = 100000, embedding_dim: int = 768):
+    def __init__(
+        self,
+        max_size: int = 100000,
+        embedding_dim: int = 768,
+        use_faiss: bool = True,
+        index_type: str = "faiss_flat",
+    ):
         self.max_size = max_size
         self.embedding_dim = embedding_dim
+        self.use_faiss = use_faiss
         
         self.episodes: Dict[str, Episode] = {}
         self.episode_order: deque = deque(maxlen=max_size)
         
-        # Index for similarity search
-        self.embeddings_matrix: Optional[np.ndarray] = None
-        self.episode_ids: List[str] = []
+        # Initialize vector index
+        self._init_vector_index(index_type)
+        
+        # Batch buffer for efficient indexing
+        self._pending_embeddings: List[Tuple[str, np.ndarray]] = []
+        self._batch_size = 100
+    
+    def _init_vector_index(self, index_type: str):
+        """Initialize the appropriate vector index."""
+        if VECTOR_INDEX_AVAILABLE and self.use_faiss:
+            try:
+                config = IndexConfig(
+                    index_type=IndexType(index_type),
+                    embedding_dim=self.embedding_dim,
+                    metric="cosine",
+                )
+                self._vector_index = create_vector_index(config)
+                self._use_advanced_index = True
+                logger.info(f"Using {index_type} vector index")
+            except Exception as e:
+                logger.warning(f"Failed to create advanced index: {e}, using NumPy")
+                self._use_advanced_index = False
+                self._embeddings_matrix: Optional[np.ndarray] = None
+                self._episode_ids: List[str] = []
+        else:
+            self._use_advanced_index = False
+            self._embeddings_matrix: Optional[np.ndarray] = None
+            self._episode_ids: List[str] = []
     
     def add(self, episode: Episode):
         """Add an episode to memory."""
@@ -380,25 +981,70 @@ class EpisodicMemory:
             oldest_id = self.episode_order.popleft()
             if oldest_id in self.episodes:
                 del self.episodes[oldest_id]
+                # Note: Vector index removal is expensive, we let it grow and rebuild periodically
         
         self.episodes[episode.episode_id] = episode
         self.episode_order.append(episode.episode_id)
         
-        # Update embedding index
+        # Buffer embedding for batch indexing
         if episode.embeddings is not None:
-            self._update_index(episode)
+            self._pending_embeddings.append((episode.episode_id, episode.embeddings))
+            
+            # Flush batch if buffer is full
+            if len(self._pending_embeddings) >= self._batch_size:
+                self._flush_pending_embeddings()
     
-    def _update_index(self, episode: Episode):
-        """Update the embedding index."""
-        if self.embeddings_matrix is None:
-            self.embeddings_matrix = episode.embeddings.reshape(1, -1)
-            self.episode_ids = [episode.episode_id]
+    def add_batch(self, episodes: List[Episode]):
+        """Add multiple episodes efficiently."""
+        embeddings_batch = []
+        ids_batch = []
+        
+        for episode in episodes:
+            # Handle capacity
+            if len(self.episode_order) >= self.max_size:
+                oldest_id = self.episode_order.popleft()
+                if oldest_id in self.episodes:
+                    del self.episodes[oldest_id]
+            
+            self.episodes[episode.episode_id] = episode
+            self.episode_order.append(episode.episode_id)
+            
+            if episode.embeddings is not None:
+                embeddings_batch.append(episode.embeddings)
+                ids_batch.append(episode.episode_id)
+        
+        # Batch add to vector index
+        if embeddings_batch:
+            self._add_embeddings_batch(ids_batch, embeddings_batch)
+    
+    def _flush_pending_embeddings(self):
+        """Flush pending embeddings to the vector index."""
+        if not self._pending_embeddings:
+            return
+        
+        ids = [eid for eid, _ in self._pending_embeddings]
+        embeddings = [emb for _, emb in self._pending_embeddings]
+        
+        self._add_embeddings_batch(ids, embeddings)
+        self._pending_embeddings.clear()
+    
+    def _add_embeddings_batch(self, ids: List[str], embeddings: List[np.ndarray]):
+        """Add embeddings in batch to the vector index."""
+        if not embeddings:
+            return
+        
+        embeddings_array = np.vstack([e.reshape(1, -1) for e in embeddings])
+        
+        if self._use_advanced_index:
+            self._vector_index.add(embeddings_array, ids)
         else:
-            self.embeddings_matrix = np.vstack([
-                self.embeddings_matrix,
-                episode.embeddings.reshape(1, -1)
-            ])
-            self.episode_ids.append(episode.episode_id)
+            # NumPy fallback
+            if self._embeddings_matrix is None:
+                self._embeddings_matrix = embeddings_array
+                self._episode_ids = ids
+            else:
+                self._embeddings_matrix = np.vstack([self._embeddings_matrix, embeddings_array])
+                self._episode_ids.extend(ids)
     
     def retrieve_similar(
         self,
@@ -406,25 +1052,56 @@ class EpisodicMemory:
         k: int = 5,
     ) -> List[Episode]:
         """Retrieve k most similar episodes."""
-        if self.embeddings_matrix is None or len(self.episode_ids) == 0:
-            return []
+        # Flush any pending embeddings first
+        self._flush_pending_embeddings()
         
-        # Compute cosine similarity
-        query_norm = query_embedding / np.linalg.norm(query_embedding)
-        matrix_norm = self.embeddings_matrix / np.linalg.norm(
-            self.embeddings_matrix, axis=1, keepdims=True
-        )
+        if self._use_advanced_index:
+            results = self._vector_index.search(query_embedding, k)
+            return [
+                self.episodes[eid]
+                for eid, _ in results
+                if eid in self.episodes
+            ]
+        else:
+            # NumPy fallback
+            if self._embeddings_matrix is None or len(self._episode_ids) == 0:
+                return []
+            
+            # Compute cosine similarity
+            query_norm = query_embedding / (np.linalg.norm(query_embedding) + 1e-8)
+            matrix_norm = self._embeddings_matrix / (
+                np.linalg.norm(self._embeddings_matrix, axis=1, keepdims=True) + 1e-8
+            )
+            
+            similarities = matrix_norm @ query_norm
+            
+            # Get top-k indices
+            k = min(k, len(self._episode_ids))
+            top_indices = np.argsort(similarities)[-k:][::-1]
+            
+            return [
+                self.episodes[self._episode_ids[i]]
+                for i in top_indices
+                if self._episode_ids[i] in self.episodes
+            ]
+    
+    def retrieve_similar_batch(
+        self,
+        query_embeddings: np.ndarray,
+        k: int = 5,
+    ) -> List[List[Episode]]:
+        """Batch retrieve similar episodes for multiple queries."""
+        self._flush_pending_embeddings()
         
-        similarities = matrix_norm @ query_norm
-        
-        # Get top-k indices
-        top_indices = np.argsort(similarities)[-k:][::-1]
-        
-        return [
-            self.episodes[self.episode_ids[i]]
-            for i in top_indices
-            if self.episode_ids[i] in self.episodes
-        ]
+        if self._use_advanced_index:
+            all_results = self._vector_index.search_batch(query_embeddings, k)
+            return [
+                [self.episodes[eid] for eid, _ in results if eid in self.episodes]
+                for results in all_results
+            ]
+        else:
+            # Process each query individually for NumPy fallback
+            return [self.retrieve_similar(q, k) for q in query_embeddings]
     
     def retrieve_by_reward(self, k: int = 10, min_reward: float = 0.0) -> List[Episode]:
         """Retrieve episodes with highest rewards."""
@@ -439,6 +1116,24 @@ class EpisodicMemory:
         """Retrieve most recent episodes."""
         recent_ids = list(self.episode_order)[-k:]
         return [self.episodes[eid] for eid in recent_ids if eid in self.episodes]
+    
+    def rebuild_index(self):
+        """Rebuild the vector index from current episodes."""
+        if self._use_advanced_index:
+            # Re-initialize and add all current embeddings
+            self._init_vector_index("faiss_flat")
+            
+            embeddings = []
+            ids = []
+            for eid, episode in self.episodes.items():
+                if episode.embeddings is not None:
+                    embeddings.append(episode.embeddings)
+                    ids.append(eid)
+            
+            if embeddings:
+                self._add_embeddings_batch(ids, embeddings)
+            
+            logger.info(f"Rebuilt vector index with {len(ids)} embeddings")
 
 
 class SemanticMemory:
@@ -635,45 +1330,83 @@ class MemoryManagement:
         """Recall successful past experiences."""
         return self.episodic.retrieve_by_reward(k, min_reward=0.5)
     
-    async def consolidate_memories(self):
+    async def consolidate_memories(self, batch_size: int = 50):
         """
         Consolidate memories (like sleep/dream replay).
         
+        Optimized for batch processing:
         - Transfer important episodic memories to semantic
         - Prune low-value memories
         - Strengthen frequently accessed memories
+        
+        Args:
+            batch_size: Number of episodes to process per batch
         """
         logger.info("Starting memory consolidation")
         
         # Get high-reward episodes
         important_episodes = self.episodic.retrieve_by_reward(k=100, min_reward=0.7)
         
-        # Extract patterns and store in semantic memory
-        for episode in important_episodes:
-            # Create concept from episode
-            concept_id = f"learned_{episode.episode_id[:8]}"
-            self.semantic.add_concept(
-                concept_id,
-                f"Learned from {episode.action}",
-                {
-                    "context_pattern": episode.context[:100],
-                    "successful_action": episode.action,
-                    "outcome": episode.outcome,
-                }
-            )
+        if not important_episodes:
+            logger.info("No important episodes to consolidate")
+            self.last_consolidation = datetime.now(timezone.utc)
+            return
+        
+        # Process in batches for efficiency
+        total_processed = 0
+        
+        for batch_start in range(0, len(important_episodes), batch_size):
+            batch = important_episodes[batch_start:batch_start + batch_size]
             
-            # Add fact
-            self.semantic.add_fact(
-                f"Action '{episode.action}' in context '{episode.context[:50]}...' "
-                f"leads to '{episode.outcome}'",
-                source="episodic_consolidation",
-                confidence=episode.reward,
-            )
+            # Prepare batch data
+            concepts_to_add = []
+            facts_to_add = []
+            
+            for episode in batch:
+                concept_id = f"learned_{episode.episode_id[:8]}"
+                concepts_to_add.append({
+                    "id": concept_id,
+                    "name": f"Learned from {episode.action}",
+                    "attributes": {
+                        "context_pattern": episode.context[:100],
+                        "successful_action": episode.action,
+                        "outcome": episode.outcome,
+                        "reward": episode.reward,
+                        "timestamp": episode.timestamp.isoformat(),
+                    }
+                })
+                
+                facts_to_add.append({
+                    "fact": f"Action '{episode.action}' in context '{episode.context[:50]}...' leads to '{episode.outcome}'",
+                    "source": "episodic_consolidation",
+                    "confidence": episode.reward,
+                })
+            
+            # Batch add concepts
+            for concept in concepts_to_add:
+                self.semantic.add_concept(
+                    concept["id"],
+                    concept["name"],
+                    concept["attributes"],
+                )
+            
+            # Batch add facts
+            for fact in facts_to_add:
+                self.semantic.add_fact(
+                    fact["fact"],
+                    source=fact["source"],
+                    confidence=fact["confidence"],
+                )
+            
+            total_processed += len(batch)
+            
+            # Yield control to event loop between batches
+            await asyncio.sleep(0)
         
         self.last_consolidation = datetime.now(timezone.utc)
         self.consolidation_pending = False
         
-        logger.info(f"Consolidated {len(important_episodes)} episodes")
+        logger.info(f"Consolidated {total_processed} episodes in batches of {batch_size}")
     
     def should_consolidate(self) -> bool:
         """Check if memory consolidation is needed."""

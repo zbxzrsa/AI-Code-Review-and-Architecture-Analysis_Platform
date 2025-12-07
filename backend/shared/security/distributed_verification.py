@@ -208,7 +208,7 @@ class DistributedVerificationService:
             try:
                 await self._healthcheck_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Healthcheck task cancelled")
         
         if self._session:
             await self._session.close()
@@ -222,7 +222,8 @@ class DistributedVerificationService:
                 await asyncio.sleep(self.healthcheck_interval)
                 await self._check_all_nodes_health()
             except asyncio.CancelledError:
-                break
+                logger.debug("Healthcheck loop cancelled")
+                raise
             except Exception as e:
                 logger.error(f"Health check error: {e}")
     

@@ -32,6 +32,19 @@ transformers>=4.36.0
 trl>=0.7.0
 peft>=0.7.0
 
+# Quantization
+bitsandbytes>=0.41.0  # INT4/INT8 quantization
+auto-gptq>=0.4.0      # GPTQ quantization (optional)
+# autoawq>=0.1.0      # AWQ quantization (optional, uncomment if needed)
+
+# Vector Indexing (Production)
+faiss-cpu>=1.7.4      # CPU version of FAISS
+# faiss-gpu>=1.7.4    # GPU version (uncomment for GPU acceleration)
+# pymilvus>=2.3.0     # Milvus distributed vector DB (optional)
+
+# System Monitoring
+psutil>=5.9.0         # System memory/CPU monitoring
+
 # Monitoring & Logging
 wandb>=0.16.0
 tensorboard>=2.15.0

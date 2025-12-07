@@ -1,0 +1,25 @@
+# Caching_V1 Configuration
+version: "1.0.0"
+status: experimental
+
+# Cache Levels
+cache_levels:
+  l1:
+    ttl_seconds: 300
+    max_size: 500
+  l2:
+    ttl_seconds: 3600
+    max_size: 2000
+  l3:
+    ttl_seconds: 86400
+    max_size: 10000
+
+# Semantic Cache
+semantic_cache:
+  ttl_seconds: 3600
+  max_entries: 5000
+
+# Redis (Mock by default)
+redis:
+  use_mock: true
+  namespace: app

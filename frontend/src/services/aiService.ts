@@ -1,6 +1,22 @@
 /**
- * AI Service
- * Connects frontend to the three-version AI backend services
+ * AI 服务 (AI Service)
+ *
+ * 功能描述:
+ *   连接前端到三版本 AI 后端服务。
+ *
+ * 主要功能:
+ *   - AI 版本状态获取
+ *   - 代码分析请求
+ *   - AI 对话交互
+ *   - 技术列表管理
+ *
+ * 接口类型:
+ *   - AIVersion: AI 版本信息
+ *   - AIMessage: AI 消息
+ *   - AIAnalysisRequest: 分析请求
+ *   - AIAnalysisResult: 分析结果
+ *
+ * 最后修改日期: 2024-12-07
  */
 
 import api from "./api";

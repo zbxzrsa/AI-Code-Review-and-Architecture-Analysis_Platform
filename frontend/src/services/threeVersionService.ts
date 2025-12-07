@@ -1,10 +1,22 @@
 /**
- * Three-Version Evolution Service API
+ * 三版本演化服务 API (Three-Version Evolution Service API)
  *
- * Client for the three-version self-evolution cycle API:
- * - V1 (New): Experimentation, trial and error
- * - V2 (Stable): Production, fixes V1 errors
- * - V3 (Old): Quarantine, comparison, exclusion
+ * 功能描述:
+ *   三版本自演化循环 API 客户端。
+ *
+ * 版本说明:
+ *   - V1（新版）: 实验，试错
+ *   - V2（稳定版）: 生产，修复 V1 错误
+ *   - V3（旧版）: 隔离，比较，排除
+ *
+ * 主要方法:
+ *   - getCycleStatus(): 获取循环状态
+ *   - startCycle(): 启动循环
+ *   - stopCycle(): 停止循环
+ *   - promoteVersion(): 升级版本
+ *   - degradeVersion(): 降级版本
+ *
+ * 最后修改日期: 2024-12-07
  */
 
 import { api } from "./api";

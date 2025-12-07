@@ -1,0 +1,58 @@
+# SelfHealing_V2 Configuration
+version: "2.0.0"
+status: production
+
+# Health Monitoring
+health_monitor:
+  check_interval_seconds: 30
+  timeout_seconds: 10
+  healthy_threshold: 2
+  unhealthy_threshold: 3
+
+  # SLO-based thresholds
+  slo_latency_ms: 1000
+  slo_error_rate: 0.01
+
+# Recovery Settings
+recovery:
+  cooldown_seconds: 300
+  max_retries: 3
+  retry_delay_seconds: 5
+
+  # Default runbook steps
+  default_actions:
+    - clear_cache
+    - reconnect
+    - restart
+
+# Predictive Healer
+predictive:
+  analysis_window: 100
+  prediction_horizon_minutes: 30
+
+  # Metric thresholds
+  thresholds:
+    cpu_usage:
+      warning: 70
+      critical: 90
+    memory_usage:
+      warning: 75
+      critical: 95
+    error_rate:
+      warning: 0.02
+      critical: 0.05
+    latency_p99:
+      warning: 2000
+      critical: 5000
+
+# Incident Detection
+incidents:
+  auto_detect: true
+  severity_thresholds:
+    critical: 3
+    high: 5
+    medium: 10
+
+  escalation:
+    critical_notify_minutes: 5
+    high_notify_minutes: 15

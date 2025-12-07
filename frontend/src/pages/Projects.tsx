@@ -1,3 +1,19 @@
+/**
+ * 项目管理页面 (Projects Page)
+ * 
+ * 功能描述:
+ *   项目列表和管理页面，提供项目的创建、编辑、删除等功能。
+ * 
+ * 主要特性:
+ *   - 项目列表展示
+ *   - 搜索和筛选
+ *   - 项目创建向导
+ *   - 项目设置管理
+ *   - 代码分析入口
+ * 
+ * 最后修改日期: 2024-12-07
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {

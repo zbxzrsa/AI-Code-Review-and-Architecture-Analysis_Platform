@@ -1,6 +1,22 @@
 """
-Continuous Learning Framework
-Supports incremental learning, online learning, and lifelong learning
+持续学习框架 (Continuous Learning Framework)
+
+模块功能描述:
+    支持增量学习、在线学习和终身学习。
+
+主要功能:
+    - 新数据增量学习
+    - 任务增量和类增量学习
+    - 灾难性遗忘防止
+    - 动态架构扩展
+    - 跨任务性能监控
+
+主要组件:
+    - ContinuousLearner: 持续学习器主类
+    - LearningState: 学习状态数据类
+    - ExperienceReplay: 经验回放缓冲区
+
+最后修改日期: 2024-12-07
 """
 
 import torch
@@ -20,7 +36,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class LearningState:
-    """State of continuous learning process"""
+    """
+    持续学习过程状态数据类
+    
+    功能描述:
+        记录持续学习过程的各项状态信息。
+    
+    属性说明:
+        - total_samples_seen: 已见样本总数
+        - total_updates: 更新总次数
+        - current_task_id: 当前任务ID
+        - task_boundaries: 任务边界记录
+        - performance_history: 性能历史记录
+    """
     total_samples_seen: int = 0
     total_updates: int = 0
     current_task_id: int = 0
@@ -28,21 +56,33 @@ class LearningState:
     performance_history: List[Dict[str, float]] = field(default_factory=list)
     
     def record_task_boundary(self) -> None:
-        """Record a task boundary"""
+        """
+        记录任务边界
+        
+        当从一个任务切换到另一个任务时调用。
+        """
         self.task_boundaries.append(self.total_samples_seen)
         self.current_task_id += 1
 
 
 class ContinuousLearner:
     """
-    Continuous Learning System
+    持续学习系统
     
-    Features:
-    - Incremental learning on new data
-    - Task-incremental and class-incremental learning
-    - Catastrophic forgetting prevention
-    - Dynamic architecture expansion
-    - Performance monitoring across tasks
+    功能描述:
+        实现模型的持续学习能力，防止灾难性遗忘。
+    
+    主要特性:
+        - 新数据增量学习
+        - 任务增量和类增量学习
+        - 灾难性遗忘防止
+        - 动态架构扩展
+        - 跨任务性能监控
+    
+    参数:
+        - model: PyTorch 模型
+        - memory_size: 经验回放缓冲区大小
+        - ewc_lambda: EWC 正则化系数
     """
     
     def __init__(

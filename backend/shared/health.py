@@ -1,17 +1,27 @@
 """
-Health Check Module for Microservices
+微服务健康检查模块 (Health Check Module for Microservices)
 
-Provides standardized health check endpoints:
-- /health - Liveness check (is the service running?)
-- /ready - Readiness check (is the service ready to accept traffic?)
-- /health/live - Alias for liveness
-- /health/ready - Alias for readiness
+模块功能描述:
+    提供标准化的健康检查端点。
 
-Includes:
-- Database connectivity checks
-- Redis connectivity checks
-- External service dependency checks
-- Graceful shutdown handling
+提供的端点:
+    - /health: 存活检查（服务是否运行？）
+    - /ready: 就绪检查（服务是否准备好接受流量？）
+    - /health/live: 存活检查别名
+    - /health/ready: 就绪检查别名
+
+包含功能:
+    - 数据库连接检查
+    - Redis 连接检查
+    - 外部服务依赖检查
+    - 优雅关闭处理
+
+主要组件:
+    - HealthChecker: 健康检查器主类
+    - HealthStatus: 健康状态枚举
+    - ComponentHealth: 组件健康状态
+
+最后修改日期: 2024-12-07
 """
 
 import asyncio
@@ -35,14 +45,34 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 class HealthStatus(str, Enum):
-    """Health status enumeration"""
+    """
+    健康状态枚举
+    
+    定义服务的健康状态类型。
+    
+    状态说明:
+        - HEALTHY: 健康
+        - DEGRADED: 降级
+        - UNHEALTHY: 不健康
+    """
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
 
 
 class ComponentHealth(BaseModel):
-    """Health status of a single component"""
+    """
+    组件健康状态模型
+    
+    功能描述:
+        表示单个组件的健康状态。
+    
+    属性:
+        - name: 组件名称
+        - status: 健康状态
+        - latency_ms: 响应延迟（毫秒）
+        - message: 详细消息
+    """
     name: str
     status: HealthStatus
     latency_ms: Optional[float] = None
@@ -51,7 +81,19 @@ class ComponentHealth(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Full health check response"""
+    """
+    完整健康检查响应模型
+    
+    功能描述:
+        包含所有组件状态的完整健康检查响应。
+    
+    属性:
+        - status: 总体状态
+        - service: 服务名称
+        - version: 服务版本
+        - uptime_seconds: 运行时间（秒）
+        - components: 组件状态列表
+    """
     status: HealthStatus
     service: str
     version: str = "1.0.0"

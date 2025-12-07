@@ -1,10 +1,21 @@
 /**
- * Evolution Cycle Dashboard
+ * 演化循环仪表板 (Evolution Cycle Dashboard)
  * 
- * Monitors the three-version self-evolution cycle:
- * - V1 Experimentation: New technology testing
- * - V2 Production: Stable user-facing AI
- * - V3 Quarantine: Failed experiment archive
+ * 功能描述:
+ *   监控三版本自演化循环状态。
+ * 
+ * 版本说明:
+ *   - V1 实验版: 新技术测试
+ *   - V2 生产版: 稳定的面向用户的 AI
+ *   - V3 隔离版: 失败实验归档
+ * 
+ * 主要特性:
+ *   - 版本状态监控
+ *   - 升级/降级操作
+ *   - 实验历史记录
+ *   - 性能指标展示
+ * 
+ * 最后修改日期: 2024-12-07
  */
 
 import React, { useState, useEffect, useCallback } from 'react';

@@ -1,11 +1,21 @@
 """
-Version Comparison Engine and Auto-Merger
+版本比较引擎与自动合并器 (Version Comparison Engine and Auto-Merger)
 
-Features:
-- Automatic identification of improvement points
-- AI model evaluation and version release
-- Intelligent conflict resolution
-- Auto merge success rate > 95%
+模块功能描述:
+    提供版本比较、改进点识别和自动合并功能。
+
+主要功能:
+    - 自动识别改进点
+    - AI 模型评估和版本发布
+    - 智能冲突解决
+    - 自动合并成功率 > 95%
+
+主要组件:
+    - VersionComparisonEngine: 版本比较引擎
+    - AutoMerger: 自动合并器
+    - ConflictResolver: 冲突解决器
+
+最后修改日期: 2024-12-07
 """
 
 import asyncio
@@ -21,7 +31,18 @@ logger = logging.getLogger(__name__)
 
 
 class ConflictType(Enum):
-    """Types of merge conflicts"""
+    """
+    合并冲突类型枚举
+    
+    定义合并过程中可能出现的冲突类型。
+    
+    冲突类型:
+        - NO_CONFLICT: 无冲突
+        - CONTENT_CONFLICT: 内容冲突
+        - SCHEMA_CONFLICT: 模式冲突
+        - DEPENDENCY_CONFLICT: 依赖冲突
+        - VERSION_CONFLICT: 版本冲突
+    """
     NO_CONFLICT = "no_conflict"
     CONTENT_CONFLICT = "content_conflict"
     SCHEMA_CONFLICT = "schema_conflict"
@@ -30,7 +51,18 @@ class ConflictType(Enum):
 
 
 class MergeStrategy(Enum):
-    """Merge resolution strategies"""
+    """
+    合并策略枚举
+    
+    定义解决冲突的各种策略。
+    
+    策略说明:
+        - OURS: 使用我们的版本
+        - THEIRS: 使用他们的版本
+        - MANUAL: 手动解决
+        - AI_RESOLVED: AI 自动解决
+        - THREE_WAY: 三方合并
+    """
     OURS = "ours"
     THEIRS = "theirs"
     MANUAL = "manual"
@@ -39,7 +71,18 @@ class MergeStrategy(Enum):
 
 
 class EvaluationStatus(Enum):
-    """Model evaluation status"""
+    """
+    模型评估状态枚举
+    
+    定义模型评估的各种状态。
+    
+    状态说明:
+        - PENDING: 等待评估
+        - IN_PROGRESS: 评估中
+        - PASSED: 已通过
+        - FAILED: 未通过
+        - NEEDS_REVIEW: 需要审查
+    """
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     PASSED = "passed"
@@ -49,7 +92,22 @@ class EvaluationStatus(Enum):
 
 @dataclass
 class ImprovementPoint:
-    """An identified improvement opportunity"""
+    """
+    改进点数据类
+    
+    功能描述:
+        表示已识别的改进机会。
+    
+    属性说明:
+        - improvement_id: 改进点标识符
+        - category: 类别（'performance', 'accuracy', 'reliability', 'security'）
+        - title: 标题
+        - description: 描述
+        - current_value: 当前值
+        - target_value: 目标值
+        - impact_score: 影响分数
+        - effort_estimate: 工作量估计
+    """
     improvement_id: str
     category: str  # 'performance', 'accuracy', 'reliability', 'security'
     title: str

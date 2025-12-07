@@ -1,13 +1,17 @@
 ﻿/**
- * AI Auto-Fix Management Page (Admin)
- * AI自动修复管理页面
+ * AI 自动修复管理页面 (AI Auto-Fix Management Page)
  * 
- * Features:
- * - Automatic vulnerability detection & fixing
- * - AI-powered bug resolution
- * - Version control cycle visualization
- * - Fix approval workflow
- * - Rollback capability
+ * 功能描述:
+ *   管理 AI 驱动的自动漏洞检测和修复。
+ * 
+ * 主要特性:
+ *   - 自动漏洞检测和修复
+ *   - AI 驱动的问题解决
+ *   - 版本控制循环可视化
+ *   - 修复审批工作流
+ *   - 回滚能力
+ * 
+ * 最后修改日期: 2024-12-07
  */
 
 import React, { useState } from 'react';

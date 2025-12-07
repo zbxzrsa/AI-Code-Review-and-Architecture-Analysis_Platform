@@ -528,7 +528,7 @@ class MultiSigService:
             try:
                 await self._expiry_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Expiry task cancelled")
         
         logger.info("Multi-sig service stopped")
     
@@ -591,7 +591,8 @@ class MultiSigService:
                     logger.info(f"Request {request_id} expired")
                 
             except asyncio.CancelledError:
-                break
+                logger.debug("Expiry loop cancelled")
+                raise
             except Exception as e:
                 logger.error(f"Expiry loop error: {e}")
     

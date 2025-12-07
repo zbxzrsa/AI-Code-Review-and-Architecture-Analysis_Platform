@@ -1,11 +1,21 @@
 """
-Performance Monitoring Dashboard
+性能监控仪表板 (Performance Monitoring Dashboard)
 
-Features:
-- Real-time metrics collection
-- Learning effect evaluation
-- Feedback optimization closed-loop
-- SLA compliance tracking
+模块功能描述:
+    提供全面的系统性能监控和学习效果评估功能。
+
+主要功能:
+    - 实时指标收集
+    - 学习效果评估
+    - 反馈优化闭环
+    - SLA 合规性跟踪
+
+主要组件:
+    - PerformanceMonitor: 性能监控器
+    - LearningMetrics: 学习指标收集
+    - AlertManager: 告警管理器
+
+最后修改日期: 2024-12-07
 """
 
 import asyncio
@@ -20,7 +30,17 @@ logger = logging.getLogger(__name__)
 
 
 class MetricType(Enum):
-    """Types of metrics"""
+    """
+    指标类型枚举
+    
+    定义系统支持的指标类型。
+    
+    指标类型:
+        - COUNTER: 计数器（只增）
+        - GAUGE: 仪表盘（可增减）
+        - HISTOGRAM: 直方图（分布）
+        - SUMMARY: 摘要（百分位）
+    """
     COUNTER = "counter"
     GAUGE = "gauge"
     HISTOGRAM = "histogram"
@@ -28,7 +48,17 @@ class MetricType(Enum):
 
 
 class AlertSeverity(Enum):
-    """Alert severity levels"""
+    """
+    告警严重级别枚举
+    
+    定义告警的严重程度。
+    
+    级别说明:
+        - INFO: 信息
+        - WARNING: 警告
+        - ERROR: 错误
+        - CRITICAL: 严重
+    """
     INFO = "info"
     WARNING = "warning"
     ERROR = "error"
@@ -37,7 +67,20 @@ class AlertSeverity(Enum):
 
 @dataclass
 class MetricDefinition:
-    """Definition of a metric"""
+    """
+    指标定义数据类
+    
+    定义单个指标的元数据和阈值。
+    
+    属性说明:
+        - name: 指标名称
+        - metric_type: 指标类型
+        - description: 指标描述
+        - unit: 单位
+        - warning_threshold: 警告阈值
+        - error_threshold: 错误阈值
+        - target_value: 目标值
+    """
     name: str
     metric_type: MetricType
     description: str
@@ -52,7 +95,17 @@ class MetricDefinition:
 
 @dataclass
 class MetricValue:
-    """A metric value with timestamp"""
+    """
+    指标值数据类
+    
+    表示带时间戳的单个指标值。
+    
+    属性说明:
+        - metric_name: 指标名称
+        - value: 指标值
+        - timestamp: 时间戳
+        - labels: 标签字典
+    """
     metric_name: str
     value: float
     timestamp: str
@@ -61,7 +114,20 @@ class MetricValue:
 
 @dataclass
 class Alert:
-    """An alert triggered by metrics"""
+    """
+    告警数据类
+    
+    表示由指标触发的告警。
+    
+    属性说明:
+        - alert_id: 告警唯一标识符
+        - metric_name: 触发指标名称
+        - severity: 严重级别
+        - message: 告警消息
+        - value: 当前值
+        - threshold: 阈值
+        - resolved: 是否已解决
+    """
     alert_id: str
     metric_name: str
     severity: AlertSeverity
@@ -75,7 +141,17 @@ class Alert:
 
 @dataclass
 class LearningEffectMetrics:
-    """Metrics for learning effect evaluation"""
+    """
+    学习效果指标数据类
+    
+    评估学习系统的效果和性能。
+    
+    指标分类:
+        - 知识指标: 学习量、保留率、应用率
+        - 性能影响: 准确率提升、延迟改善、错误减少
+        - 学习效率: 吞吐量、延迟
+        - 质量指标: 误报率、漏报率
+    """
     # Knowledge metrics
     knowledge_items_learned: int = 0
     knowledge_retention_rate: float = 0.0
@@ -97,7 +173,11 @@ class LearningEffectMetrics:
 
 @dataclass
 class FeedbackRecord:
-    """User feedback record"""
+    """
+    用户反馈记录数据类
+    
+    记录用户对学习结果的反馈。
+    """
     feedback_id: str
     timestamp: str
     user_id: str

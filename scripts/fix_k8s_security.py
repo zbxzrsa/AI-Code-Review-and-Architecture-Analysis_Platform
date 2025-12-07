@@ -1,8 +1,23 @@
 #!/usr/bin/env python3
 """
-Batch fix Kubernetes security issues:
-1. Add automountServiceAccountToken: false
-2. Add ephemeral-storage limits to all containers
+Kubernetes 安全问题批量修复脚本
+
+脚本功能描述:
+    批量修复 Kubernetes 部署文件中的安全问题。
+
+修复内容:
+    1. 添加 automountServiceAccountToken: false（禁用自动挂载服务账户令牌）
+    2. 为所有容器添加 ephemeral-storage 限制
+
+安全改进:
+    - 防止不必要的服务账户令牌挂载
+    - 限制容器的临时存储使用
+    - 提高集群安全性
+
+使用方法:
+    python scripts/fix_k8s_security.py
+
+最后修改日期: 2024-12-07
 """
 
 import re

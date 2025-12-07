@@ -1,13 +1,23 @@
 /**
- * Enhanced Code Analysis Hook
+ * 增强型代码分析 Hook (Enhanced Code Analysis Hook)
  *
- * Improved code analysis with:
- * - Streaming analysis support
- * - Incremental analysis
- * - Result caching
- * - Priority queue
- * - Batch analysis
- * - Progress tracking
+ * 功能描述:
+ *   提供增强的代码分析功能，支持流式分析和缓存。
+ *
+ * 主要特性:
+ *   - 流式分析支持
+ *   - 增量分析
+ *   - 结果缓存
+ *   - 优先级队列
+ *   - 批量分析
+ *   - 进度跟踪
+ *
+ * 导出类型:
+ *   - AnalysisIssue: 分析问题
+ *   - AnalysisResult: 分析结果
+ *   - AnalysisSeverity: 严重级别
+ *
+ * 最后修改日期: 2024-12-07
  */
 
 import { useState, useCallback, useRef, useEffect } from "react";

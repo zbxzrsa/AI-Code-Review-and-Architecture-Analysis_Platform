@@ -1,7 +1,22 @@
 """
-OPA (Open Policy Agent) client for policy-based access control.
+OPA (Open Policy Agent) 客户端
 
-Integrates with OPA for fine-grained authorization decisions.
+模块功能描述:
+    用于基于策略的访问控制的 OPA 客户端。
+    与 OPA 集成实现细粒度的授权决策。
+
+主要功能:
+    - 策略检查和评估
+    - 版本访问控制
+    - 升级规则验证
+    - 配额和成本控制
+
+主要组件:
+    - OPAClient: OPA 客户端主类
+    - PolicyAction: 策略操作枚举
+    - ResourceType: 资源类型枚举
+
+最后修改日期: 2024-12-07
 """
 import logging
 import json
@@ -16,7 +31,20 @@ logger = logging.getLogger(__name__)
 
 
 class PolicyAction(str, Enum):
-    """Policy actions."""
+    """
+    策略操作枚举
+    
+    定义可执行的策略操作类型。
+    
+    操作类型:
+        - READ: 读取
+        - CREATE: 创建
+        - UPDATE: 更新
+        - DELETE: 删除
+        - PROMOTE: 升级
+        - QUARANTINE: 隔离
+        - EXECUTE: 执行
+    """
     READ = "read"
     CREATE = "create"
     UPDATE = "update"
@@ -27,7 +55,20 @@ class PolicyAction(str, Enum):
 
 
 class ResourceType(str, Enum):
-    """Resource types."""
+    """
+    资源类型枚举
+    
+    定义可管理的资源类型。
+    
+    资源类型:
+        - EXPERIMENT: 实验
+        - VERSION: 版本
+        - PROJECT: 项目
+        - API_KEY: API 密钥
+        - USER: 用户
+        - PROVIDER: 提供者
+        - ANALYSIS: 分析
+    """
     EXPERIMENT = "experiment"
     VERSION = "version"
     PROJECT = "project"
@@ -38,10 +79,27 @@ class ResourceType(str, Enum):
 
 
 class OPAClient:
-    """OPA policy client."""
+    """
+    OPA 策略客户端
+    
+    功能描述:
+        与 OPA 服务器通信，执行策略检查和授权决策。
+    
+    主要方法:
+        - check_permission(): 检查权限
+        - check_version_access(): 检查版本访问权限
+        - can_promote_version(): 检查是否可以升级版本
+        - load_policy(): 加载策略
+    """
 
     def __init__(self, opa_url: str = "http://localhost:8181", timeout: int = 5):
-        """Initialize OPA client."""
+        """
+        初始化 OPA 客户端
+        
+        参数:
+            opa_url: OPA 服务器 URL
+            timeout: 请求超时时间（秒）
+        """
         self.opa_url = opa_url.rstrip("/")
         self.timeout = timeout
         self.session = self._create_session()

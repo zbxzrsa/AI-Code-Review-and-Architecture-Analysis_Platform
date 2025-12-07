@@ -1,11 +1,17 @@
 """
-Dual-Loop Update Mechanism
+双循环更新机制 (Dual-Loop Update Mechanism)
 
-Two interconnected update loops:
-1. Project Update Loop - Updates to the codebase and project
-2. AI Self-Iteration Loop - AI model improvements and evolution
+模块功能描述:
+    实现两个相互关联的更新循环，实现代码和 AI 模型的持续改进。
 
-Target: Version iteration cycle ≤ 24 hours
+主要组件:
+    1. ProjectLoop (项目更新循环): 代码库和项目的更新
+    2. AIIterationLoop (AI 自迭代循环): AI 模型的改进和演化
+
+性能目标:
+    - 版本迭代周期: ≤ 24 小时
+
+最后修改日期: 2024-12-07
 """
 
 import asyncio
@@ -20,7 +26,19 @@ logger = logging.getLogger(__name__)
 
 
 class LoopStatus(Enum):
-    """Loop execution status"""
+    """
+    循环执行状态枚举
+    
+    定义循环的当前运行状态。
+    
+    状态说明:
+        - IDLE: 空闲状态
+        - RUNNING: 运行中
+        - PAUSED: 已暂停
+        - BLOCKED: 被阻塞
+        - COMPLETED: 已完成
+        - FAILED: 失败
+    """
     IDLE = "idle"
     RUNNING = "running"
     PAUSED = "paused"
@@ -30,7 +48,21 @@ class LoopStatus(Enum):
 
 
 class UpdateType(Enum):
-    """Types of updates"""
+    """
+    更新类型枚举
+    
+    定义系统支持的各类更新类型。
+    
+    更新类型:
+        - CODE_CHANGE: 代码修改
+        - DEPENDENCY_UPDATE: 依赖更新
+        - CONFIG_CHANGE: 配置变更
+        - MODEL_UPDATE: 模型更新
+        - LEARNING_INTEGRATION: 学习整合
+        - PERFORMANCE_OPTIMIZATION: 性能优化
+        - BUG_FIX: 错误修复
+        - FEATURE_ADDITION: 功能添加
+    """
     CODE_CHANGE = "code_change"
     DEPENDENCY_UPDATE = "dependency_update"
     CONFIG_CHANGE = "config_change"
@@ -43,7 +75,22 @@ class UpdateType(Enum):
 
 @dataclass
 class UpdateCandidate:
-    """A candidate update to be processed"""
+    """
+    更新候选项数据类
+    
+    表示待处理的单个更新项。
+    
+    属性说明:
+        - update_id: 更新唯一标识符
+        - update_type: 更新类型
+        - title: 更新标题
+        - description: 更新描述
+        - source: 来源（'project', 'ai', 'learning'）
+        - priority: 优先级（1-5，越高越紧急）
+        - estimated_impact: 预估影响（0-1）
+        - risk_level: 风险等级（low, medium, high）
+        - affected_files: 受影响文件列表
+    """
     update_id: str
     update_type: UpdateType
     title: str
@@ -66,7 +113,23 @@ class UpdateCandidate:
 
 @dataclass
 class IterationResult:
-    """Result of an iteration cycle"""
+    """
+    迭代结果数据类
+    
+    记录单次迭代周期的执行结果。
+    
+    属性说明:
+        - iteration_id: 迭代唯一标识符
+        - loop_type: 循环类型（'project' 或 'ai'）
+        - started_at: 开始时间
+        - completed_at: 完成时间
+        - duration_seconds: 持续时间（秒）
+        - updates_processed: 已处理更新数
+        - updates_succeeded: 成功更新数
+        - updates_failed: 失败更新数
+        - version_before: 更新前版本
+        - version_after: 更新后版本
+    """
     iteration_id: str
     loop_type: str  # 'project' or 'ai'
     started_at: str
@@ -89,13 +152,21 @@ class IterationResult:
 
 class ProjectLoop:
     """
-    Project Update Loop
+    项目更新循环类
     
-    Handles:
-    - Code changes and improvements
-    - Dependency updates
-    - Configuration changes
-    - Bug fixes and features
+    功能描述:
+        处理项目级别的更新，包括代码变更、依赖更新、
+        配置修改、错误修复和新功能开发。
+    
+    处理内容:
+        - 代码变更和改进
+        - 依赖更新
+        - 配置变更
+        - 错误修复和新功能
+    
+    属性:
+        - iteration_interval: 迭代间隔
+        - max_updates: 每周期最大更新数
     """
     
     def __init__(
@@ -119,7 +190,12 @@ class ProjectLoop:
         self.on_iteration_complete: Optional[Callable] = None
     
     def add_update(self, update: UpdateCandidate) -> None:
-        """Add an update candidate"""
+        """
+        添加更新候选项
+        
+        参数:
+            update: 更新候选项对象
+        """
         update.created_at = datetime.now().isoformat()
         self.pending_updates.append(update)
         
@@ -129,7 +205,14 @@ class ProjectLoop:
         logger.info(f"Added project update: {update.title} (priority: {update.priority})")
     
     async def run_iteration(self) -> IterationResult:
-        """Run a single iteration cycle"""
+        """
+        运行单次迭代周期
+        
+        处理所有待处理的更新，更新版本号并记录结果。
+        
+        返回值:
+            IterationResult: 迭代结果对象
+        """
         iteration_id = f"proj_{datetime.now().strftime('%Y%m%d%H%M%S')}"
         started_at = datetime.now()
         
@@ -591,34 +674,67 @@ class DualLoopUpdater:
         logger.info("Dual-loop stopped")
     
     async def _run_loops(self) -> None:
-        """Run both loops continuously"""
+        """Run both loops continuously with timeout protection"""
         while self.is_running:
             try:
-                # Run project loop
-                if (
-                    self.project_loop.pending_updates or
-                    not self.project_loop.last_iteration or
-                    datetime.now() - self.project_loop.last_iteration >= self.project_loop.iteration_interval
-                ):
-                    await self.project_loop.run_iteration()
+                # Run project loop with timeout protection
+                if self._should_run_project_loop():
+                    try:
+                        timeout = self.project_loop.iteration_interval.total_seconds()
+                        await asyncio.wait_for(
+                            self.project_loop.run_iteration(),
+                            timeout=timeout
+                        )
+                    except asyncio.TimeoutError:
+                        logger.error(
+                            f"Project loop iteration timed out after {timeout}s"
+                        )
+                        # Continue to AI loop despite timeout
                 
-                # Run AI loop
-                if (
-                    self.ai_loop.pending_improvements or
-                    not self.ai_loop.last_iteration or
-                    datetime.now() - self.ai_loop.last_iteration >= self.ai_loop.iteration_interval
-                ):
-                    await self.ai_loop.run_iteration()
+                # Run AI loop with timeout protection
+                if self._should_run_ai_loop():
+                    try:
+                        timeout = self.ai_loop.iteration_interval.total_seconds()
+                        await asyncio.wait_for(
+                            self.ai_loop.run_iteration(),
+                            timeout=timeout
+                        )
+                    except asyncio.TimeoutError:
+                        logger.error(
+                            f"AI loop iteration timed out after {timeout}s"
+                        )
                 
-                # Process cross-loop updates
-                await self._process_cross_loop_updates()
+                # Process cross-loop updates with timeout
+                try:
+                    await asyncio.wait_for(
+                        self._process_cross_loop_updates(),
+                        timeout=5.0
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning("Cross-loop update processing timed out")
                 
                 # Wait before next check
                 await asyncio.sleep(60)  # Check every minute
                 
             except Exception as e:
-                logger.error(f"Dual-loop error: {e}")
+                logger.error(f"Dual-loop error: {e}", exc_info=True)
                 await asyncio.sleep(5)
+    
+    def _should_run_project_loop(self) -> bool:
+        """Check if project loop should run."""
+        return (
+            self.project_loop.pending_updates or
+            not self.project_loop.last_iteration or
+            datetime.now() - self.project_loop.last_iteration >= self.project_loop.iteration_interval
+        )
+    
+    def _should_run_ai_loop(self) -> bool:
+        """Check if AI loop should run."""
+        return (
+            self.ai_loop.pending_improvements or
+            not self.ai_loop.last_iteration or
+            datetime.now() - self.ai_loop.last_iteration >= self.ai_loop.iteration_interval
+        )
     
     async def _process_cross_loop_updates(self) -> None:
         """Process updates between loops"""

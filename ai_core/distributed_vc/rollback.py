@@ -1,11 +1,21 @@
 """
-Safe Rollback Manager
+安全回滚管理器 (Safe Rollback Manager)
 
-Ensures quick recovery in case of update failure with:
-- Version snapshots
-- Health-based automatic rollback
-- Rollback verification
-- Recovery time < 30 seconds
+模块功能描述:
+    确保在更新失败时能够快速恢复，提供完整的版本回滚能力。
+
+主要功能:
+    - 版本快照管理
+    - 基于健康检查的自动回滚
+    - 回滚验证
+    - 恢复时间 < 30 秒
+
+主要组件:
+    - SafeRollbackManager: 安全回滚管理器
+    - HealthMonitor: 健康监控器
+    - VersionSnapshot: 版本快照
+
+最后修改日期: 2024-12-07
 """
 
 import asyncio
@@ -21,7 +31,20 @@ logger = logging.getLogger(__name__)
 
 
 class RollbackTrigger(Enum):
-    """Triggers for rollback"""
+    """
+    回滚触发器枚举
+    
+    定义触发回滚操作的各种条件。
+    
+    触发条件:
+        - MANUAL: 手动触发
+        - HEALTH_CHECK_FAILED: 健康检查失败
+        - ERROR_RATE_EXCEEDED: 错误率超阈值
+        - LATENCY_EXCEEDED: 延迟超阈值
+        - ACCURACY_DROPPED: 准确率下降
+        - AVAILABILITY_DROPPED: 可用性下降
+        - TEST_FAILED: 测试失败
+    """
     MANUAL = "manual"
     HEALTH_CHECK_FAILED = "health_check_failed"
     ERROR_RATE_EXCEEDED = "error_rate_exceeded"
@@ -32,7 +55,18 @@ class RollbackTrigger(Enum):
 
 
 class RollbackStatus(Enum):
-    """Rollback operation status"""
+    """
+    回滚操作状态枚举
+    
+    定义回滚操作的当前状态。
+    
+    状态说明:
+        - PENDING: 等待执行
+        - IN_PROGRESS: 执行中
+        - COMPLETED: 已完成
+        - FAILED: 失败
+        - VERIFIED: 已验证
+    """
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -42,7 +76,21 @@ class RollbackStatus(Enum):
 
 @dataclass
 class VersionSnapshot:
-    """Snapshot of a version state"""
+    """
+    版本快照数据类
+    
+    存储版本状态的完整快照，用于回滚恢复。
+    
+    属性说明:
+        - snapshot_id: 快照唯一标识符
+        - version: 版本号
+        - timestamp: 创建时间
+        - model_state: 模型状态
+        - config_state: 配置状态
+        - metrics_state: 指标状态
+        - checksum: 校验和
+        - is_healthy: 是否健康
+    """
     snapshot_id: str
     version: str
     timestamp: str
@@ -59,7 +107,14 @@ class VersionSnapshot:
     tags: List[str] = field(default_factory=list)
     
     def verify_integrity(self) -> bool:
-        """Verify snapshot integrity"""
+        """
+        验证快照完整性
+        
+        通过比较计算的校验和与存储的校验和来验证数据完整性。
+        
+        返回值:
+            bool: True 表示完整性验证通过
+        """
         computed = hashlib.sha256(
             str(self.model_state).encode() +
             str(self.config_state).encode()
@@ -69,7 +124,20 @@ class VersionSnapshot:
 
 @dataclass
 class RollbackRecord:
-    """Record of a rollback operation"""
+    """
+    回滚记录数据类
+    
+    记录单次回滚操作的详细信息。
+    
+    属性说明:
+        - rollback_id: 回滚唯一标识符
+        - trigger: 触发原因
+        - from_version: 原版本
+        - to_version: 目标版本
+        - status: 回滚状态
+        - duration_seconds: 持续时间
+        - recovery_verified: 是否已验证恢复
+    """
     rollback_id: str
     trigger: RollbackTrigger
     from_version: str
@@ -88,7 +156,16 @@ class RollbackRecord:
 
 class HealthMonitor:
     """
-    Health monitoring for rollback decisions
+    健康监控器 - 用于回滚决策
+    
+    功能描述:
+        监控系统健康状态，当指标超过阈值时触发自动回滚。
+    
+    监控指标:
+        - 错误率
+        - 响应延迟
+        - 准确率
+        - 可用性
     """
     
     def __init__(

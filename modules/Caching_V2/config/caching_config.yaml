@@ -1,0 +1,46 @@
+# Caching_V2 Configuration
+version: "2.0.0"
+status: production
+
+# Cache Levels
+cache_levels:
+  l1_session:
+    ttl_seconds: 300
+    max_size: 500
+
+  l2_project:
+    ttl_seconds: 3600
+    max_size: 2000
+
+  l3_global:
+    ttl_seconds: 86400
+    max_size: 10000
+
+# Semantic Cache
+semantic_cache:
+  ttl_seconds: 3600
+  max_entries: 5000
+  normalization:
+    remove_comments: true
+    normalize_whitespace: true
+
+# Cache Warming
+warming:
+  enabled: true
+  interval_seconds: 30
+  max_concurrent: 5
+  refresh_before_expiry_seconds: 60
+
+# Redis Configuration
+redis:
+  host: localhost
+  port: 6379
+  db: 0
+  namespace: coderev
+  connection_pool_size: 10
+
+# SLO Targets
+slo:
+  hit_rate_target: 0.85
+  latency_p99_ms: 10
+  invalidation_propagation_ms: 1000

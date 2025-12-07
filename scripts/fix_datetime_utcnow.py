@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
 """
-Script to fix datetime.utcnow() → datetime.now(timezone.utc) across the codebase.
+修复 datetime.utcnow() 废弃警告脚本
 
-This addresses the deprecation warning in Python 3.12+ where datetime.utcnow() 
-returns naive datetimes which can cause issues with timezone-aware comparisons.
+脚本功能描述:
+    在整个代码库中将 datetime.utcnow() 替换为 datetime.now(timezone.utc)。
+    解决 Python 3.12+ 中的废弃警告，因为 datetime.utcnow() 返回的是
+    无时区信息的日期时间，可能导致时区感知比较问题。
 
-Usage:
-    python scripts/fix_datetime_utcnow.py --dry-run  # Preview changes
-    python scripts/fix_datetime_utcnow.py            # Apply changes
+主要功能:
+    - 扫描指定目录中的 Python 文件
+    - 检测并替换 datetime.utcnow() 调用
+    - 自动添加必要的 timezone 导入
+    - 支持预览模式（dry-run）
+
+使用方法:
+    python scripts/fix_datetime_utcnow.py --dry-run  # 预览更改
+    python scripts/fix_datetime_utcnow.py            # 应用更改
+
+最后修改日期: 2024-12-07
 """
 
 import os

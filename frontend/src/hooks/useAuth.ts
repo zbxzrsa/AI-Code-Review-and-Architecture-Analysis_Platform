@@ -1,3 +1,26 @@
+/**
+ * 认证 Hook (useAuth Hook)
+ *
+ * 功能描述:
+ *   提供用户认证相关的状态和方法。
+ *
+ * 主要特性:
+ *   - 登录/登出功能
+ *   - JWT 令牌自动刷新
+ *   - 用户状态管理
+ *   - OAuth 第三方登录支持
+ *   - 错误处理
+ *
+ * 返回值:
+ *   - user: 当前用户信息
+ *   - isLoading: 加载状态
+ *   - error: 错误信息
+ *   - login(): 登录方法
+ *   - logout(): 登出方法
+ *
+ * 最后修改日期: 2024-12-07
+ */
+
 import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AxiosError } from "axios";

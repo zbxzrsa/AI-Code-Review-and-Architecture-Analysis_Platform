@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """
-API Test Script for AI Code Review Platform
+AI 代码审查平台 API 测试脚本 (API Test Script for AI Code Review Platform)
 
-Quick smoke tests for all platform APIs.
+模块功能描述:
+    所有平台 API 的快速烟雾测试。
 
-Usage:
+测试内容:
+    - 健康检查端点
+    - 管理 API 端点
+    - 代码分析 API
+
+使用方法:
     python scripts/api_test.py [--base-url URL] [--verbose]
+
+最后修改日期: 2024-12-07
 """
 
 import argparse

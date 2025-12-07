@@ -1,12 +1,20 @@
 """
-Lifecycle Controller Service
+生命周期控制器服务 (Lifecycle Controller Service)
 
-Manages the promotion/downgrade lifecycle across V1, V2, and V3:
-- V1 → V2 promotion (after shadow evaluation passes)
-- V1 → V3 downgrade (on failure)
-- V3 → V1 re-evaluation cycle
-- Integrates with OPA for policy-as-code decisions
-- Triggers Argo Rollouts for gray-scale promotion
+模块功能描述:
+    管理 V1、V2 和 V3 之间的升级/降级生命周期。
+
+主要功能:
+    - V1 → V2 升级（影子评估通过后）
+    - V1 → V3 降级（失败时）
+    - V3 → V1 重新评估循环
+    - 与 OPA 集成实现策略即代码决策
+    - 触发 Argo Rollouts 进行灰度升级
+
+升级流程:
+    V1 (Experiment) → Shadow → 1% → 5% → 25% → 50% → 100% (Stable)
+
+最后修改日期: 2024-12-07
 """
 
 import asyncio
@@ -22,7 +30,19 @@ logger = logging.getLogger(__name__)
 
 
 class VersionState(str, Enum):
-    """Version states in the lifecycle"""
+    """
+    版本生命周期状态枚举
+    
+    定义版本在生命周期中的各个状态。
+    
+    状态说明:
+        - EXPERIMENT: V1 活跃实验
+        - SHADOW: V1 影子流量评估
+        - GRAY_*: V2 灰度发布阶段
+        - STABLE: V2 100% 生产
+        - QUARANTINE: V3 隔离区
+        - RE_EVALUATION: V3 → V1 恢复尝试
+    """
     EXPERIMENT = "experiment"      # V1: Active experimentation
     SHADOW = "shadow"              # V1: Shadow traffic evaluation
     GRAY_1 = "gray_1_percent"      # V2: 1% traffic
@@ -35,7 +55,17 @@ class VersionState(str, Enum):
 
 
 class EvaluationResult(str, Enum):
-    """Results from evaluation pipeline"""
+    """
+    评估结果枚举
+    
+    评估管道的结果类型。
+    
+    结果类型:
+        - PASSED: 通过
+        - FAILED: 失败
+        - INCONCLUSIVE: 不确定
+        - ERROR: 错误
+    """
     PASSED = "passed"
     FAILED = "failed"
     INCONCLUSIVE = "inconclusive"
@@ -44,7 +74,19 @@ class EvaluationResult(str, Enum):
 
 @dataclass
 class PromotionThresholds:
-    """Configurable thresholds for promotion decisions"""
+    """
+    升级阈值配置数据类
+    
+    功能描述:
+        定义升级决策的可配置阈值。
+    
+    阈值说明:
+        - p95_latency_ms: P95 延迟阈值
+        - error_rate: 错误率阈值
+        - accuracy_delta: 准确率提升要求
+        - security_pass_rate: 安全检查通过率
+        - cost_increase_max: 最大成本增加
+    """
     p95_latency_ms: float = 3000.0
     error_rate: float = 0.02
     accuracy_delta: float = 0.02  # Must be >= 2% better

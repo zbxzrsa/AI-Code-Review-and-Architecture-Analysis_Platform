@@ -505,12 +505,13 @@ class AsyncTaskQueue:
                 await self._process_task(task)
                 
             except asyncio.CancelledError:
-                break
+                logger.debug(f"Worker {worker_id} cancelled")
+                raise
             except Exception as e:
                 logger.error(f"Worker {worker_id} error: {e}")
                 await asyncio.sleep(1.0)
         
-        logger.debug(f"Worker {worker_id} stopped")
+        logger.debug(f"Worker stopped")
     
     async def _batch_processor_loop(self) -> None:
         """Process tasks in batches for handlers that support it."""
@@ -536,7 +537,8 @@ class AsyncTaskQueue:
                 await asyncio.sleep(0.5)
                 
             except asyncio.CancelledError:
-                break
+                logger.debug("Batch processor cancelled")
+                raise
             except Exception as e:
                 logger.error(f"Batch processor error: {e}")
                 await asyncio.sleep(1.0)

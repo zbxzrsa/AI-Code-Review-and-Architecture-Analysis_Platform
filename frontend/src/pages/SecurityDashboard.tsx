@@ -1,13 +1,17 @@
 /**
- * Security Dashboard Page
- * 安全仪表板页面
+ * 安全仪表板页面 (Security Dashboard Page)
  * 
- * Features:
- * - Security vulnerability overview
- * - OWASP Top 10 tracking
- * - CVE monitoring
- * - Compliance status
- * - Security trends
+ * 功能描述:
+ *   提供安全漏洞监控和合规状态的综合视图。
+ * 
+ * 主要特性:
+ *   - 安全漏洞概览
+ *   - OWASP Top 10 跟踪
+ *   - CVE 监控
+ *   - 合规状态
+ *   - 安全趋势分析
+ * 
+ * 最后修改日期: 2024-12-07
  */
 
 import React, { useState, useEffect, useCallback } from 'react';

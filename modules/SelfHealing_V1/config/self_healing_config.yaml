@@ -1,0 +1,22 @@
+# SelfHealing_V1 Configuration
+version: "1.0.0"
+status: experimental
+
+# Health Monitoring
+health_monitor:
+  check_interval_seconds: 30
+  failure_threshold: 3
+
+# Recovery Settings
+recovery:
+  max_retries: 3
+  cooldown_seconds: 60
+
+  actions:
+    - restart
+    - scale_up
+    - failover
+
+# Incident Detection
+incidents:
+  auto_resolve_timeout_seconds: 300

@@ -1,12 +1,18 @@
 ﻿/**
- * Provider Management Page
+ * AI 提供者管理页面 (Provider Management Page)
  * 
- * Admin page for managing AI providers with:
- * - Provider list with status and metrics
- * - Provider configuration
- * - Model management
- * - Health monitoring
- * - Performance charts
+ * 功能描述:
+ *   管理 AI 服务提供者的管理员界面。
+ * 
+ * 主要特性:
+ *   - 提供者列表（含状态和指标）
+ *   - 提供者配置
+ *   - 模型管理
+ *   - 健康监控
+ *   - 性能图表
+ *   - API 密钥管理
+ * 
+ * 最后修改日期: 2024-12-07
  */
 
 import React, { useState, useCallback, useMemo } from 'react';

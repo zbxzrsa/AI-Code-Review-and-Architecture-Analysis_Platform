@@ -143,6 +143,7 @@ class SpiralEvolutionManager:
         version_manager=None,
         event_bus=None,
         config: Optional[SpiralCycleConfig] = None,
+        elimination_config: Optional["TechEliminationConfig"] = None,
     ):
         self.version_manager = version_manager
         self.event_bus = event_bus
@@ -152,6 +153,10 @@ class SpiralEvolutionManager:
         self.dual_ai = DualAICoordinator(event_bus, version_manager)
         self.feedback_system = CrossVersionFeedbackSystem(event_bus=event_bus)
         self.comparison_engine = V3ComparisonEngine(event_bus=event_bus)
+        
+        # Technology elimination manager (initialized later to avoid circular reference)
+        self._elimination_config = elimination_config
+        self._elimination_manager: Optional["TechEliminationManager"] = None
         
         # Cycle state
         self._current_cycle: Optional[EvolutionCycleState] = None
@@ -167,6 +172,17 @@ class SpiralEvolutionManager:
         self._pending_reevaluations: List[str] = []
         
         self._lock = asyncio.Lock()
+    
+    @property
+    def elimination_manager(self) -> "TechEliminationManager":
+        """Get or create the elimination manager."""
+        if self._elimination_manager is None:
+            self._elimination_manager = TechEliminationManager(
+                version_manager=self.version_manager,
+                event_bus=self.event_bus,
+                config=self._elimination_config,
+            )
+        return self._elimination_manager
     
     # =========================================================================
     # Lifecycle
@@ -653,3 +669,460 @@ class SpiralEvolutionManager:
             }
             for c in self._cycle_history[-limit:]
         ]
+    
+    def get_elimination_status(self) -> Dict[str, Any]:
+        """Get technology elimination status."""
+        return self.elimination_manager.get_elimination_status()
+
+
+# =============================================================================
+# Technology Elimination System
+# =============================================================================
+
+@dataclass
+class TechEliminationConfig:
+    """
+    技术淘汰配置 / Technology Elimination Configuration
+    
+    Controls when and how technologies are eliminated from the system.
+    """
+    # Performance thresholds
+    min_accuracy_threshold: float = 0.75
+    max_error_rate_threshold: float = 0.15
+    max_latency_p95_ms: float = 5000
+    
+    # Failure tracking
+    consecutive_failures_to_eliminate: int = 3
+    evaluation_window_hours: int = 24
+    min_evaluations_required: int = 5
+    
+    # Automation
+    auto_eliminate: bool = True
+    require_approval: bool = False
+    
+    # Archival
+    archive_before_delete: bool = True
+    archive_retention_days: int = 90
+    
+    # Notifications
+    notify_on_at_risk: bool = True
+    notify_on_elimination: bool = True
+
+
+@dataclass
+class EliminationRecord:
+    """Record of an eliminated technology."""
+    tech_id: str
+    tech_name: str
+    eliminated_at: datetime
+    reasons: List[str]
+    final_metrics: Dict[str, float]
+    evaluation_history: List[Dict[str, Any]]
+    archived_data: Optional[Dict[str, Any]] = None
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "tech_id": self.tech_id,
+            "tech_name": self.tech_name,
+            "eliminated_at": self.eliminated_at.isoformat(),
+            "reasons": self.reasons,
+            "final_metrics": self.final_metrics,
+            "evaluation_count": len(self.evaluation_history),
+        }
+
+
+class TechEliminationManager:
+    """
+    技术淘汰管理器 / Technology Elimination Manager
+    
+    Automatically evaluates and eliminates underperforming technologies.
+    
+    Elimination Criteria:
+    - Accuracy < 75%
+    - Error rate > 15%
+    - 3 consecutive evaluation failures
+    
+    Features:
+    - Continuous performance monitoring
+    - Configurable thresholds
+    - Automatic elimination with optional approval
+    - Archive before deletion
+    - At-risk technology tracking
+    """
+    
+    def __init__(
+        self,
+        version_manager=None,
+        event_bus=None,
+        config: Optional[TechEliminationConfig] = None,
+    ):
+        """
+        Initialize the elimination manager.
+        
+        Args:
+            version_manager: Version manager instance
+            event_bus: Event bus for notifications
+            config: Elimination configuration
+        """
+        self.version_manager = version_manager
+        self.event_bus = event_bus
+        self.config = config or TechEliminationConfig()
+        
+        # Failure tracking per technology
+        self.failure_counts: Dict[str, int] = {}
+        
+        # Evaluation history per technology
+        self.evaluation_history: Dict[str, List[Dict[str, Any]]] = {}
+        
+        # Eliminated technologies archive
+        self.eliminated_techs: List[EliminationRecord] = []
+        
+        # Pending eliminations (awaiting approval)
+        self.pending_eliminations: Dict[str, Dict[str, Any]] = {}
+        
+        # Statistics
+        self._total_evaluations = 0
+        self._total_eliminations = 0
+    
+    async def evaluate_technology(self, tech_id: str) -> Dict[str, Any]:
+        """
+        评估技术 / Evaluate a technology for potential elimination.
+        
+        Args:
+            tech_id: Technology identifier
+            
+        Returns:
+            Evaluation result with recommendation
+        """
+        self._total_evaluations += 1
+        
+        # Get technology data
+        tech = await self._get_technology(tech_id)
+        if not tech:
+            return {
+                "tech_id": tech_id,
+                "found": False,
+                "should_eliminate": False,
+            }
+        
+        tech_name = tech.get("name", tech_id)
+        metrics = tech.get("metrics", {})
+        
+        # Extract metrics
+        accuracy = metrics.get("accuracy", 1.0)
+        error_rate = metrics.get("error_rate", 0.0)
+        latency_p95 = metrics.get("latency_p95_ms", 0.0)
+        
+        # Evaluate against thresholds
+        should_eliminate = False
+        reasons = []
+        
+        if accuracy < self.config.min_accuracy_threshold:
+            reasons.append(
+                f"Accuracy {accuracy:.2%} < {self.config.min_accuracy_threshold:.2%}"
+            )
+            should_eliminate = True
+        
+        if error_rate > self.config.max_error_rate_threshold:
+            reasons.append(
+                f"Error rate {error_rate:.2%} > {self.config.max_error_rate_threshold:.2%}"
+            )
+            should_eliminate = True
+        
+        if latency_p95 > self.config.max_latency_p95_ms:
+            reasons.append(
+                f"Latency P95 {latency_p95:.0f}ms > {self.config.max_latency_p95_ms:.0f}ms"
+            )
+            should_eliminate = True
+        
+        # Record evaluation
+        evaluation = {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "accuracy": accuracy,
+            "error_rate": error_rate,
+            "latency_p95_ms": latency_p95,
+            "should_eliminate": should_eliminate,
+            "reasons": reasons,
+        }
+        
+        if tech_id not in self.evaluation_history:
+            self.evaluation_history[tech_id] = []
+        
+        self.evaluation_history[tech_id].append(evaluation)
+        
+        # Trim history
+        max_history = 100
+        if len(self.evaluation_history[tech_id]) > max_history:
+            self.evaluation_history[tech_id] = self.evaluation_history[tech_id][-max_history:]
+        
+        # Update failure count
+        if should_eliminate:
+            self.failure_counts[tech_id] = self.failure_counts.get(tech_id, 0) + 1
+            
+            # Notify if at risk
+            if self.config.notify_on_at_risk:
+                await self._notify_at_risk(tech_id, tech_name, self.failure_counts[tech_id])
+        else:
+            # Reset on success
+            self.failure_counts[tech_id] = 0
+        
+        # Check if elimination threshold reached
+        elimination_triggered = False
+        consecutive_failures = self.failure_counts.get(tech_id, 0)
+        
+        if consecutive_failures >= self.config.consecutive_failures_to_eliminate:
+            # Check minimum evaluations
+            if len(self.evaluation_history.get(tech_id, [])) >= self.config.min_evaluations_required:
+                if self.config.auto_eliminate and not self.config.require_approval:
+                    await self.eliminate_technology(tech_id, reasons)
+                    elimination_triggered = True
+                else:
+                    # Queue for approval
+                    self._queue_for_approval(tech_id, tech_name, reasons, metrics)
+        
+        return {
+            "tech_id": tech_id,
+            "tech_name": tech_name,
+            "found": True,
+            "should_eliminate": should_eliminate,
+            "reasons": reasons,
+            "consecutive_failures": consecutive_failures,
+            "remaining_chances": max(
+                0,
+                self.config.consecutive_failures_to_eliminate - consecutive_failures
+            ),
+            "elimination_triggered": elimination_triggered,
+            "metrics": {
+                "accuracy": accuracy,
+                "error_rate": error_rate,
+                "latency_p95_ms": latency_p95,
+            },
+        }
+    
+    async def evaluate_for_elimination(self, tech_id: str) -> bool:
+        """
+        Convenience method to check if technology should be eliminated.
+        
+        Returns:
+            True if elimination criteria met
+        """
+        result = await self.evaluate_technology(tech_id)
+        return result.get("elimination_triggered", False)
+    
+    async def eliminate_technology(
+        self,
+        tech_id: str,
+        reasons: List[str],
+        force: bool = False,
+    ) -> bool:
+        """
+        淘汰技术 / Eliminate a technology.
+        
+        Args:
+            tech_id: Technology to eliminate
+            reasons: Reasons for elimination
+            force: Force elimination without checks
+            
+        Returns:
+            True if elimination successful
+        """
+        tech = await self._get_technology(tech_id)
+        if not tech and not force:
+            logger.warning(f"Technology not found: {tech_id}")
+            return False
+        
+        tech_name = tech.get("name", tech_id) if tech else tech_id
+        
+        # Create elimination record
+        record = EliminationRecord(
+            tech_id=tech_id,
+            tech_name=tech_name,
+            eliminated_at=datetime.now(timezone.utc),
+            reasons=reasons,
+            final_metrics=tech.get("metrics", {}) if tech else {},
+            evaluation_history=self.evaluation_history.get(tech_id, []),
+        )
+        
+        # Archive before deletion
+        if self.config.archive_before_delete and tech:
+            record.archived_data = tech
+        
+        self.eliminated_techs.append(record)
+        
+        # Remove from version manager
+        if self.version_manager:
+            try:
+                await self._remove_technology(tech_id)
+            except Exception as e:
+                logger.error(f"Failed to remove technology {tech_id}: {e}")
+        
+        # Clean up tracking data
+        self.failure_counts.pop(tech_id, None)
+        self.evaluation_history.pop(tech_id, None)
+        self.pending_eliminations.pop(tech_id, None)
+        
+        # Update statistics
+        self._total_eliminations += 1
+        
+        # Notify
+        if self.config.notify_on_elimination:
+            await self._notify_elimination(tech_id, tech_name, reasons)
+        
+        logger.warning(f"Technology eliminated: {tech_id} ({tech_name})")
+        logger.warning(f"  Reasons: {', '.join(reasons)}")
+        
+        return True
+    
+    def _queue_for_approval(
+        self,
+        tech_id: str,
+        tech_name: str,
+        reasons: List[str],
+        metrics: Dict[str, float],
+    ):
+        """Queue technology for elimination approval."""
+        self.pending_eliminations[tech_id] = {
+            "tech_id": tech_id,
+            "tech_name": tech_name,
+            "reasons": reasons,
+            "metrics": metrics,
+            "queued_at": datetime.now(timezone.utc).isoformat(),
+            "evaluation_count": len(self.evaluation_history.get(tech_id, [])),
+        }
+        
+        logger.info(f"Technology queued for elimination approval: {tech_id}")
+    
+    async def approve_elimination(self, tech_id: str, approver: str) -> bool:
+        """
+        Approve a pending elimination.
+        
+        Args:
+            tech_id: Technology to approve elimination for
+            approver: User approving the elimination
+            
+        Returns:
+            True if approved and eliminated
+        """
+        pending = self.pending_eliminations.get(tech_id)
+        if not pending:
+            return False
+        
+        reasons = pending.get("reasons", [])
+        reasons.append(f"Approved by {approver}")
+        
+        return await self.eliminate_technology(tech_id, reasons)
+    
+    def reject_elimination(self, tech_id: str, rejector: str) -> bool:
+        """
+        Reject a pending elimination.
+        
+        Args:
+            tech_id: Technology to reject elimination for
+            rejector: User rejecting the elimination
+            
+        Returns:
+            True if rejection processed
+        """
+        if tech_id not in self.pending_eliminations:
+            return False
+        
+        del self.pending_eliminations[tech_id]
+        
+        # Reset failure count to give another chance
+        self.failure_counts[tech_id] = 0
+        
+        logger.info(f"Elimination rejected by {rejector}: {tech_id}")
+        return True
+    
+    def get_at_risk_technologies(self) -> List[Dict[str, Any]]:
+        """
+        获取有淘汰风险的技术 / Get technologies at risk of elimination.
+        
+        Returns:
+            List of at-risk technologies with details
+        """
+        at_risk = []
+        
+        for tech_id, failures in self.failure_counts.items():
+            if failures > 0:
+                remaining = self.config.consecutive_failures_to_eliminate - failures
+                history = self.evaluation_history.get(tech_id, [])
+                last_eval = history[-1] if history else {}
+                
+                at_risk.append({
+                    "tech_id": tech_id,
+                    "consecutive_failures": failures,
+                    "remaining_chances": remaining,
+                    "risk_level": "high" if remaining <= 1 else "medium" if remaining <= 2 else "low",
+                    "last_evaluation": last_eval,
+                    "evaluation_count": len(history),
+                })
+        
+        # Sort by remaining chances (most at risk first)
+        return sorted(at_risk, key=lambda x: x["remaining_chances"])
+    
+    def get_eliminated_technologies(self) -> List[Dict[str, Any]]:
+        """获取已淘汰技术列表 / Get list of eliminated technologies."""
+        return [record.to_dict() for record in self.eliminated_techs]
+    
+    def get_pending_eliminations(self) -> List[Dict[str, Any]]:
+        """Get pending elimination requests."""
+        return list(self.pending_eliminations.values())
+    
+    def get_elimination_status(self) -> Dict[str, Any]:
+        """Get overall elimination system status."""
+        return {
+            "config": {
+                "min_accuracy": self.config.min_accuracy_threshold,
+                "max_error_rate": self.config.max_error_rate_threshold,
+                "consecutive_failures_required": self.config.consecutive_failures_to_eliminate,
+                "auto_eliminate": self.config.auto_eliminate,
+            },
+            "statistics": {
+                "total_evaluations": self._total_evaluations,
+                "total_eliminations": self._total_eliminations,
+                "technologies_tracked": len(self.failure_counts),
+            },
+            "at_risk_count": len(self.get_at_risk_technologies()),
+            "pending_approvals": len(self.pending_eliminations),
+            "eliminated_count": len(self.eliminated_techs),
+        }
+    
+    async def _get_technology(self, tech_id: str) -> Optional[Dict[str, Any]]:
+        """Get technology from version manager."""
+        if self.version_manager:
+            if hasattr(self.version_manager, "get_technology"):
+                return await self.version_manager.get_technology(tech_id)
+        return None
+    
+    async def _remove_technology(self, tech_id: str):
+        """Remove technology from version manager."""
+        if self.version_manager:
+            if hasattr(self.version_manager, "remove_technology"):
+                await self.version_manager.remove_technology(tech_id)
+    
+    async def _notify_at_risk(self, tech_id: str, tech_name: str, failures: int):
+        """Notify about at-risk technology."""
+        if self.event_bus:
+            await self.event_bus.emit(
+                "tech.at_risk",
+                {
+                    "tech_id": tech_id,
+                    "tech_name": tech_name,
+                    "consecutive_failures": failures,
+                    "remaining_chances": self.config.consecutive_failures_to_eliminate - failures,
+                }
+            )
+    
+    async def _notify_elimination(self, tech_id: str, tech_name: str, reasons: List[str]):
+        """Notify about technology elimination."""
+        if self.event_bus:
+            await self.event_bus.emit(
+                "tech.eliminated",
+                {
+                    "tech_id": tech_id,
+                    "tech_name": tech_name,
+                    "reasons": reasons,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )

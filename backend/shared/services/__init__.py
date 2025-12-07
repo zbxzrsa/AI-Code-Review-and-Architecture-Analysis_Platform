@@ -1,3 +1,14 @@
 """
-Shared services for code analysis and AI operations.
+共享服务模块 (Shared Services Module)
+
+模块功能描述:
+    提供代码分析和 AI 操作的共享服务。
+
+主要功能:
+    - 代码分析服务
+    - AI 请求处理
+    - 漏洞检测服务
+    - 报告生成服务
+
+最后修改日期: 2024-12-07
 """

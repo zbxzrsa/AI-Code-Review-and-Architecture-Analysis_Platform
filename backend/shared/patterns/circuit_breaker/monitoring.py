@@ -151,7 +151,7 @@ class CircuitBreakerMonitor:
             try:
                 await self._collection_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Collection task cancelled")
         logger.info("Circuit breaker monitor stopped")
     
     async def _collection_loop(self):
@@ -163,7 +163,8 @@ class CircuitBreakerMonitor:
                 await self._broadcast_update()
                 await asyncio.sleep(self.collection_interval)
             except asyncio.CancelledError:
-                break
+                logger.debug("Collection loop cancelled")
+                raise
             except Exception as e:
                 logger.error(f"Metrics collection error: {e}")
                 await asyncio.sleep(1)

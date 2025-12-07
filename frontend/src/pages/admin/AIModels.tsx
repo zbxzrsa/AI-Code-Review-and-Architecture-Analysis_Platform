@@ -1,14 +1,19 @@
 /**
- * AI Models Management Page (Admin)
+ * AI 模型管理页面 (AI Models Management Page)
  * 
- * Features:
- * - View all AI models and versions
- * - Manage model lifecycle (V1→V2→V3)
- * - Import external models via API
- * - Admin AI Chat interface for version control
- * - Promote/rollback versions
- * - Monitor model performance
- * - Configure model settings
+ * 功能描述:
+ *   管理 AI 模型和版本的管理员界面。
+ * 
+ * 主要特性:
+ *   - 查看所有 AI 模型和版本
+ *   - 管理模型生命周期（V1→V2→V3）
+ *   - 通过 API 导入外部模型
+ *   - 管理员 AI 聊天界面（版本控制）
+ *   - 升级/回滚版本
+ *   - 监控模型性能
+ *   - 配置模型设置
+ * 
+ * 最后修改日期: 2024-12-07
  */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';

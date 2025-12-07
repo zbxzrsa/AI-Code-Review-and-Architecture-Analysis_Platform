@@ -1,14 +1,52 @@
-# Contributing Guide
+# Contributing to AI Code Review Platform | 贡献指南
 
-## Code of Conduct
+[English](#english) | [中文](#中文)
 
-Be respectful, inclusive, and professional in all interactions.
+---
 
-## Development Setup
+## English
 
-### Prerequisites
+Thank you for your interest in contributing to the AI Code Review Platform! We welcome contributions from everyone. This guide will help you get started.
 
-- Python 3.10+
+### Table of Contents
+
+1. [Code of Conduct](#code-of-conduct)
+2. [Getting Started](#getting-started)
+3. [Development Setup](#development-setup)
+4. [Making Changes](#making-changes)
+5. [Submitting Changes](#submitting-changes)
+6. [Code Style Guidelines](#code-style-guidelines)
+7. [Testing Requirements](#testing-requirements)
+8. [Documentation](#documentation)
+9. [Community](#community)
+
+### Code of Conduct
+
+This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report unacceptable behavior to team@ai-code-review.dev.
+
+### Getting Started
+
+#### Ways to Contribute
+
+- **Report bugs** - Found a bug? Open an issue!
+- **Suggest features** - Have an idea? We'd love to hear it!
+- **Improve documentation** - Help others understand the project
+- **Fix issues** - Pick an issue and submit a PR
+- **Translate** - Help make the project accessible to more people
+- **Star the project** - Show your support!
+
+#### Before You Start
+
+1. **Search existing issues** - Your issue might already be reported
+2. **Check the roadmap** - See if your feature is already planned
+3. **Discuss major changes** - Open an issue first for significant changes
+
+### Development Setup
+
+#### Prerequisites
+
+- Python 3.10 or higher
+- Node.js 18 or higher (for frontend)
 - Docker and Docker Compose
 - Git
 - PostgreSQL 13+ (or use Docker)

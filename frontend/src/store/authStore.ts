@@ -1,15 +1,25 @@
+/**
+ * 认证状态存储 (Auth Store)
+ *
+ * 功能描述:
+ *   使用 Zustand 管理用户认证状态。
+ *
+ * 安全说明:
+ *   - 令牌不存储在 localStorage（易受 XSS 攻击）
+ *   - 认证通过服务器设置的 httpOnly cookies 处理
+ *   - 仅持久化非敏感用户数据以改善用户体验
+ *   - CSRF 令牌通过安全服务存储在内存中
+ *
+ * 主要类型:
+ *   - User: 用户资料
+ *   - Session: 会话信息
+ *   - OAuthConnection: OAuth 连接状态
+ *
+ * 最后修改日期: 2024-12-07
+ */
+
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-
-/**
- * Auth Store
- *
- * SECURITY NOTE:
- * - Tokens are NOT stored in localStorage (vulnerable to XSS)
- * - Authentication is handled via httpOnly cookies set by the server
- * - Only non-sensitive user data is persisted for UX
- * - CSRF tokens are stored in memory via security service
- */
 
 /** User role types */
 export type UserRole = "admin" | "user" | "viewer" | "guest";

@@ -18,11 +18,30 @@ This guide covers the testing infrastructure for the AI Code Review Platform, fo
 /________________\ Component and function tests
 ```
 
-| Level       | Coverage Target | Framework    |
-| ----------- | --------------- | ------------ |
-| Unit        | 50%+            | Jest, pytest |
-| Integration | 20%             | pytest-httpx |
-| E2E         | 10%             | Playwright   |
+| Level       | Coverage Target | Framework             |
+| ----------- | --------------- | --------------------- |
+| Unit        | 70%+            | Jest, pytest          |
+| Integration | 20%             | pytest-httpx, asyncpg |
+| E2E         | 10%             | Playwright            |
+| **Total**   | **95%**         | All combined          |
+
+> ⚠️ **Updated 2025-12-07**: Coverage target increased to **95%** per testing improvement plan.
+
+---
+
+## Test Categories & Markers
+
+| Marker                     | Description              | Example                |
+| -------------------------- | ------------------------ | ---------------------- |
+| `@pytest.mark.unit`        | Fast, no external deps   | Pure function tests    |
+| `@pytest.mark.integration` | Requires services        | API, database tests    |
+| `@pytest.mark.e2e`         | Full system tests        | User workflow tests    |
+| `@pytest.mark.smoke`       | Quick sanity checks      | Health checks          |
+| `@pytest.mark.critical`    | Must pass for deploy     | Auth, payment tests    |
+| `@pytest.mark.mutation`    | Mutation testing targets | Security functions     |
+| `@pytest.mark.slow`        | Tests > 30 seconds       | Load tests             |
+| `@pytest.mark.security`    | Security-related         | Auth, encryption       |
+| `@pytest.mark.regression`  | Bug regression tests     | Fixed bug verification |
 
 ---
 
@@ -576,4 +595,152 @@ pytest -v --tb=long --capture=no
 
 # Run single test with output
 pytest tests/unit/test_auth.py::test_login -v -s
+```
+
+---
+
+## Mutation Testing
+
+Mutation testing helps find gaps in test coverage by introducing small changes (mutations) to code and verifying tests catch them.
+
+### Setup
+
+```bash
+# Install mutmut
+pip install mutmut
+
+# Or with pytest integration
+pip install pytest-mutmut
+```
+
+### Running Mutation Tests
+
+```bash
+# Run mutation testing on specific module
+mutmut run --paths-to-mutate=backend/shared/security
+
+# View results
+mutmut results
+
+# Generate HTML report
+mutmut html
+
+# Run with pytest integration
+pytest --run-mutation --mutation-target=backend/shared/auth
+```
+
+### Configuration
+
+Create `setup.cfg` or use `tests/mutation/mutation_config.py`:
+
+```ini
+[mutmut]
+paths_to_mutate = backend/shared
+backup = false
+runner = python -m pytest -x --tb=no -q
+tests_dir = tests/
+```
+
+### Critical Module Requirements
+
+| Module            | Min Mutation Score |
+| ----------------- | ------------------ |
+| `secure_auth.py`  | 90%                |
+| `rate_limiter.py` | 85%                |
+| `password.py`     | 95%                |
+| `validators.py`   | 90%                |
+| `rollback.py`     | 85%                |
+
+### Mutation Operators
+
+| Operator | Description                                        |
+| -------- | -------------------------------------------------- |
+| `AOR`    | Arithmetic Operator Replacement (`+` → `-`)        |
+| `ROR`    | Relational Operator Replacement (`<` → `<=`)       |
+| `BCR`    | Boolean Comparison Replacement (`and` → `or`)      |
+| `COI`    | Conditional Operator Insertion (negate conditions) |
+| `SDR`    | Statement Deletion (remove statements)             |
+
+### Interpreting Results
+
+- **Killed**: Test caught the mutation ✅
+- **Survived**: Test missed the mutation ❌ (needs more tests)
+- **Timeout**: Mutation caused infinite loop
+- **Suspicious**: Mutation behavior unclear
+
+### Example Workflow
+
+```python
+# Original code
+def validate_age(age):
+    if age >= 18:  # Mutation: >= → >
+        return True
+    return False
+
+# A good test catches the mutation:
+def test_validate_age_boundary():
+    assert validate_age(18) is True  # Catches >= → > mutation
+    assert validate_age(17) is False
+```
+
+---
+
+## Running All Test Types
+
+### Quick Commands
+
+```bash
+# Unit tests only (fast)
+pytest -m unit
+
+# Integration tests (requires services)
+pytest -m integration --run-integration
+
+# E2E tests
+cd frontend && npx playwright test
+
+# Critical tests only (before deploy)
+pytest -m critical
+
+# Full test suite with coverage
+pytest --cov=backend --cov=services --cov=ai_core --cov-report=html
+
+# Mutation testing
+mutmut run --paths-to-mutate=backend/shared/security
+```
+
+### CI/CD Test Matrix
+
+| Stage      | Tests Run          | Pass Criteria      |
+| ---------- | ------------------ | ------------------ |
+| PR Check   | Unit + Smoke       | 95% coverage       |
+| Merge      | Unit + Integration | All pass           |
+| Pre-Deploy | Critical + E2E     | All pass           |
+| Nightly    | Full + Mutation    | 80% mutation score |
+
+---
+
+## Test Quality Metrics
+
+### Targets
+
+| Metric          | Target | Current |
+| --------------- | ------ | ------- |
+| Line Coverage   | 95%    | -       |
+| Branch Coverage | 90%    | -       |
+| Mutation Score  | 80%    | -       |
+| Test/Code Ratio | 1:1    | -       |
+| E2E Pass Rate   | 100%   | -       |
+
+### Monitoring
+
+```bash
+# Generate coverage badge
+coverage-badge -o coverage.svg
+
+# View coverage trend
+codecov --token=$CODECOV_TOKEN
+
+# Check mutation score
+mutmut results --show-score
 ```

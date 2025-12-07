@@ -856,7 +856,7 @@ class AnomalyDetectionService:
             try:
                 await self._background_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Background task cancelled")
         
         # Save model
         try:
@@ -884,7 +884,8 @@ class AnomalyDetectionService:
                         await self.train_model()
                 
             except asyncio.CancelledError:
-                break
+                logger.debug("Monitoring loop cancelled")
+                raise
             except Exception as e:
                 logger.error(f"Monitoring loop error: {e}")
     

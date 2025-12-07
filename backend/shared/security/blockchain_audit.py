@@ -678,7 +678,7 @@ class BlockchainAuditService:
             try:
                 await self._background_task
             except asyncio.CancelledError:
-                pass
+                logger.debug("Background task cancelled")
         
         await self.blockchain.disconnect()
         logger.info("Blockchain audit service stopped")
@@ -710,7 +710,8 @@ class BlockchainAuditService:
                 await self._check_pending_anchors()
                 
             except asyncio.CancelledError:
-                break
+                logger.debug("Anchoring loop cancelled")
+                raise
             except Exception as e:
                 logger.error(f"Error in anchoring loop: {e}")
     

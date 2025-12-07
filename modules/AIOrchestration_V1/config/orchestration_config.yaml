@@ -1,0 +1,25 @@
+# AIOrchestration_V1 Configuration
+version: "1.0.0"
+status: experimental
+
+# Basic Orchestration Settings
+orchestration:
+  default_timeout_seconds: 30
+  max_concurrent_tasks: 10
+
+# Provider Settings
+providers:
+  - name: mock
+    model: gpt-4
+    enabled: true
+
+# Routing
+routing:
+  default_strategy: round_robin
+  fallback_enabled: true
+
+# Retry Settings
+retry:
+  max_retries: 3
+  delay_seconds: 1.0
+  exponential_backoff: true

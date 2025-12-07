@@ -1,10 +1,21 @@
 /**
- * Three-Version Evolution Control Panel
+ * 三版本演化控制面板 (Three-Version Evolution Control Panel)
  * 
- * Admin interface for managing the three-version self-evolution cycle:
- * - V1 (New): Experimentation, trial and error
- * - V2 (Stable): Production, fixes V1 errors
- * - V3 (Old): Quarantine, comparison, exclusion
+ * 功能描述:
+ *   管理三版本自演化循环的管理员界面。
+ * 
+ * 版本说明:
+ *   - V1（新版）: 实验，试错
+ *   - V2（稳定版）: 生产，修复 V1 错误
+ *   - V3（旧版）: 隔离，比较，排除
+ * 
+ * 主要特性:
+ *   - 版本状态监控
+ *   - 升级/降级操作
+ *   - 实验管理
+ *   - 性能对比
+ * 
+ * 最后修改日期: 2024-12-07
  */
 
 import React, { useState, useEffect, useCallback } from 'react';

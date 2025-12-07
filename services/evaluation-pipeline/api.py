@@ -1,11 +1,19 @@
 """
-Evaluation Pipeline API
+评估管道 API (Evaluation Pipeline API)
 
-REST API for the evaluation pipeline service.
-Provides endpoints for:
-- Shadow traffic output recording
-- Promotion recommendation
-- Gold-set evaluation
+模块功能描述:
+    评估管道服务的 REST API。
+
+提供的端点:
+    - 影子流量输出记录
+    - 升级建议
+    - 金标集评估
+
+主要组件:
+    - ShadowComparator: 影子比较器
+    - GoldSetEvaluator: 金标集评估器
+
+最后修改日期: 2024-12-07
 """
 
 import logging

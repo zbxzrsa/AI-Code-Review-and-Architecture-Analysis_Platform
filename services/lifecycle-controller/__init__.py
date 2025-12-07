@@ -1,55 +1,66 @@
 """
-Lifecycle Controller Service
+生命周期控制器服务 (Lifecycle Controller Service)
 
-Manages the three-version self-evolution cycle:
-- V1 (Experiment) → V2 (Production) promotion
-- V2 (Production) → V3 (Quarantine) demotion  
-- V3 (Quarantine) → V1 (Experiment) recovery
+模块功能描述:
+    管理三版本自演化循环。
 
-The cycle operates autonomously, ensuring continuous improvement
-without manual intervention.
+版本流转:
+    - V1 (实验版) → V2 (生产版) 升级
+    - V2 (生产版) → V3 (隔离版) 降级
+    - V3 (隔离版) → V1 (实验版) 恢复
 
-Usage:
+该循环自主运行，确保在无需人工干预的情况下持续改进。
+
+主要组件:
+    - CycleOrchestrator: 循环编排器
+    - LifecycleController: 生命周期控制器
+    - RecoveryManager: 恢复管理器
+    - CycleMetricsCollector: 循环指标收集器
+    - EventPublisher: 事件发布器
+
+使用示例:
     from services.lifecycle_controller import (
         CycleOrchestrator,
         LifecycleController,
         RecoveryManager,
     )
     
-    # Initialize
+    # 初始化
     lifecycle = LifecycleController()
     recovery = RecoveryManager()
     orchestrator = CycleOrchestrator(lifecycle, recovery)
     
-    # Start the self-evolution cycle
+    # 启动自演化循环
     await orchestrator.start()
     
-    # Register a new experiment
+    # 注册新实验
     await orchestrator.register_new_experiment(
         version_id="v1-exp-001",
         model_version="gpt-4o",
         prompt_version="code-review-v4"
     )
 
-Cycle Flow:
+循环流程图:
     
     ┌─────────────────────────────────────────────────────────────────┐
-    │                    SELF-EVOLUTION CYCLE                         │
+    │                       自演化循环                                  │
     │                                                                 │
-    │   ┌──────────┐    Shadow     ┌──────────┐    Gray-Scale        │
+    │   ┌──────────┐    影子流量   ┌──────────┐    灰度发布          │
     │   │   V1     │ ──────────►   │   V2     │ ◄────────────┐       │
-    │   │ Experiment│   Traffic    │ Production│              │       │
+    │   │  实验版   │              │  生产版   │              │       │
     │   └────▲─────┘               └─────┬────┘              │       │
     │        │                           │                    │       │
-    │        │ Recovery                  │ SLO Breach        │       │
-    │        │ (Gold-set)                │ Rollback          │       │
+    │        │ 恢复                      │ SLO 违规          │       │
+    │        │ (金标集)                  │ 回滚              │       │
     │        │                           ▼                    │       │
     │   ┌────┴─────┐              ┌──────────┐               │       │
-    │   │   V3     │ ◄────────────│ Demotion │───────────────┘       │
-    │   │Quarantine│              └──────────┘                        │
+    │   │   V3     │ ◄────────────│   降级    │───────────────┘       │
+    │   │  隔离版   │              └──────────┘                        │
     │   └──────────┘                                                  │
     │                                                                 │
     └─────────────────────────────────────────────────────────────────┘
+
+最后修改日期: 2024-12-07
 """
 
 from .controller import (

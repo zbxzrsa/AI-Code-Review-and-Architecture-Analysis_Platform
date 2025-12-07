@@ -1,6 +1,21 @@
 """
-Modular AI Architecture
-Supports plug-in functionality expansion
+模块化 AI 架构 (Modular AI Architecture)
+
+模块功能描述:
+    支持插件式功能扩展的模块化 AI 架构。
+
+主要功能:
+    - 插件动态加载和管理
+    - 模块化组件设计
+    - 配置验证和异常处理
+    - 热插拔支持
+
+主要组件:
+    - PluginManager: 插件管理器
+    - ModulePlugin: 模块插件抽象基类
+    - ModularAIArchitecture: 模块化AI架构主类
+
+最后修改日期: 2024-12-07
 """
 
 import torch
@@ -18,7 +33,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PluginMetadata:
-    """Plugin metadata"""
+    """
+    插件元数据数据类
+    
+    功能描述:
+        描述插件的基本信息和依赖关系。
+    
+    属性说明:
+        - name: 插件名称
+        - version: 版本号
+        - description: 描述
+        - author: 作者
+        - dependencies: 依赖列表
+    """
     name: str
     version: str
     description: str
@@ -28,7 +55,16 @@ class PluginMetadata:
 
 
 class ModulePlugin(ABC):
-    """Abstract base class for module plugins"""
+    """
+    模块插件抽象基类
+    
+    功能描述:
+        定义模块插件的基本接口。
+    
+    抽象方法:
+        - metadata: 返回插件元数据
+        - create_module(): 创建模块实例
+    """
     
     @property
     @abstractmethod

@@ -1,0 +1,39 @@
+# CodeReviewAI_V3 Configuration
+# Version: 3.0.0
+# Status: Quarantine
+
+version: "3.0.0"
+status: quarantine
+deprecated: true
+
+# Access control
+access:
+  admin_only: true
+  read_only: true
+  allowed_operations:
+    - compare
+    - re_evaluate
+    - export
+
+# Comparison settings
+comparison:
+  significance_threshold: 0.05
+  min_improvement: 5.0
+  max_latency_increase_ms: 500
+
+# Re-evaluation settings
+re_evaluation:
+  enabled: true
+  max_attempts: 3
+  cooldown_hours: 24
+  auto_promote_threshold: 90.0
+
+# Retention
+retention:
+  archive_days: 90
+  delete_after_days: 365
+
+# Metrics
+metrics:
+  enabled: true
+  comparison_tracking: true

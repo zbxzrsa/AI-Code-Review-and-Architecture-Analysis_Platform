@@ -1,11 +1,21 @@
 """
-Bidirectional Communication Protocol
+双向通信协议 (Bidirectional Communication Protocol)
 
-Project-AI communication protocol with:
-- Real-time event streaming
-- Request-response patterns
-- Automated testing pipeline
-- Conflict resolution
+模块功能描述:
+    实现项目与 AI 系统之间的双向通信协议。
+
+主要功能:
+    - 实时事件流
+    - 请求-响应模式
+    - 自动化测试管道
+    - 冲突解决
+
+主要组件:
+    - BidirectionalProtocol: 双向通信协议主类
+    - MessageHandler: 消息处理器
+    - CommunicationChannel: 通信通道
+
+最后修改日期: 2024-12-07
 """
 
 import asyncio
@@ -22,7 +32,17 @@ logger = logging.getLogger(__name__)
 
 
 class MessageType(Enum):
-    """Protocol message types"""
+    """
+    消息类型枚举
+    
+    定义协议支持的各类消息类型。
+    
+    消息类型:
+        - REQUEST/RESPONSE: 请求-响应对
+        - EVENT/NOTIFICATION: 事件通知
+        - HEARTBEAT/ACK: 心跳和确认
+        - SYNC_REQUEST/SYNC_RESPONSE: 同步操作
+    """
     # Request-Response
     REQUEST = "request"
     RESPONSE = "response"
@@ -42,14 +62,29 @@ class MessageType(Enum):
 
 
 class ProtocolVersion(Enum):
-    """Protocol versions"""
+    """
+    协议版本枚举
+    
+    定义协议支持的版本。
+    """
     V1 = "1.0"
     V2 = "2.0"
     CURRENT = "2.0"
 
 
 class ChannelStatus(Enum):
-    """Communication channel status"""
+    """
+    通信通道状态枚举
+    
+    定义通信通道的各种状态。
+    
+    状态说明:
+        - DISCONNECTED: 已断开
+        - CONNECTING: 连接中
+        - CONNECTED: 已连接
+        - RECONNECTING: 重连中
+        - ERROR: 错误
+    """
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     CONNECTED = "connected"

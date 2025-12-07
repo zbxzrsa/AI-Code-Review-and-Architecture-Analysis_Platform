@@ -1,11 +1,18 @@
 /**
- * User Management Page
+ * 用户管理页面 (User Management Page)
  * 
- * Admin page for managing users with:
- * - User list table with filtering, sorting, pagination
- * - User statistics and charts
- * - Bulk operations
- * - User detail modal
+ * 功能描述:
+ *   管理员用户管理界面。
+ * 
+ * 主要特性:
+ *   - 用户列表（支持筛选、排序、分页）
+ *   - 用户统计和图表
+ *   - 批量操作
+ *   - 用户详情弹窗
+ *   - 用户角色管理
+ *   - 账户状态控制
+ * 
+ * 最后修改日期: 2024-12-07
  */
 
 import React, { useState, useCallback } from 'react';

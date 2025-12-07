@@ -1,4 +1,20 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿/**
+ * 实验管理页面 (Experiment Management Page)
+ * 
+ * 功能描述:
+ *   管理 V1 实验版本中的 AI 实验。
+ * 
+ * 主要特性:
+ *   - 实验列表和状态管理
+ *   - 创建新实验
+ *   - 启动/暂停/停止实验
+ *   - 升级到生产版本
+ *   - 实验指标监控
+ * 
+ * 最后修改日期: 2024-12-07
+ */
+
+import React, { useState, useEffect } from 'react';
 import {
   Card,
   Table,

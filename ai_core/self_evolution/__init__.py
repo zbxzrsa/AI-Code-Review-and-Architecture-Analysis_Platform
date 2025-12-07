@@ -1,12 +1,27 @@
 """
-Self-Evolution Module
+自演化模块 (Self-Evolution Module)
 
-Automated bug detection, fixing, and continuous improvement system.
+模块功能描述:
+    自动化错误检测、修复和持续改进系统。
 
-Components:
-- BugFixerEngine: Core vulnerability detection and fix generation
-- AutoFixCycle: Enhanced automated fix cycle with learning
-- FixVerifier: Fix verification pipeline
+主要功能:
+    - 自动漏洞检测
+    - 代码修复生成
+    - 修复验证
+    - 持续学习改进
+
+主要组件:
+    - BugFixerEngine: 核心漏洞检测和修复生成引擎
+    - AutoFixCycle: 增强型自动修复循环（带学习功能）
+    - FixVerifier: 修复验证管道
+
+导出类:
+    - BugFixerEngine, Severity, BugCategory, FixStatus
+    - DetectedVulnerability, CodeFix, FixResult
+    - FixVerifier, VerificationResult, VerificationPipeline
+    - AutoFixCycle, FixCycleConfig, FixCyclePhase, FixStrategy
+
+最后修改日期: 2024-12-07
 """
 
 from .bug_fixer import (

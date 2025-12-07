@@ -1,3 +1,25 @@
+/**
+ * WebSocket Hook (useWebSocket)
+ *
+ * 功能描述:
+ *   提供 WebSocket 实时通信功能。
+ *
+ * 主要特性:
+ *   - 自动连接和重连
+ *   - 消息发送和接收
+ *   - 连接状态管理
+ *   - 错误处理
+ *   - 认证令牌支持
+ *
+ * 返回值:
+ *   - data: 接收到的数据
+ *   - isConnected: 连接状态
+ *   - send(): 发送消息方法
+ *   - reconnect(): 重连方法
+ *
+ * 最后修改日期: 2024-12-07
+ */
+
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useAuthStore } from "../store/authStore";
 

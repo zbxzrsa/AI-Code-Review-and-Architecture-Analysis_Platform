@@ -1,7 +1,22 @@
 """
-Backend Constants
+后端常量定义 (Backend Constants)
 
-Centralized constants for duplicate literals across backend services.
+模块功能描述:
+    集中定义后端服务中使用的常量，避免重复字面量。
+
+常量分类:
+    - MODEL_*: AI 模型名称
+    - FILE_*: 文件名称
+    - VERSION_*: 版本号
+    - CATEGORY_*: 分类名称
+    - PATH_*: 文件路径
+    - API_PATH_*: API 路径
+    - MSG_*: 消息文本
+    - DB_*: 数据库相关
+    - SQL_*: SQL 查询
+    - PATTERN_*: 正则表达式模式
+
+最后修改日期: 2024-12-07
 """
 
 # Model Names
