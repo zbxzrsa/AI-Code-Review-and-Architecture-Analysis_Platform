@@ -1,0 +1,12 @@
+# Root requirements file - redirects to backend requirements
+# For backend dependencies, see: backend/requirements.txt
+# For test dependencies, see: backend/requirements-test.txt
+
+# Core Python utilities
+pyyaml>=6.0
+python-dotenv>=1.0.0
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# Include backend requirements
+-r backend/requirements.txt

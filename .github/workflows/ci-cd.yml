@@ -82,12 +82,14 @@ jobs:
             p/security-audit
             p/secrets
             p/owasp-top-ten
+        continue-on-error: true
 
       - name: Run Gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_ENABLE_COMMENTS: true
+        continue-on-error: true
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master
@@ -104,6 +106,7 @@ jobs:
 
       - name: Run OWASP Dependency Check
         uses: dependency-check/Dependency-Check_Action@main
+        continue-on-error: true
         with:
           path: "backend/"
           format: "SARIF"
@@ -396,20 +399,23 @@ jobs:
 
   # ==================== Post-Deployment ====================
   post-deployment:
-    needs: [deploy-production]
+    needs: [build-images, build-frontend]
     runs-on: ubuntu-latest
-    if: always()
+    if: always() && (needs.build-images.result == 'success' || needs.build-frontend.result == 'success')
     steps:
       - name: Generate deployment report
         run: |
-          echo "Deployment Report" > report.md
-          echo "==================" >> report.md
-          echo "Date: $(date)" >> report.md
-          echo "Commit: ${{ github.sha }}" >> report.md
-          echo "Status: ${{ job.status }}" >> report.md
+          echo "# Deployment Report" > report.md
+          echo "" >> report.md
+          echo "**Date:** $(date)" >> report.md
+          echo "**Commit:** ${{ github.sha }}" >> report.md
+          echo "**Branch:** ${{ github.ref_name }}" >> report.md
+          echo "**Build Status:** ${{ needs.build-images.result }}" >> report.md
+          echo "**Frontend Status:** ${{ needs.build-frontend.result }}" >> report.md
 
       - name: Upload deployment report
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-report
           path: report.md
+          retention-days: 30

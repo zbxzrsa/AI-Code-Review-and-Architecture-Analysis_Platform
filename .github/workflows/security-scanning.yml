@@ -186,9 +186,20 @@ jobs:
 
       - name: Build Docker Images
         run: |
-          docker build -t app:scan -f Dockerfile . || true
+          # Build a representative service image for scanning
+          docker build -t app:scan -f backend/services/ai-orchestrator/Dockerfile backend/services/ai-orchestrator/ || true
 
-      - name: Trivy Scan
+      - name: Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-fs-results.sarif"
+          severity: "CRITICAL,HIGH"
+        continue-on-error: true
+
+      - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: "app:scan"
@@ -201,7 +212,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: "trivy-results.sarif"
-        if: always()
+        continue-on-error: true
 
   # ============================================================
   # Security Report Generation

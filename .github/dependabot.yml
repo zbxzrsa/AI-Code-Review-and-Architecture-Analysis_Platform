@@ -42,9 +42,6 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      # Security updates get their own PRs
-      python-security:
-        applies-to: security-updates
     ignore:
       # Ignore major version updates for critical packages
       - dependency-name: "torch"

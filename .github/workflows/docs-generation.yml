@@ -140,6 +140,9 @@ jobs:
 
       - name: Generate ADR index
         run: |
+          # Create ADR directory if it doesn't exist
+          mkdir -p docs/adr
+
           echo "# Architecture Decision Records" > docs/adr/README.md
           echo "" >> docs/adr/README.md
           echo "This directory contains Architecture Decision Records (ADRs) for the project." >> docs/adr/README.md
@@ -147,15 +150,21 @@ jobs:
           echo "## Index" >> docs/adr/README.md
           echo "" >> docs/adr/README.md
 
-          # List all ADRs
+          # List all ADRs (handle case where no ADRs exist)
+          ADR_COUNT=0
           for adr in docs/adr/ADR-*.md; do
             if [ -f "$adr" ]; then
               # Extract title from first line
               TITLE=$(head -1 "$adr" | sed 's/^# //')
               FILENAME=$(basename "$adr")
               echo "- [$TITLE]($FILENAME)" >> docs/adr/README.md
+              ADR_COUNT=$((ADR_COUNT + 1))
             fi
           done
+
+          if [ "$ADR_COUNT" -eq 0 ]; then
+            echo "_No ADRs have been created yet._" >> docs/adr/README.md
+          fi
 
           echo "" >> docs/adr/README.md
           echo "## Status Legend" >> docs/adr/README.md

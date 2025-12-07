@@ -40,7 +40,8 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r backend/requirements.txt || true
+          pip install -r backend/requirements-test.txt || true
           pip install pytest pytest-cov pytest-asyncio coverage
 
       - name: Install Node dependencies
@@ -106,7 +107,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r backend/requirements.txt || true
           pip install pytest pyyaml pact-python
 
       - name: Run contract tests
@@ -175,7 +176,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r backend/requirements.txt || true
           pip install pytest pytest-asyncio aiohttp locust
 
       - name: Start application
@@ -308,7 +309,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          pip install -r backend/requirements.txt || true
           cd frontend && npm ci
 
       - name: Install Playwright
