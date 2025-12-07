@@ -198,7 +198,7 @@ class CodeReviewResult:
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     code_language: str = ""
     code_length: int = 0
-    
+
     # Analysis results
     security_vulnerabilities: List[SecurityVulnerability] = field(default_factory=list)
     code_issues: List[CodeIssue] = field(default_factory=list)
@@ -206,11 +206,11 @@ class CodeReviewResult:
     architecture_analysis: ArchitectureAnalysis = field(default_factory=ArchitectureAnalysis)
     test_recommendations: TestRecommendation = field(default_factory=TestRecommendation)
     patch_suggestions: List[PatchSuggestion] = field(default_factory=list)
-    
+
     # Documentation
     documentation_suggestions: List[str] = field(default_factory=list)
     comment_suggestions: List[str] = field(default_factory=list)
-    
+
     # Metadata
     model_used: str = ""
     analysis_time_ms: float = 0.0
@@ -369,7 +369,7 @@ class CodeReviewAI:
     def _test_model_availability(
         self,
         model: str,
-        api_key: Optional[str] = None,  # noqa: ARG002 - Reserved for auth
+        _api_key: Optional[str] = None,  # Reserved for auth
     ) -> bool:
         """Test if model is available."""
         # In production: actually test the model
@@ -388,7 +388,7 @@ class CodeReviewAI:
     def _scan_security_vulnerabilities(
         self,
         code: str,
-        language: str,  # noqa: ARG002 - reserved for language-specific scanning
+        _language: str,  # Reserved for language-specific scanning
     ) -> List[SecurityVulnerability]:
         """Scan for security vulnerabilities (SAST)."""
         vulnerabilities = []
@@ -464,8 +464,8 @@ class CodeReviewAI:
 
     def _analyze_performance(
         self,
-        code: str,  # noqa: ARG002 - Reserved for analysis
-        language: str,  # noqa: ARG002 - Reserved for language-specific
+        _code: str,  # Reserved for analysis
+        _language: str,  # Reserved for language-specific
     ) -> PerformanceAnalysis:
         """Analyze performance bottlenecks."""
         return PerformanceAnalysis(
@@ -481,8 +481,8 @@ class CodeReviewAI:
 
     def _analyze_architecture(
         self,
-        code: str,  # noqa: ARG002 - Reserved for analysis
-        language: str,  # noqa: ARG002 - Reserved for language-specific
+        _code: str,  # Reserved for analysis
+        _language: str,  # Reserved for language-specific
     ) -> ArchitectureAnalysis:
         """Analyze architecture and dependencies."""
         return ArchitectureAnalysis(
@@ -496,8 +496,8 @@ class CodeReviewAI:
 
     def _generate_test_recommendations(
         self,
-        code: str,  # noqa: ARG002 - Reserved for analysis
-        language: str,  # noqa: ARG002 - Reserved for language-specific
+        _code: str,  # Reserved for analysis
+        _language: str,  # Reserved for language-specific
     ) -> TestRecommendation:
         """Generate test recommendations."""
         return TestRecommendation(
@@ -539,8 +539,8 @@ class CodeReviewAI:
 
     def _generate_documentation(
         self,
-        code: str,  # noqa: ARG002 - Reserved for analysis
-        language: str,  # noqa: ARG002 - Reserved for language-specific
+        _code: str,  # Reserved for analysis
+        _language: str,  # Reserved for language-specific
     ) -> List[str]:
         """Generate documentation suggestions."""
         return [
@@ -551,8 +551,8 @@ class CodeReviewAI:
 
     def _generate_comments(
         self,
-        code: str,  # noqa: ARG002 - Reserved for analysis
-        language: str,  # noqa: ARG002 - Reserved for language-specific
+        _code: str,  # Reserved for analysis
+        _language: str,  # Reserved for language-specific
     ) -> List[str]:
         """Generate comment suggestions."""
         return [

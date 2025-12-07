@@ -210,7 +210,7 @@ class ProductionCacheWarmer:
                 value = await task["loader"]() if asyncio.iscoroutinefunction(task["loader"]) else task["loader"]()
                 await self._cache.set(key, value, task["ttl"], priority="high")
                 task["last_refresh"] = datetime.now(timezone.utc)
-            except Exception as e:
+            except Exception:
                 # Log but continue warming other caches
                 pass
 

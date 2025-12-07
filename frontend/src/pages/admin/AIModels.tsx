@@ -1,9 +1,9 @@
 /**
  * AI 模型管理页面 (AI Models Management Page)
- * 
+ *
  * 功能描述:
  *   管理 AI 模型和版本的管理员界面。
- * 
+ *
  * 主要特性:
  *   - 查看所有 AI 模型和版本
  *   - 管理模型生命周期（V1→V2→V3）
@@ -12,7 +12,7 @@
  *   - 升级/回滚版本
  *   - 监控模型性能
  *   - 配置模型设置
- * 
+ *
  * 最后修改日期: 2024-12-07
  */
 
@@ -70,8 +70,6 @@ import {
   CloudServerOutlined,
   UserOutlined,
   ClearOutlined,
-  HistoryOutlined,
-  ToolOutlined,
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../services/api';
@@ -370,7 +368,7 @@ export const AIModels: React.FC = () => {
       message.success('Model imported successfully');
       setImportModalOpen(false);
       importForm.resetFields();
-      
+
       // Add to imported models list
       const newModel: ImportedModel = {
         id: `imported_${Date.now()}`,
@@ -387,7 +385,7 @@ export const AIModels: React.FC = () => {
       message.success('Model imported successfully');
       setImportModalOpen(false);
       importForm.resetFields();
-      
+
       const newModel: ImportedModel = {
         id: `imported_${Date.now()}`,
         name: values.name,
@@ -448,8 +446,8 @@ export const AIModels: React.FC = () => {
     } catch (error) {
       // Mock success
       message.success(`Model ${model.name} promoted to V2 Production`);
-      setModels(prev => prev.map(m => 
-        m.id === model.id 
+      setModels(prev => prev.map(m =>
+        m.id === model.id
           ? { ...m, zone: 'v2-production' as const, status: 'active' as const }
           : m
       ));
@@ -465,8 +463,8 @@ export const AIModels: React.FC = () => {
       fetchModels();
     } catch (error) {
       message.success(`Model ${model.name} rolled back`);
-      setModels(prev => prev.map(m => 
-        m.id === model.id 
+      setModels(prev => prev.map(m =>
+        m.id === model.id
           ? { ...m, zone: 'v1-experimentation' as const, status: 'testing' as const }
           : m
       ));
@@ -481,8 +479,8 @@ export const AIModels: React.FC = () => {
       fetchModels();
     } catch (error) {
       message.warning(`Model ${model.name} quarantined`);
-      setModels(prev => prev.map(m => 
-        m.id === model.id 
+      setModels(prev => prev.map(m =>
+        m.id === model.id
           ? { ...m, zone: 'v3-quarantine' as const, status: 'quarantined' as const }
           : m
       ));
@@ -504,8 +502,8 @@ export const AIModels: React.FC = () => {
   };
 
   // Filter models by zone
-  const filteredModels = activeTab === 'all' 
-    ? models 
+  const filteredModels = activeTab === 'all'
+    ? models
     : models.filter(m => m.zone === activeTab);
 
   // Table columns
@@ -651,7 +649,7 @@ export const AIModels: React.FC = () => {
     experimentation: models.filter(m => m.zone === 'v1-experimentation').length,
     quarantine: models.filter(m => m.zone === 'v3-quarantine').length,
     avgAccuracy: models.filter(m => m.zone === 'v2-production')
-      .reduce((acc, m) => acc + m.metrics.accuracy, 0) / 
+      .reduce((acc, m) => acc + m.metrics.accuracy, 0) /
       models.filter(m => m.zone === 'v2-production').length || 0,
   };
 
@@ -672,8 +670,8 @@ export const AIModels: React.FC = () => {
           <Space wrap>
             <Tooltip title="AI Assistant for Version Control">
               <Badge count={chatMessages.length} size="small">
-                <Button 
-                  icon={<MessageOutlined />} 
+                <Button
+                  icon={<MessageOutlined />}
                   onClick={() => setChatDrawerOpen(true)}
                   style={{ borderRadius: 8 }}
                 >
@@ -681,22 +679,22 @@ export const AIModels: React.FC = () => {
                 </Button>
               </Badge>
             </Tooltip>
-            <Button 
-              icon={<ApiOutlined />} 
+            <Button
+              icon={<ApiOutlined />}
               onClick={() => setImportModalOpen(true)}
               style={{ borderRadius: 8 }}
             >
               Import Model
             </Button>
-            <Button 
-              icon={<ReloadOutlined />} 
+            <Button
+              icon={<ReloadOutlined />}
               onClick={fetchModels}
               style={{ borderRadius: 8 }}
             >
               Refresh
             </Button>
-            <Button 
-              type="primary" 
+            <Button
+              type="primary"
               icon={<PlusOutlined />}
               style={{ borderRadius: 8 }}
             >
@@ -709,7 +707,7 @@ export const AIModels: React.FC = () => {
       {/* Stats */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
-          <Card 
+          <Card
             style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}
             hoverable
           >
@@ -722,7 +720,7 @@ export const AIModels: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card 
+          <Card
             style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '4px solid #52c41a' }}
             hoverable
           >
@@ -735,7 +733,7 @@ export const AIModels: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card 
+          <Card
             style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: '4px solid #1890ff' }}
             hoverable
           >
@@ -748,7 +746,7 @@ export const AIModels: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card 
+          <Card
             style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: `4px solid ${stats.avgAccuracy >= 0.9 ? '#52c41a' : '#faad14'}` }}
             hoverable
           >
@@ -764,7 +762,7 @@ export const AIModels: React.FC = () => {
       </Row>
 
       {/* Model Lifecycle Flow */}
-      <Card 
+      <Card
         style={{ marginBottom: 24, borderRadius: 12, background: 'linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%)' }}
       >
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 24, flexWrap: 'wrap', padding: '16px 0' }}>
@@ -774,18 +772,18 @@ export const AIModels: React.FC = () => {
             <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{stats.experimentation}</div>
             <Text type="secondary" style={{ fontSize: 12 }}>models testing</Text>
           </div>
-          
+
           <div style={{ fontSize: 32, color: '#1890ff' }}>→</div>
-          
+
           <div style={{ textAlign: 'center', padding: '16px 24px', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(82,196,26,0.2)', border: '2px solid #52c41a' }}>
             <SafetyCertificateOutlined style={{ fontSize: 28, color: '#52c41a' }} />
             <div style={{ marginTop: 8, fontWeight: 600, color: '#52c41a' }}>V2 Production</div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#333' }}>{stats.production}</div>
             <Text type="secondary" style={{ fontSize: 12 }}>models active</Text>
           </div>
-          
+
           <div style={{ fontSize: 32, color: '#ff4d4f' }}>→</div>
-          
+
           <div style={{ textAlign: 'center', padding: '16px 24px', background: '#fff', borderRadius: 12, boxShadow: '0 2px 8px rgba(255,77,79,0.2)', border: '2px solid #ff4d4f' }}>
             <WarningOutlined style={{ fontSize: 28, color: '#ff4d4f' }} />
             <div style={{ marginTop: 8, fontWeight: 600, color: '#ff4d4f' }}>V3 Quarantine</div>
@@ -793,9 +791,9 @@ export const AIModels: React.FC = () => {
             <Text type="secondary" style={{ fontSize: 12 }}>models archived</Text>
           </div>
         </div>
-        
+
         <Divider style={{ margin: '16px 0' }} />
-        
+
         <div style={{ textAlign: 'center' }}>
           <Text type="secondary" style={{ fontSize: 13 }}>
             <SafetyCertificateOutlined style={{ marginRight: 8 }} />
@@ -811,8 +809,8 @@ export const AIModels: React.FC = () => {
           onChange={setActiveTab}
           type="card"
           items={[
-            { 
-              key: 'all', 
+            {
+              key: 'all',
               label: (
                 <Space>
                   <RobotOutlined />
@@ -821,8 +819,8 @@ export const AIModels: React.FC = () => {
                 </Space>
               )
             },
-            { 
-              key: 'v1-experimentation', 
+            {
+              key: 'v1-experimentation',
               label: (
                 <Space>
                   <ExperimentOutlined />
@@ -831,8 +829,8 @@ export const AIModels: React.FC = () => {
                 </Space>
               )
             },
-            { 
-              key: 'v2-production', 
+            {
+              key: 'v2-production',
               label: (
                 <Space>
                   <SafetyCertificateOutlined />
@@ -841,8 +839,8 @@ export const AIModels: React.FC = () => {
                 </Space>
               )
             },
-            { 
-              key: 'v3-quarantine', 
+            {
+              key: 'v3-quarantine',
               label: (
                 <Space>
                   <WarningOutlined />
@@ -858,7 +856,7 @@ export const AIModels: React.FC = () => {
           dataSource={filteredModels}
           rowKey="id"
           loading={loading}
-          pagination={{ 
+          pagination={{
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
@@ -1018,9 +1016,9 @@ export const AIModels: React.FC = () => {
               ]}
             />
             <Tooltip title="Clear chat history">
-              <Button 
-                size="small" 
-                icon={<ClearOutlined />} 
+              <Button
+                size="small"
+                icon={<ClearOutlined />}
                 onClick={handleClearChat}
               />
             </Tooltip>
@@ -1029,11 +1027,11 @@ export const AIModels: React.FC = () => {
       >
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           {/* Chat Messages */}
-          <div 
+          <div
             ref={chatContainerRef}
-            style={{ 
-              flex: 1, 
-              overflowY: 'auto', 
+            style={{
+              flex: 1,
+              overflowY: 'auto',
               paddingBottom: 16,
               marginBottom: 16,
             }}
@@ -1052,20 +1050,20 @@ export const AIModels: React.FC = () => {
                 }
               >
                 <Space direction="vertical" size="small">
-                  <Button 
-                    size="small" 
+                  <Button
+                    size="small"
                     onClick={() => setChatInput('What models are ready for promotion?')}
                   >
                     What models are ready for promotion?
                   </Button>
-                  <Button 
-                    size="small" 
+                  <Button
+                    size="small"
                     onClick={() => setChatInput('Show me V2 production metrics')}
                   >
                     Show me V2 production metrics
                   </Button>
-                  <Button 
-                    size="small" 
+                  <Button
+                    size="small"
                     onClick={() => setChatInput('How do I import a new model?')}
                   >
                     How do I import a new model?
@@ -1076,15 +1074,15 @@ export const AIModels: React.FC = () => {
               <List
                 dataSource={chatMessages}
                 renderItem={(msg) => (
-                  <List.Item 
-                    style={{ 
+                  <List.Item
+                    style={{
                       padding: '8px 0',
                       border: 'none',
                       justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
                     }}
                   >
-                    <div 
-                      style={{ 
+                    <div
+                      style={{
                         maxWidth: '85%',
                         display: 'flex',
                         flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
@@ -1092,16 +1090,16 @@ export const AIModels: React.FC = () => {
                         gap: 8,
                       }}
                     >
-                      <Avatar 
+                      <Avatar
                         size={32}
                         icon={msg.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
-                        style={{ 
+                        style={{
                           backgroundColor: msg.role === 'user' ? '#1890ff' : '#52c41a',
                           flexShrink: 0,
                         }}
                       />
-                      <div 
-                        style={{ 
+                      <div
+                        style={{
                           padding: '8px 12px',
                           borderRadius: 12,
                           background: msg.role === 'user' ? '#1890ff' : '#f5f5f5',
@@ -1146,8 +1144,8 @@ export const AIModels: React.FC = () => {
                 }}
                 style={{ borderRadius: '8px 0 0 8px' }}
               />
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 icon={<SendOutlined />}
                 onClick={handleSendMessage}
                 loading={chatLoading}
@@ -1182,7 +1180,7 @@ export const AIModels: React.FC = () => {
           showIcon
           style={{ marginBottom: 24 }}
         />
-        
+
         <Form
           form={importForm}
           layout="vertical"

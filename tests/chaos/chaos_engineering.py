@@ -76,14 +76,14 @@ class ChaosResult:
 class ChaosMonkey:
     """
     Chaos engineering framework for resilience testing.
-    
+
     Tests system behavior under:
     - Pod/container failures
     - Network issues
     - Resource constraints
     - Dependency failures
     """
-    
+
     def __init__(
         self,
         kubernetes_client = None,
@@ -93,15 +93,15 @@ class ChaosMonkey:
         self.k8s = kubernetes_client
         self.metrics = metrics_client
         self.namespace = namespace
-        
+
         # Experiment history
         self._experiments: Dict[str, ChaosExperiment] = {}
         self._results: Dict[str, ChaosResult] = {}
-    
+
     # =========================================================================
     # Pod Chaos
     # =========================================================================
-    
+
     async def kill_pod(
         self,
         selector: str,
@@ -109,7 +109,7 @@ class ChaosMonkey:
     ) -> ChaosExperiment:
         """Kill random pods matching selector."""
         import uuid
-        
+
         experiment = ChaosExperiment(
             experiment_id=str(uuid.uuid4()),
             name=f"Kill {count} pods matching {selector}",
@@ -119,41 +119,41 @@ class ChaosMonkey:
             parameters={"count": count},
             hypothesis="System should recover within 60 seconds with no user impact",
         )
-        
+
         self._experiments[experiment.experiment_id] = experiment
-        
+
         try:
             experiment.state = ChaosState.RUNNING
             experiment.started_at = datetime.now(timezone.utc)
-            
+
             # Capture metrics before
             metrics_before = await self._capture_metrics()
-            
+
             # Kill pods
             if self.k8s:
                 pods = await self._get_pods(selector)
                 targets = random.sample(pods, min(count, len(pods)))
-                
+
                 for pod in targets:
                     logger.info(f"Killing pod: {pod}")
                     await self._delete_pod(pod)
             else:
                 logger.info(f"[DRY RUN] Would kill {count} pods matching {selector}")
-            
+
             # Monitor recovery
             recovery_start = datetime.now(timezone.utc)
             recovered = await self._wait_for_recovery(selector, timeout=120)
             recovery_time = (datetime.now(timezone.utc) - recovery_start).total_seconds()
-            
+
             # Capture metrics after
             metrics_after = await self._capture_metrics()
-            
+
             experiment.state = ChaosState.COMPLETED
             experiment.completed_at = datetime.now(timezone.utc)
-            
+
             # Evaluate hypothesis
             hypothesis_valid = recovery_time < 60 and metrics_after.get("error_rate", 0) < 0.02
-            
+
             result = ChaosResult(
                 experiment_id=experiment.experiment_id,
                 success=recovered,
@@ -165,18 +165,18 @@ class ChaosMonkey:
                 findings=self._analyze_findings(metrics_before, metrics_after),
                 recommendations=self._generate_recommendations(recovered, recovery_time),
             )
-            
+
             self._results[experiment.experiment_id] = result
             experiment.results = result.__dict__
-            
+
             return experiment
-            
+
         except Exception as e:
             experiment.state = ChaosState.FAILED
             experiment.results = {"error": str(e)}
             logger.error(f"Chaos experiment failed: {e}")
             return experiment
-    
+
     async def simulate_pod_failure(
         self,
         selector: str,
@@ -184,7 +184,7 @@ class ChaosMonkey:
     ) -> ChaosExperiment:
         """Simulate pod failure by scaling to zero then back."""
         import uuid
-        
+
         experiment = ChaosExperiment(
             experiment_id=str(uuid.uuid4()),
             name=f"Simulate pod failure for {duration_seconds}s",
@@ -193,53 +193,53 @@ class ChaosMonkey:
             duration_seconds=duration_seconds,
             hypothesis="System should handle pod unavailability gracefully",
         )
-        
+
         self._experiments[experiment.experiment_id] = experiment
-        
+
         try:
             experiment.state = ChaosState.RUNNING
             experiment.started_at = datetime.now(timezone.utc)
-            
+
             metrics_before = await self._capture_metrics()
-            
+
             # Store original replica count
             original_replicas = 3  # Default
-            
+
             if self.k8s:
                 # Scale down
                 logger.info(f"Scaling down {selector}")
                 await self._scale_deployment(selector, 0)
-                
+
                 # Wait for duration
                 await asyncio.sleep(duration_seconds)
-                
+
                 # Scale back up
                 logger.info(f"Scaling up {selector}")
                 await self._scale_deployment(selector, original_replicas)
             else:
                 logger.info(f"[DRY RUN] Would simulate {duration_seconds}s failure")
                 await asyncio.sleep(min(duration_seconds, 5))  # Short wait for dry run
-            
+
             # Wait for recovery
             await self._wait_for_recovery(selector, timeout=120)
-            
+
             metrics_after = await self._capture_metrics()
-            
+
             experiment.state = ChaosState.COMPLETED
             experiment.completed_at = datetime.now(timezone.utc)
-            
+
             return experiment
-            
+
         except Exception:
             experiment.state = ChaosState.FAILED
             if experiment.rollback_on_failure:
                 await self._rollback_experiment(experiment)
             raise
-    
+
     # =========================================================================
     # Network Chaos
     # =========================================================================
-    
+
     async def inject_network_latency(
         self,
         selector: str,
@@ -248,7 +248,7 @@ class ChaosMonkey:
     ) -> ChaosExperiment:
         """Inject network latency."""
         import uuid
-        
+
         experiment = ChaosExperiment(
             experiment_id=str(uuid.uuid4()),
             name=f"Inject {latency_ms}ms latency for {duration_seconds}s",
@@ -258,20 +258,20 @@ class ChaosMonkey:
             parameters={"latency_ms": latency_ms},
             hypothesis="System should maintain p95 < 5s with 500ms added latency",
         )
-        
+
         self._experiments[experiment.experiment_id] = experiment
-        
+
         try:
             experiment.state = ChaosState.RUNNING
             experiment.started_at = datetime.now(timezone.utc)
-            
+
             # Apply network chaos (using tc or Chaos Mesh)
             chaos_manifest = self._generate_network_chaos_manifest(
                 selector, latency_ms, duration_seconds
             )
-            
+
             logger.info(f"Applying network latency chaos: {latency_ms}ms")
-            
+
             if self.k8s:
                 await self._apply_chaos_manifest(chaos_manifest)
                 await asyncio.sleep(duration_seconds)
@@ -279,16 +279,16 @@ class ChaosMonkey:
             else:
                 logger.info(f"[DRY RUN] Would inject {latency_ms}ms latency")
                 await asyncio.sleep(min(duration_seconds, 5))
-            
+
             experiment.state = ChaosState.COMPLETED
             experiment.completed_at = datetime.now(timezone.utc)
-            
+
             return experiment
-            
+
         except Exception:
             experiment.state = ChaosState.FAILED
             raise
-    
+
     async def inject_network_partition(
         self,
         source_selector: str,
@@ -297,7 +297,7 @@ class ChaosMonkey:
     ) -> ChaosExperiment:
         """Create network partition between services."""
         import uuid
-        
+
         experiment = ChaosExperiment(
             experiment_id=str(uuid.uuid4()),
             name=f"Network partition between {source_selector} and {target_selector}",
@@ -306,21 +306,21 @@ class ChaosMonkey:
             duration_seconds=duration_seconds,
             hypothesis="System should detect partition and failover within 30s",
         )
-        
+
         self._experiments[experiment.experiment_id] = experiment
-        
+
         logger.info(f"Creating network partition for {duration_seconds}s")
-        
+
         # Implementation would use NetworkPolicy or Chaos Mesh
         experiment.state = ChaosState.COMPLETED
         experiment.completed_at = datetime.now(timezone.utc)
-        
+
         return experiment
-    
+
     # =========================================================================
     # Resource Chaos
     # =========================================================================
-    
+
     async def stress_cpu(
         self,
         selector: str,
@@ -329,7 +329,7 @@ class ChaosMonkey:
     ) -> ChaosExperiment:
         """Stress CPU on target pods."""
         import uuid
-        
+
         experiment = ChaosExperiment(
             experiment_id=str(uuid.uuid4()),
             name=f"CPU stress {cpu_load_percent}% for {duration_seconds}s",
@@ -339,17 +339,17 @@ class ChaosMonkey:
             parameters={"cpu_load_percent": cpu_load_percent},
             hypothesis="HPA should scale up within 2 minutes under CPU stress",
         )
-        
+
         self._experiments[experiment.experiment_id] = experiment
-        
+
         logger.info(f"Stressing CPU to {cpu_load_percent}%")
-        
+
         # Would use stress-ng or Chaos Mesh
         experiment.state = ChaosState.COMPLETED
         experiment.completed_at = datetime.now(timezone.utc)
-        
+
         return experiment
-    
+
     async def stress_memory(
         self,
         selector: str,
@@ -358,7 +358,7 @@ class ChaosMonkey:
     ) -> ChaosExperiment:
         """Stress memory on target pods."""
         import uuid
-        
+
         experiment = ChaosExperiment(
             experiment_id=str(uuid.uuid4()),
             name=f"Memory stress {memory_mb}MB for {duration_seconds}s",
@@ -368,20 +368,20 @@ class ChaosMonkey:
             parameters={"memory_mb": memory_mb},
             hypothesis="System should handle memory pressure without OOMKilled",
         )
-        
+
         self._experiments[experiment.experiment_id] = experiment
-        
+
         logger.info(f"Stressing memory with {memory_mb}MB allocation")
-        
+
         experiment.state = ChaosState.COMPLETED
         experiment.completed_at = datetime.now(timezone.utc)
-        
+
         return experiment
-    
+
     # =========================================================================
     # Dependency Chaos
     # =========================================================================
-    
+
     async def fail_dependency(
         self,
         dependency: str,  # redis, postgresql, ai-api
@@ -390,7 +390,7 @@ class ChaosMonkey:
     ) -> ChaosExperiment:
         """Simulate dependency failure."""
         import uuid
-        
+
         experiment = ChaosExperiment(
             experiment_id=str(uuid.uuid4()),
             name=f"Fail {dependency} ({failure_type}) for {duration_seconds}s",
@@ -400,26 +400,26 @@ class ChaosMonkey:
             parameters={"failure_type": failure_type},
             hypothesis=f"System should gracefully degrade when {dependency} is {failure_type}",
         )
-        
+
         self._experiments[experiment.experiment_id] = experiment
-        
+
         logger.info(f"Simulating {dependency} {failure_type}")
-        
+
         # Implementation would block traffic or inject faults
         experiment.state = ChaosState.COMPLETED
         experiment.completed_at = datetime.now(timezone.utc)
-        
+
         return experiment
-    
+
     # =========================================================================
     # Helper Methods
     # =========================================================================
-    
+
     async def _capture_metrics(self) -> Dict[str, float]:
         """Capture current system metrics."""
         if self.metrics:
             return await self.metrics.get_current_metrics()
-        
+
         # Mock metrics
         return {
             "latency_p95_ms": 800,
@@ -428,44 +428,44 @@ class ChaosMonkey:
             "cpu_utilization": 0.45,
             "memory_utilization": 0.60,
         }
-    
-    async def _get_pods(self, selector: str) -> List[str]:
+
+    async def _get_pods(self, _selector: str) -> List[str]:
         """Get pods matching selector."""
-        # Would use kubernetes client
+        # selector used with kubernetes client in production
         return ["pod-1", "pod-2", "pod-3"]
-    
+
     async def _delete_pod(self, pod_name: str):
         """Delete a pod."""
         logger.info(f"Deleting pod: {pod_name}")
-    
+
     async def _scale_deployment(self, name: str, replicas: int):
         """Scale deployment."""
         logger.info(f"Scaling {name} to {replicas} replicas")
-    
+
     async def _wait_for_recovery(
         self,
-        selector: str,
+        _selector: str,  # Used with kubernetes client in production
         timeout: int = 120,
     ) -> bool:
         """Wait for pods to recover."""
         start = datetime.now(timezone.utc)
-        
+
         while (datetime.now(timezone.utc) - start).total_seconds() < timeout:
             # Check pod health
             await asyncio.sleep(5)
             logger.info("Waiting for recovery...")
-            
+
             # Mock: assume recovery after a few checks
             if (datetime.now(timezone.utc) - start).total_seconds() > 15:
                 return True
-        
+
         return False
-    
+
     async def _rollback_experiment(self, experiment: ChaosExperiment):
         """Rollback experiment effects."""
         logger.info(f"Rolling back experiment: {experiment.experiment_id}")
         experiment.state = ChaosState.ROLLED_BACK
-    
+
     def _generate_network_chaos_manifest(
         self,
         selector: str,
@@ -485,15 +485,15 @@ class ChaosMonkey:
                 "duration": f"{duration_seconds}s",
             },
         }
-    
+
     async def _apply_chaos_manifest(self, manifest: Dict[str, Any]):
         """Apply chaos manifest to cluster."""
         logger.info(f"Applying chaos manifest: {manifest['metadata']['name']}")
-    
+
     async def _remove_chaos_manifest(self, manifest: Dict[str, Any]):
         """Remove chaos manifest from cluster."""
         logger.info(f"Removing chaos manifest: {manifest['metadata']['name']}")
-    
+
     def _analyze_findings(
         self,
         before: Dict[str, float],
@@ -501,15 +501,15 @@ class ChaosMonkey:
     ) -> List[str]:
         """Analyze chaos experiment findings."""
         findings = []
-        
+
         if after.get("error_rate", 0) > before.get("error_rate", 0) * 2:
             findings.append("Error rate increased significantly during chaos")
-        
+
         if after.get("latency_p95_ms", 0) > before.get("latency_p95_ms", 0) * 1.5:
             findings.append("Latency increased by more than 50%")
-        
+
         return findings or ["System maintained stability during chaos"]
-    
+
     def _generate_recommendations(
         self,
         recovered: bool,
@@ -517,45 +517,45 @@ class ChaosMonkey:
     ) -> List[str]:
         """Generate recommendations based on results."""
         recommendations = []
-        
+
         if not recovered:
             recommendations.append("Implement automatic recovery mechanisms")
             recommendations.append("Add health checks for faster failure detection")
-        
+
         if recovery_time > 60:
             recommendations.append("Reduce recovery time with pod pre-warming")
             recommendations.append("Increase readiness probe frequency")
-        
+
         return recommendations or ["System resilience is acceptable"]
-    
+
     # =========================================================================
     # Test Runner
     # =========================================================================
-    
+
     async def run_resilience_suite(self) -> List[ChaosResult]:
         """Run full resilience test suite."""
         logger.info("Starting Chaos Engineering Suite...")
-        
+
         results = []
-        
+
         # Test 1: Pod failure
         exp = await self.kill_pod("app=v2-service", count=1)
         if exp.experiment_id in self._results:
             results.append(self._results[exp.experiment_id])
-        
+
         await asyncio.sleep(30)  # Cool down
-        
+
         # Test 2: Network latency
-        exp = await self.inject_network_latency("app=v2-service", latency_ms=500, duration_seconds=30)
-        
+        await self.inject_network_latency("app=v2-service", latency_ms=500, duration_seconds=30)
+
         await asyncio.sleep(30)
-        
+
         # Test 3: Dependency failure
-        exp = await self.fail_dependency("redis", failure_type="unavailable", duration_seconds=30)
-        
+        await self.fail_dependency("redis", failure_type="unavailable", duration_seconds=30)
+
         logger.info("Chaos Engineering Suite completed")
         return results
-    
+
     def generate_report(self) -> str:
         """Generate chaos engineering report."""
         report = f"""
@@ -574,7 +574,7 @@ Failed: {len([e for e in self._experiments.values() if e.state == ChaosState.FAI
 RESULTS
 -------
 """
-        
+
         for exp_id, result in self._results.items():
             exp = self._experiments.get(exp_id)
             if exp:
@@ -587,7 +587,7 @@ Experiment: {exp.name}
   Findings: {', '.join(result.findings)}
   Recommendations: {', '.join(result.recommendations)}
 """
-        
+
         report += f"\n{'='*60}\n"
         return report
 
@@ -595,9 +595,9 @@ Experiment: {exp.name}
 # CLI runner
 if __name__ == "__main__":
     import sys
-    
+
     logging.basicConfig(level=logging.INFO)
-    
+
     chaos = ChaosMonkey(namespace="platform-v2-stable")
     asyncio.run(chaos.run_resilience_suite())
     print(chaos.generate_report())

@@ -77,58 +77,58 @@ class EndpointMetrics:
     successful_requests: int = 0
     failed_requests: int = 0
     response_times: List[float] = field(default_factory=list)
-    
+
     @property
     def success_rate(self) -> float:
         if self.total_requests == 0:
             return 0.0
         return self.successful_requests / self.total_requests * 100
-    
+
     @property
     def error_rate(self) -> float:
         return 100 - self.success_rate
-    
+
     @property
     def avg_response_time(self) -> float:
         if not self.response_times:
             return 0.0
         return statistics.mean(self.response_times)
-    
+
     @property
     def p50_response_time(self) -> float:
         if not self.response_times:
             return 0.0
         sorted_times = sorted(self.response_times)
         return sorted_times[int(len(sorted_times) * 0.5)]
-    
+
     @property
     def p95_response_time(self) -> float:
         if not self.response_times:
             return 0.0
         sorted_times = sorted(self.response_times)
         return sorted_times[int(len(sorted_times) * 0.95)]
-    
+
     @property
     def p99_response_time(self) -> float:
         if not self.response_times:
             return 0.0
         sorted_times = sorted(self.response_times)
         return sorted_times[int(len(sorted_times) * 0.99)]
-    
+
     @property
     def min_response_time(self) -> float:
         return min(self.response_times) if self.response_times else 0.0
-    
+
     @property
     def max_response_time(self) -> float:
         return max(self.response_times) if self.response_times else 0.0
-    
+
     @property
     def std_dev(self) -> float:
         if len(self.response_times) < 2:
             return 0.0
         return statistics.stdev(self.response_times)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "endpoint": self.endpoint,
@@ -160,7 +160,7 @@ class PerformanceAlert:
     actual: float
     message: str
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "severity": self.severity.value,
@@ -195,23 +195,23 @@ class TestScenario:
 
 class PerformanceBaseline:
     """Manages performance baselines for regression detection."""
-    
+
     def __init__(self, baseline_file: str = "performance_baseline.json"):
         self.baseline_file = Path(baseline_file)
         self.baselines: Dict[str, Dict[str, float]] = {}
         self._load()
-    
+
     def _load(self):
         """Load baselines from file."""
         if self.baseline_file.exists():
             with open(self.baseline_file) as f:
                 self.baselines = json.load(f)
-    
+
     def save(self):
         """Save baselines to file."""
         with open(self.baseline_file, "w") as f:
             json.dump(self.baselines, f, indent=2)
-    
+
     def set_baseline(self, endpoint: str, metrics: EndpointMetrics):
         """Set baseline for an endpoint."""
         self.baselines[endpoint] = {
@@ -223,11 +223,11 @@ class PerformanceBaseline:
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
         self.save()
-    
+
     def get_baseline(self, endpoint: str) -> Optional[Dict[str, float]]:
         """Get baseline for an endpoint."""
         return self.baselines.get(endpoint)
-    
+
     def check_regression(
         self,
         endpoint: str,
@@ -237,10 +237,10 @@ class PerformanceBaseline:
         """Check for performance regression against baseline."""
         alerts = []
         baseline = self.get_baseline(endpoint)
-        
+
         if not baseline:
             return alerts
-        
+
         # Check P95 response time regression
         if metrics.p95_response_time > baseline["p95"] * (1 + variance_percent / 100):
             regression_percent = ((metrics.p95_response_time - baseline["p95"]) / baseline["p95"]) * 100
@@ -252,7 +252,7 @@ class PerformanceBaseline:
                 actual=metrics.p95_response_time,
                 message=f"P95 response time increased by {regression_percent:.1f}% (baseline: {baseline['p95']:.0f}ms, current: {metrics.p95_response_time:.0f}ms)",
             ))
-        
+
         # Check error rate regression
         if metrics.error_rate > baseline.get("error_rate", 0) + 5:
             alerts.append(PerformanceAlert(
@@ -263,14 +263,14 @@ class PerformanceBaseline:
                 actual=metrics.error_rate,
                 message=f"Error rate increased significantly (baseline: {baseline.get('error_rate', 0):.1f}%, current: {metrics.error_rate:.1f}%)",
             ))
-        
+
         return alerts
 
 
 class LoadTester:
     """
     Load testing engine similar to JMeter/LoadRunner.
-    
+
     Features:
     - Concurrent user simulation
     - Ramp-up support
@@ -278,7 +278,7 @@ class LoadTester:
     - Multiple endpoint testing
     - Real-time metrics collection
     """
-    
+
     def __init__(self, config: LoadTestConfig):
         self.config = config
         self.metrics: Dict[str, EndpointMetrics] = {}
@@ -286,7 +286,7 @@ class LoadTester:
         self.alerts: List[PerformanceAlert] = []
         self._running = False
         self._start_time: Optional[float] = None
-    
+
     async def run_test(
         self,
         scenario: TestScenario,
@@ -295,22 +295,22 @@ class LoadTester:
     ) -> Dict[str, Any]:
         """
         Run a load test scenario.
-        
+
         Args:
             scenario: Test scenario to execute
             test_type: Type of test to run
             thresholds: Performance thresholds to check
-            
+
         Returns:
             Test results and metrics
         """
         self._running = True
         self._start_time = time.time()
         thresholds = thresholds or PerformanceThreshold()
-        
+
         logger.info(f"Starting {test_type.value} test: {scenario.name}")
         logger.info(f"Duration: {self.config.duration_seconds}s, Users: {self.config.concurrent_users}")
-        
+
         # Initialize metrics for each endpoint
         for endpoint in scenario.endpoints:
             key = f"{endpoint['method']} {endpoint['url']}"
@@ -318,7 +318,7 @@ class LoadTester:
                 endpoint=endpoint['url'],
                 method=endpoint['method'],
             )
-        
+
         # Create user tasks
         tasks = []
         for user_id in range(self.config.concurrent_users):
@@ -328,28 +328,28 @@ class LoadTester:
                 self._user_session(user_id, scenario, delay)
             )
             tasks.append(task)
-        
+
         # Wait for test duration
         await asyncio.sleep(self.config.duration_seconds + self.config.ramp_up_seconds)
         self._running = False
-        
+
         # Wait for all tasks to complete
         await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         # Check thresholds
         self._check_thresholds(thresholds)
-        
+
         return self._generate_report(scenario, test_type)
-    
+
     async def _user_session(
         self,
-        user_id: int,
+        _user_id: int,  # Available for user-specific behavior
         scenario: TestScenario,
         start_delay: float
     ):
         """Simulate a user session."""
         await asyncio.sleep(start_delay)
-        
+
         async with aiohttp.ClientSession(
             headers=self.config.headers,
             timeout=aiohttp.ClientTimeout(total=self.config.timeout_seconds)
@@ -357,43 +357,43 @@ class LoadTester:
             while self._running:
                 # Select endpoint based on weights
                 endpoint = self._select_endpoint(scenario.endpoints)
-                
+
                 # Execute request
                 result = await self._execute_request(session, endpoint)
                 self.results.append(result)
-                
+
                 # Update metrics
                 key = f"{endpoint['method']} {endpoint['url']}"
                 metrics = self.metrics[key]
                 metrics.total_requests += 1
                 metrics.response_times.append(result.response_time_ms)
-                
+
                 if result.success:
                     metrics.successful_requests += 1
                 else:
                     metrics.failed_requests += 1
-                
+
                 # Think time
                 think_time = random.uniform(
                     scenario.think_time_ms[0] / 1000,
                     scenario.think_time_ms[1] / 1000
                 )
                 await asyncio.sleep(think_time)
-    
+
     def _select_endpoint(self, endpoints: List[Dict]) -> Dict:
         """Select endpoint based on weights."""
         weights = [e.get("weight", 1) for e in endpoints]
         total_weight = sum(weights)
         r = random.uniform(0, total_weight)
-        
+
         cumulative = 0
         for endpoint, weight in zip(endpoints, weights):
             cumulative += weight
             if r <= cumulative:
                 return endpoint
-        
+
         return endpoints[-1]
-    
+
     async def _execute_request(
         self,
         session: aiohttp.ClientSession,
@@ -403,9 +403,9 @@ class LoadTester:
         url = f"{self.config.base_url}{endpoint['url']}"
         method = endpoint.get("method", "GET").upper()
         body = endpoint.get("body")
-        
+
         start_time = time.perf_counter()
-        
+
         try:
             async with session.request(
                 method,
@@ -414,7 +414,7 @@ class LoadTester:
             ) as response:
                 response_time = (time.perf_counter() - start_time) * 1000
                 content = await response.read()
-                
+
                 return RequestResult(
                     url=endpoint['url'],
                     method=method,
@@ -423,7 +423,7 @@ class LoadTester:
                     success=200 <= response.status < 400,
                     response_size_bytes=len(content),
                 )
-                
+
         except asyncio.TimeoutError:
             return RequestResult(
                 url=endpoint['url'],
@@ -442,7 +442,7 @@ class LoadTester:
                 success=False,
                 error=str(e),
             )
-    
+
     def _check_thresholds(self, thresholds: PerformanceThreshold):
         """Check if metrics exceed thresholds."""
         for key, metrics in self.metrics.items():
@@ -456,7 +456,7 @@ class LoadTester:
                     actual=metrics.p95_response_time,
                     message=f"P95 response time ({metrics.p95_response_time:.0f}ms) exceeds threshold ({thresholds.response_time_p95_ms}ms)",
                 ))
-            
+
             # P99 response time
             if metrics.p99_response_time > thresholds.response_time_p99_ms:
                 self.alerts.append(PerformanceAlert(
@@ -467,7 +467,7 @@ class LoadTester:
                     actual=metrics.p99_response_time,
                     message=f"P99 response time ({metrics.p99_response_time:.0f}ms) exceeds threshold ({thresholds.response_time_p99_ms}ms)",
                 ))
-            
+
             # Error rate
             if metrics.error_rate > thresholds.error_rate_percent:
                 self.alerts.append(PerformanceAlert(
@@ -478,7 +478,7 @@ class LoadTester:
                     actual=metrics.error_rate,
                     message=f"Error rate ({metrics.error_rate:.1f}%) exceeds threshold ({thresholds.error_rate_percent}%)",
                 ))
-    
+
     def _generate_report(
         self,
         scenario: TestScenario,
@@ -487,7 +487,7 @@ class LoadTester:
         """Generate test report."""
         total_duration = time.time() - self._start_time if self._start_time else 0
         total_requests = sum(m.total_requests for m in self.metrics.values())
-        
+
         return {
             "summary": {
                 "scenario": scenario.name,
@@ -506,7 +506,7 @@ class LoadTester:
 
 class StressTester(LoadTester):
     """Stress testing with gradually increasing load."""
-    
+
     async def run_stress_test(
         self,
         scenario: TestScenario,
@@ -520,34 +520,34 @@ class StressTester(LoadTester):
         thresholds = thresholds or PerformanceThreshold()
         all_results = []
         breaking_point = None
-        
+
         current_users = initial_users
-        
+
         while current_users <= max_users:
             logger.info(f"Stress test step: {current_users} users")
-            
+
             self.config.concurrent_users = current_users
             self.config.duration_seconds = step_duration_seconds
-            
+
             # Reset metrics
             self.metrics = {}
             self.results = []
             self.alerts = []
-            
+
             result = await self.run_test(scenario, TestType.STRESS, thresholds)
             all_results.append({
                 "users": current_users,
                 "result": result,
             })
-            
+
             # Check if system is breaking down
             critical_alerts = [a for a in self.alerts if a.severity == AlertSeverity.CRITICAL]
             if critical_alerts and breaking_point is None:
                 breaking_point = current_users
                 logger.warning(f"Breaking point detected at {current_users} users")
-            
+
             current_users += step_users
-        
+
         return {
             "type": "stress_test",
             "scenario": scenario.name,
@@ -603,11 +603,11 @@ def test_scenario() -> TestScenario:
 
 class TestPerformanceRegression:
     """Performance regression tests."""
-    
+
     def test_baseline_creation(self):
         """Test creating performance baseline."""
         baseline = PerformanceBaseline("test_baseline.json")
-        
+
         metrics = EndpointMetrics(
             endpoint="/api/v1/test",
             method="GET",
@@ -616,14 +616,14 @@ class TestPerformanceRegression:
             failed_requests=2,
             response_times=[100, 150, 200, 250, 300] * 20,
         )
-        
+
         baseline.set_baseline("/api/v1/test", metrics)
         loaded = baseline.get_baseline("/api/v1/test")
-        
+
         assert loaded is not None
         assert "p95" in loaded
         assert "avg" in loaded
-    
+
     def test_regression_detection(self):
         """Test performance regression detection."""
         baseline = PerformanceBaseline()
@@ -634,7 +634,7 @@ class TestPerformanceRegression:
             "avg": 150,
             "error_rate": 1.0,
         }
-        
+
         # Create metrics with regression
         metrics = EndpointMetrics(
             endpoint="/api/v1/test",
@@ -644,12 +644,12 @@ class TestPerformanceRegression:
             failed_requests=5,
             response_times=[250, 300, 350, 400, 450] * 20,  # Slower
         )
-        
+
         alerts = baseline.check_regression("/api/v1/test", metrics, variance_percent=15.0)
-        
+
         assert len(alerts) > 0
         assert any(a.metric == "p95_response_time" for a in alerts)
-    
+
     def test_threshold_check(self, performance_thresholds):
         """Test threshold checking."""
         metrics = EndpointMetrics(
@@ -659,7 +659,7 @@ class TestPerformanceRegression:
             successful_requests=100,
             response_times=[100] * 100,
         )
-        
+
         # Should pass
         assert metrics.p95_response_time <= performance_thresholds.response_time_p95_ms
         assert metrics.error_rate <= performance_thresholds.error_rate_percent
@@ -667,20 +667,20 @@ class TestPerformanceRegression:
 
 class TestLoadTester:
     """Load tester tests."""
-    
+
     def test_endpoint_selection(self, load_test_config, test_scenario):
         """Test weighted endpoint selection."""
         tester = LoadTester(load_test_config)
-        
+
         selections = {}
         for _ in range(1000):
             endpoint = tester._select_endpoint(test_scenario.endpoints)
             key = endpoint['url']
             selections[key] = selections.get(key, 0) + 1
-        
+
         # Projects should be selected more often (weight 3)
         assert selections.get("/api/v1/projects", 0) > selections.get("/api/v1/health", 0)
-    
+
     def test_metrics_calculation(self):
         """Test metrics calculation."""
         metrics = EndpointMetrics(
@@ -691,7 +691,7 @@ class TestLoadTester:
             failed_requests=5,
             response_times=list(range(100, 200)),  # 100-199ms
         )
-        
+
         assert metrics.success_rate == 95.0
         assert metrics.error_rate == 5.0
         assert metrics.avg_response_time == 149.5

@@ -78,7 +78,7 @@ class UserModelPreference:
 class CodeAI(BaseAI):
     """
     Code AI - User-facing AI for code review and analysis
-    
+
     Features:
     - Multi-language code analysis
     - Customizable analysis types
@@ -86,7 +86,7 @@ class CodeAI(BaseAI):
     - Streaming responses
     - Fix suggestions
     """
-    
+
     # Analysis prompts for different types
     ANALYSIS_PROMPTS = {
         AnalysisType.REVIEW: """Perform a comprehensive code review. Identify:
@@ -95,7 +95,7 @@ class CodeAI(BaseAI):
 - Logic errors
 - Best practice violations
 Provide specific line numbers and actionable suggestions.""",
-        
+
         AnalysisType.SECURITY: """Perform a security analysis. Identify:
 - SQL injection vulnerabilities
 - XSS vulnerabilities
@@ -103,35 +103,35 @@ Provide specific line numbers and actionable suggestions.""",
 - Data exposure risks
 - Input validation problems
 Rate severity as critical, high, medium, or low.""",
-        
+
         AnalysisType.PERFORMANCE: """Analyze code for performance issues:
 - Time complexity problems
 - Memory inefficiencies
 - Unnecessary computations
 - Database query optimization
 - Caching opportunities""",
-        
+
         AnalysisType.STYLE: """Check code style and formatting:
 - Naming conventions
 - Code organization
 - Comment quality
 - Consistency issues
 - Readability improvements""",
-        
+
         AnalysisType.DOCUMENTATION: """Analyze documentation quality:
 - Missing documentation
 - Outdated comments
 - Incomplete docstrings
 - API documentation gaps
 Generate improved documentation where needed.""",
-        
+
         AnalysisType.REFACTOR: """Suggest refactoring improvements:
 - Code duplication
 - Long methods
 - Complex conditionals
 - Design pattern opportunities
 - SOLID principle violations""",
-        
+
         AnalysisType.TEST_GENERATION: """Generate comprehensive tests:
 - Unit tests for functions
 - Edge cases
@@ -139,7 +139,7 @@ Generate improved documentation where needed.""",
 - Integration test suggestions
 Use appropriate testing framework for the language."""
     }
-    
+
     def __init__(
         self,
         config: AIConfig,
@@ -149,12 +149,12 @@ Use appropriate testing framework for the language."""
         super().__init__(config, version_type)
         self.user_preference = user_preference
         self.analysis_history: List[AnalysisResult] = []
-    
+
     def set_user_preference(self, preference: UserModelPreference) -> None:
         """Set user's model preference"""
         self.user_preference = preference
         logger.info(f"Set model preference for user {preference.user_id}")
-    
+
     async def generate(
         self,
         prompt: str,
@@ -163,11 +163,11 @@ Use appropriate testing framework for the language."""
     ) -> str:
         """Generate response for code-related queries"""
         self.record_request(tokens_used=150, success=True)
-        
+
         # In production, this would call the actual AI model
         # with user preferences applied
         return f"Code AI ({self.version_type.value}) analysis response"
-    
+
     async def generate_stream(
         self,
         prompt: str,
@@ -179,7 +179,7 @@ Use appropriate testing framework for the language."""
         for chunk in response.split():
             yield chunk + " "
             await asyncio.sleep(0.02)
-    
+
     async def analyze_code(
         self,
         code: str,
@@ -188,12 +188,12 @@ Use appropriate testing framework for the language."""
     ) -> Dict[str, Any]:
         """
         Analyze code and return structured results
-        
+
         Args:
             code: Source code to analyze
             language: Programming language
             analysis_type: Type of analysis to perform
-            
+
         Returns:
             Analysis results with issues and suggestions
         """
@@ -201,10 +201,10 @@ Use appropriate testing framework for the language."""
             atype = AnalysisType(analysis_type)
         except ValueError:
             atype = AnalysisType.REVIEW
-        
+
         # Get analysis prompt
         system_prompt = self.ANALYSIS_PROMPTS.get(atype, self.ANALYSIS_PROMPTS[AnalysisType.REVIEW])
-        
+
         # Build analysis prompt
         prompt = f"""Language: {language}
 
@@ -220,10 +220,10 @@ Provide your analysis in JSON format with:
 - summary: brief summary
 - score: quality score 0-100
 - suggestions: improvement suggestions"""
-        
+
         # Generate analysis
         response = await self.generate(prompt, system_prompt)
-        
+
         # Parse and structure results (simplified)
         result = AnalysisResult(
             analysis_id=f"analysis_{datetime.now().strftime('%Y%m%d%H%M%S')}",
@@ -240,10 +240,10 @@ Provide your analysis in JSON format with:
             },
             suggestions=["Consider adding more comprehensive tests"]
         )
-        
+
         self.analysis_history.append(result)
         self.record_request(tokens_used=200, success=True)
-        
+
         return {
             'analysis_id': result.analysis_id,
             'analysis_type': result.analysis_type.value,
@@ -255,7 +255,7 @@ Provide your analysis in JSON format with:
             'metrics': result.metrics,
             'suggestions': result.suggestions
         }
-    
+
     async def review_code(
         self,
         code: str,
@@ -264,7 +264,7 @@ Provide your analysis in JSON format with:
     ) -> Dict[str, Any]:
         """Perform comprehensive code review"""
         return await self.analyze_code(code, language, "review")
-    
+
     async def scan_security(
         self,
         code: str,
@@ -272,7 +272,7 @@ Provide your analysis in JSON format with:
     ) -> Dict[str, Any]:
         """Scan code for security vulnerabilities"""
         return await self.analyze_code(code, language, "security")
-    
+
     async def suggest_refactoring(
         self,
         code: str,
@@ -280,7 +280,7 @@ Provide your analysis in JSON format with:
     ) -> Dict[str, Any]:
         """Suggest code refactoring improvements"""
         return await self.analyze_code(code, language, "refactor")
-    
+
     async def generate_tests(
         self,
         code: str,
@@ -291,16 +291,16 @@ Provide your analysis in JSON format with:
         result = await self.analyze_code(code, language, "test_generation")
         result['test_framework'] = framework or self._detect_test_framework(language)
         return result
-    
+
     async def generate_documentation(
         self,
         code: str,
         language: str,
-        style: str = "docstring"
+        _style: str = "docstring"  # Reserved for style-specific generation
     ) -> Dict[str, Any]:
         """Generate documentation for code"""
         return await self.analyze_code(code, language, "documentation")
-    
+
     async def explain_code(
         self,
         code: str,
@@ -315,9 +315,9 @@ Provide your analysis in JSON format with:
 ```
 
 Provide a clear explanation suitable for developers."""
-        
+
         return await self.generate(prompt)
-    
+
     async def fix_issue(
         self,
         code: str,
@@ -337,16 +337,16 @@ Code:
 ```
 
 Provide the corrected code and explain the fix."""
-        
+
         response = await self.generate(prompt)
-        
+
         return {
             'original_issue': vars(issue),
             'fix_applied': True,
             'explanation': response,
             'corrected_code': code  # In production, parse and return actual fix
         }
-    
+
     def _detect_test_framework(self, language: str) -> str:
         """Detect appropriate test framework for language"""
         frameworks = {
@@ -360,7 +360,7 @@ Provide the corrected code and explain the fix."""
             'ruby': 'rspec'
         }
         return frameworks.get(language.lower(), 'unittest')
-    
+
     def get_analysis_history(
         self,
         limit: int = 10,
@@ -368,12 +368,12 @@ Provide the corrected code and explain the fix."""
     ) -> List[Dict[str, Any]]:
         """Get recent analysis history"""
         history = self.analysis_history
-        
+
         if analysis_type:
             history = [h for h in history if h.analysis_type == analysis_type]
-        
+
         history = sorted(history, key=lambda x: x.timestamp, reverse=True)[:limit]
-        
+
         return [
             {
                 'analysis_id': h.analysis_id,
@@ -385,7 +385,7 @@ Provide the corrected code and explain the fix."""
             }
             for h in history
         ]
-    
+
     def get_supported_languages(self) -> List[str]:
         """Get list of supported programming languages"""
         return [
@@ -393,7 +393,7 @@ Provide the corrected code and explain the fix."""
             'rust', 'csharp', 'cpp', 'c', 'ruby', 'php', 'swift',
             'kotlin', 'scala', 'haskell', 'elixir', 'sql', 'shell'
         ]
-    
+
     def get_supported_analysis_types(self) -> List[str]:
         """Get list of supported analysis types"""
         return [t.value for t in AnalysisType]

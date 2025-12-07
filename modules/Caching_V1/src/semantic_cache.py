@@ -164,7 +164,7 @@ class SemanticCache:
             key=lambda k: self._cache[k].created_at
         )
 
-        entry = self._cache.pop(oldest_hash)
+        self._cache.pop(oldest_hash)  # Remove oldest entry
 
         # Clean up index
         self._hash_index = {

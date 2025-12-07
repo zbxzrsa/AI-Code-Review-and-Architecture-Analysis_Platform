@@ -184,7 +184,7 @@ class ProductionOrchestrator:
 
             raise TimeoutError(f"Request exceeded SLO timeout of {timeout}s")
 
-        except Exception as e:
+        except Exception:
             latency = (time.time() - start_time) * 1000
 
             if breaker:

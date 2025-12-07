@@ -29,7 +29,7 @@ class DetectionRule:
     explanation: str
     cwe_id: Optional[str] = None
     enabled: bool = True
-    languages: List[str] = None  # V2: Language-specific rules
+    languages: Optional[List[str]] = None  # V2: Language-specific rules
 
     def __post_init__(self):
         if self.languages is None:

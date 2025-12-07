@@ -5,6 +5,31 @@ import { HomeOutlined, ArrowLeftOutlined, LockOutlined } from '@ant-design/icons
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 
+// Log unauthorized access attempts to backend
+const logUnauthorizedAccess = async (
+  userId: string | undefined,
+  userRole: string,
+  path: string,
+  requiredRole?: string,
+) => {
+  try {
+    await fetch('/api/audit/access-denial', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        userRole,
+        attemptedPath: path,
+        requiredRole,
+        timestamp: new Date().toISOString(),
+      }),
+      credentials: 'include',
+    });
+  } catch {
+    // Silently fail - audit logging shouldn't break the app
+  }
+};
+
 /**
  * Permission types for fine-grained access control.
  * Using string type directly to allow any permission value.
@@ -37,7 +62,7 @@ interface ProtectedRouteProps {
 
 /**
  * Protected Route Component
- * 
+ *
  * Wraps routes that require authentication and optionally specific roles.
  * Redirects to login if not authenticated or shows forbidden if lacking permissions.
  */
@@ -50,10 +75,10 @@ const hasPermissions = (
   requireAll: boolean = false
 ): boolean => {
   if (requiredPermissions.length === 0) return true;
-  
+
   // Admin has all permissions
   if (userPermissions.includes('admin:all')) return true;
-  
+
   if (requireAll) {
     return requiredPermissions.every(perm => userPermissions.includes(perm));
   } else {
@@ -75,19 +100,26 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   const navigate = useNavigate();
   const { isAuthenticated, user, isLoading } = useAuthStore();
 
-  // Call onAccessDenied when access is denied
+  // Call onAccessDenied when access is denied and log the attempt
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
       const roleCheck = requiredRoles.length === 0 || requiredRoles.includes(user.role);
       // Permissions are optional on User - use empty array if not present
       const userPermissions = (user as any).permissions || [];
       const permCheck = hasPermissions(userPermissions, requiredPermissions, requireAll);
-      
+
       if (!roleCheck || !permCheck) {
+        // Log unauthorized access attempt
+        logUnauthorizedAccess(
+          user.id,
+          user.role,
+          location.pathname,
+          requiredRoles.length > 0 ? requiredRoles[0] : undefined
+        );
         onAccessDenied?.();
       }
     }
-  }, [isLoading, isAuthenticated, user, requiredRoles, requiredPermissions, requireAll, onAccessDenied]);
+  }, [isLoading, isAuthenticated, user, requiredRoles, requiredPermissions, requireAll, onAccessDenied, location.pathname]);
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -110,17 +142,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!isAuthenticated || !user) {
     // Save the attempted URL for redirecting after login
     return (
-      <Navigate 
-        to={redirectTo} 
-        state={{ from: location.pathname + location.search }} 
-        replace 
+      <Navigate
+        to={redirectTo}
+        state={{ from: location.pathname + location.search }}
+        replace
       />
     );
   }
 
   // Check role-based access
   const hasRequiredRole = requiredRoles.length === 0 || requiredRoles.includes(user.role);
-  
+
   // Check permission-based access (permissions are optional on User)
   const userPerms = (user as any).permissions || [];
   const hasRequiredPermissions = hasPermissions(userPerms, requiredPermissions, requireAll);
@@ -128,8 +160,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (!hasRequiredRole || !hasRequiredPermissions) {
     // Determine if this is an admin-only route
     const isAdminRoute = requiredRoles.includes('admin') && requiredRoles.length === 1;
-    const currentPath = location.pathname;
-    
+
     return (
       <div style={{
         display: 'flex',
@@ -144,7 +175,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           icon={<LockOutlined style={{ color: '#ff4d4f', fontSize: 72 }} />}
           title={
             <span style={{ fontSize: 28 }}>
-              {isAdminRoute 
+              {isAdminRoute
                 ? t('auth.admin_only', 'Administrator Access Required')
                 : t('auth.access_denied', 'Access Denied')}
             </span>
@@ -152,7 +183,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           subTitle={
             <div style={{ maxWidth: 400, margin: '0 auto' }}>
               <p style={{ fontSize: 16, color: '#666', marginBottom: 8 }}>
-                {isAdminRoute 
+                {isAdminRoute
                   ? t('auth.admin_only_message', 'This feature is only available to administrators.')
                   : t('auth.no_permission', "You don't have permission to access this page.")}
               </p>
@@ -160,10 +191,10 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
                 {t('auth.contact_admin', 'If you believe you should have access, please contact your administrator.')}
               </p>
               {isAdminRoute && (
-                <div style={{ 
-                  marginTop: 16, 
-                  padding: '12px 16px', 
-                  background: 'rgba(255, 77, 79, 0.1)', 
+                <div style={{
+                  marginTop: 16,
+                  padding: '12px 16px',
+                  background: 'rgba(255, 77, 79, 0.1)',
                   borderRadius: 8,
                   border: '1px solid rgba(255, 77, 79, 0.2)'
                 }}>
@@ -180,15 +211,15 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           }
           extra={
             <Space size="middle">
-              <Button 
+              <Button
                 size="large"
-                icon={<ArrowLeftOutlined />} 
+                icon={<ArrowLeftOutlined />}
                 onClick={() => navigate(-1)}
               >
                 {t('common.go_back', 'Go Back')}
               </Button>
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 size="large"
                 icon={<HomeOutlined />}
                 onClick={() => navigate('/dashboard')}

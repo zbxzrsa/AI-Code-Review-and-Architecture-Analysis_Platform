@@ -111,7 +111,7 @@ export const Notifications: React.FC = () => {
   const getIcon = (type: string, category: string) => {
     if (category === 'analysis') return <BugOutlined />;
     if (category === 'experiment') return <RocketOutlined />;
-    
+
     switch (type) {
       case 'success': return <CheckCircleOutlined style={{ color: '#52c41a' }} />;
       case 'warning': return <WarningOutlined style={{ color: '#faad14' }} />;
@@ -129,8 +129,8 @@ export const Notifications: React.FC = () => {
     }
   };
 
-  const filteredNotifications = activeTab === 'all' 
-    ? notifications 
+  const filteredNotifications = activeTab === 'all'
+    ? notifications
     : activeTab === 'unread'
     ? notifications.filter(n => !n.read)
     : notifications.filter(n => n.category === activeTab);
@@ -198,7 +198,7 @@ export const Notifications: React.FC = () => {
             dataSource={filteredNotifications}
             renderItem={(item) => (
               <List.Item
-                className={`notification-item ${!item.read ? 'unread' : ''}`}
+                className={`notification-item ${item.read ? '' : 'unread'}`}
                 actions={[
                   <Dropdown key="actions" menu={{ items: getItemActions(item) }} trigger={['click']}>
                     <Button type="text" icon={<MoreOutlined />} />

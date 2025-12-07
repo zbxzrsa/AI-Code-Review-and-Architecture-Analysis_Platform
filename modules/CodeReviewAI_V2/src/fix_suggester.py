@@ -31,7 +31,7 @@ class FixSuggestion:
     # V2: Additional safety fields
     tested: bool = False
     rollback_code: Optional[str] = None
-    dependencies: List[str] = None
+    dependencies: Optional[List[str]] = None
 
     def __post_init__(self):
         if self.dependencies is None:

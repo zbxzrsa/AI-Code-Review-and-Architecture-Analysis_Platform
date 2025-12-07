@@ -54,7 +54,7 @@ class VerificationNode:
     avg_response_time_ms: float = 0.0
     success_rate: float = 1.0
     consecutive_failures: int = 0
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "node_id": self.node_id,
@@ -80,7 +80,7 @@ class NodeVerificationResult:
     response_time_ms: float
     timestamp: datetime
     error: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "node_id": self.node_id,
@@ -109,7 +109,7 @@ class ConsensusResult:
     node_results: List[NodeVerificationResult]
     total_time_ms: float
     timestamp: datetime
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "request_id": self.request_id,
@@ -129,7 +129,7 @@ class ConsensusResult:
 
 class DistributedVerificationService:
     """Distributed verification service for audit logs."""
-    
+
     def __init__(
         self,
         db_client,
@@ -141,7 +141,7 @@ class DistributedVerificationService:
         healthcheck_interval_seconds: int = 30
     ):
         """Initialize distributed verification service.
-        
+
         Args:
             db_client: Database client
             nodes: List of verification node configurations
@@ -157,7 +157,7 @@ class DistributedVerificationService:
         self.min_nodes = min_nodes
         self.max_retries = max_retries
         self.healthcheck_interval = healthcheck_interval_seconds
-        
+
         # Initialize nodes
         self.nodes: Dict[str, VerificationNode] = {}
         for node_config in nodes:
@@ -168,17 +168,17 @@ class DistributedVerificationService:
                 priority=node_config.get("priority", 0)
             )
             self.nodes[node.node_id] = node
-        
+
         self._session: Optional[aiohttp.ClientSession] = None
         self._running = False
         self._healthcheck_task: Optional[asyncio.Task] = None
-        
+
         # Metrics
         self._total_verifications = 0
         self._successful_verifications = 0
         self._failed_verifications = 0
         self._avg_verification_time_ms = 0.0
-    
+
     async def start(self):
         """Start the distributed verification service."""
         connector = aiohttp.TCPConnector(
@@ -191,30 +191,32 @@ class DistributedVerificationService:
             connector=connector,
             timeout=timeout
         )
-        
+
         self._running = True
         self._healthcheck_task = asyncio.create_task(self._healthcheck_loop())
-        
+
         logger.info(
             f"Distributed verification service started with {len(self.nodes)} nodes"
         )
-    
+
     async def stop(self):
         """Stop the distributed verification service."""
         self._running = False
-        
+
         if self._healthcheck_task:
             self._healthcheck_task.cancel()
             try:
                 await self._healthcheck_task
             except asyncio.CancelledError:
-                logger.debug("Healthcheck task cancelled")
-        
+                # Intentionally not re-raised: we initiated the cancellation
+                # during shutdown, so propagation is not needed
+                logger.debug("Healthcheck task cancelled during shutdown")
+
         if self._session:
             await self._session.close()
-        
+
         logger.info("Distributed verification service stopped")
-    
+
     async def _healthcheck_loop(self):
         """Background health check loop."""
         while self._running:
@@ -226,33 +228,33 @@ class DistributedVerificationService:
                 raise
             except Exception as e:
                 logger.error(f"Health check error: {e}")
-    
+
     async def _check_all_nodes_health(self):
         """Check health of all verification nodes."""
         tasks = []
         for node_id, node in self.nodes.items():
             tasks.append(self._check_node_health(node))
-        
+
         await asyncio.gather(*tasks, return_exceptions=True)
-    
+
     async def _check_node_health(self, node: VerificationNode):
         """Check health of a single node."""
         if not self._session:
             return
-        
+
         try:
             start_time = time.perf_counter()
-            
+
             async with self._session.get(
                 f"{node.url}/health",
                 timeout=aiohttp.ClientTimeout(total=5)
             ) as response:
                 elapsed_ms = (time.perf_counter() - start_time) * 1000
-                
+
                 if response.status == 200:
                     node.last_heartbeat = datetime.now(timezone.utc)
                     node.consecutive_failures = 0
-                    
+
                     # Update average response time
                     if node.avg_response_time_ms == 0:
                         node.avg_response_time_ms = elapsed_ms
@@ -261,7 +263,7 @@ class DistributedVerificationService:
                         node.avg_response_time_ms = (
                             0.9 * node.avg_response_time_ms + 0.1 * elapsed_ms
                         )
-                    
+
                     # Update health status
                     if elapsed_ms < 100:
                         node.health = NodeHealth.HEALTHY
@@ -271,43 +273,43 @@ class DistributedVerificationService:
                         node.health = NodeHealth.DEGRADED
                 else:
                     self._handle_node_failure(node)
-                    
+
         except asyncio.TimeoutError:
             self._handle_node_failure(node, "timeout")
         except Exception as e:
             self._handle_node_failure(node, str(e))
-    
+
     def _handle_node_failure(self, node: VerificationNode, error: str = "unknown"):
         """Handle node failure."""
         node.consecutive_failures += 1
-        
+
         if node.consecutive_failures >= 3:
             node.health = NodeHealth.UNHEALTHY
         elif node.consecutive_failures >= 5:
             node.health = NodeHealth.OFFLINE
         else:
             node.health = NodeHealth.DEGRADED
-        
+
         # Update success rate
         total = max(1, self._total_verifications)
         node.success_rate = max(0, node.success_rate - (1 / total))
-        
+
         logger.warning(
             f"Node {node.node_id} failure ({node.consecutive_failures}): {error}"
         )
-    
+
     def _get_available_nodes(self) -> List[VerificationNode]:
         """Get list of available (healthy) nodes."""
         available = [
             node for node in self.nodes.values()
             if node.health in (NodeHealth.HEALTHY, NodeHealth.DEGRADED)
         ]
-        
+
         # Sort by priority, then by response time
         available.sort(key=lambda n: (-n.priority, n.avg_response_time_ms))
-        
+
         return available
-    
+
     async def verify_log(
         self,
         log_id: str,
@@ -316,25 +318,25 @@ class DistributedVerificationService:
         prev_hash: Optional[str] = None
     ) -> ConsensusResult:
         """Verify an audit log entry across multiple nodes.
-        
+
         Args:
             log_id: ID of the audit log
             signature: Cryptographic signature to verify
             expected_hash: Expected hash of the log entry
             prev_hash: Previous log entry hash for chain verification
-            
+
         Returns:
             ConsensusResult with verification details
         """
         request_id = hashlib.sha256(
             f"{log_id}:{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()[:16]
-        
+
         start_time = time.perf_counter()
-        
+
         # Get available nodes
         available_nodes = self._get_available_nodes()
-        
+
         if len(available_nodes) < self.min_nodes:
             logger.warning(
                 f"Insufficient nodes: {len(available_nodes)} < {self.min_nodes}"
@@ -353,7 +355,7 @@ class DistributedVerificationService:
                 total_time_ms=(time.perf_counter() - start_time) * 1000,
                 timestamp=datetime.now(timezone.utc)
             )
-        
+
         # Prepare verification request
         verification_request = {
             "request_id": request_id,
@@ -362,7 +364,7 @@ class DistributedVerificationService:
             "expected_hash": expected_hash,
             "prev_hash": prev_hash
         }
-        
+
         # Send verification requests to all nodes concurrently
         tasks = []
         for node in available_nodes:
@@ -370,7 +372,7 @@ class DistributedVerificationService:
                 self._verify_on_node(node, verification_request)
             )
             tasks.append(task)
-        
+
         # Wait for all responses with timeout
         try:
             node_results = await asyncio.wait_for(
@@ -386,13 +388,13 @@ class DistributedVerificationService:
                         node_results.append(task.result())
                     except Exception:
                         pass
-        
+
         # Process results
         successful_results: List[NodeVerificationResult] = []
         for result in node_results:
             if isinstance(result, NodeVerificationResult):
                 successful_results.append(result)
-        
+
         # Calculate consensus
         consensus_result = self._calculate_consensus(
             request_id,
@@ -401,20 +403,20 @@ class DistributedVerificationService:
             successful_results,
             start_time
         )
-        
+
         # Update metrics
         self._total_verifications += 1
         if consensus_result.is_valid and consensus_result.consensus_reached:
             self._successful_verifications += 1
         else:
             self._failed_verifications += 1
-        
+
         # Update average time
         self._avg_verification_time_ms = (
-            0.95 * self._avg_verification_time_ms + 
+            0.95 * self._avg_verification_time_ms +
             0.05 * consensus_result.total_time_ms
         )
-        
+
         # Log result
         if consensus_result.consensus_reached:
             logger.info(
@@ -428,9 +430,9 @@ class DistributedVerificationService:
                 f"consensus={consensus_result.consensus_ratio:.2%} "
                 f"(required: {self.consensus_threshold:.2%})"
             )
-        
+
         return consensus_result
-    
+
     async def _verify_on_node(
         self,
         node: VerificationNode,
@@ -439,9 +441,9 @@ class DistributedVerificationService:
         """Send verification request to a single node."""
         if not self._session:
             raise RuntimeError("Service not started")
-        
+
         start_time = time.perf_counter()
-        
+
         for retry in range(self.max_retries + 1):
             try:
                 async with self._session.post(
@@ -449,16 +451,16 @@ class DistributedVerificationService:
                     json=request
                 ) as response:
                     elapsed_ms = (time.perf_counter() - start_time) * 1000
-                    
+
                     if response.status == 200:
                         result = await response.json()
-                        
+
                         # Update node metrics
                         node.consecutive_failures = 0
                         node.avg_response_time_ms = (
                             0.9 * node.avg_response_time_ms + 0.1 * elapsed_ms
                         )
-                        
+
                         return NodeVerificationResult(
                             node_id=node.node_id,
                             is_valid=result.get("is_valid", False),
@@ -471,7 +473,7 @@ class DistributedVerificationService:
                     else:
                         error_text = await response.text()
                         raise Exception(f"HTTP {response.status}: {error_text}")
-                        
+
             except asyncio.TimeoutError:
                 if retry == self.max_retries:
                     self._handle_node_failure(node, "timeout")
@@ -486,7 +488,7 @@ class DistributedVerificationService:
                         error="timeout"
                     )
                 continue
-                
+
             except Exception as e:
                 if retry == self.max_retries:
                     self._handle_node_failure(node, str(e))
@@ -501,7 +503,7 @@ class DistributedVerificationService:
                         error=str(e)
                     )
                 await asyncio.sleep(0.05 * (retry + 1))  # Backoff
-        
+
         # Should not reach here
         return NodeVerificationResult(
             node_id=node.node_id,
@@ -513,7 +515,7 @@ class DistributedVerificationService:
             timestamp=datetime.now(timezone.utc),
             error="max_retries_exceeded"
         )
-    
+
     def _calculate_consensus(
         self,
         request_id: str,
@@ -524,9 +526,9 @@ class DistributedVerificationService:
     ) -> ConsensusResult:
         """Calculate consensus from node results."""
         total_time_ms = (time.perf_counter() - start_time) * 1000
-        
+
         responding_nodes = len(results)
-        
+
         if responding_nodes == 0:
             return ConsensusResult(
                 request_id=request_id,
@@ -542,15 +544,15 @@ class DistributedVerificationService:
                 total_time_ms=total_time_ms,
                 timestamp=datetime.now(timezone.utc)
             )
-        
+
         # Count valid/invalid votes
         valid_votes = sum(1 for r in results if r.is_valid and not r.error)
         invalid_votes = sum(1 for r in results if not r.is_valid and not r.error)
         error_votes = sum(1 for r in results if r.error)
-        
+
         # Exclude error votes from consensus calculation
         effective_votes = responding_nodes - error_votes
-        
+
         if effective_votes == 0:
             return ConsensusResult(
                 request_id=request_id,
@@ -566,15 +568,15 @@ class DistributedVerificationService:
                 total_time_ms=total_time_ms,
                 timestamp=datetime.now(timezone.utc)
             )
-        
+
         # Determine majority opinion
         majority_is_valid = valid_votes > invalid_votes
         agreeing_nodes = valid_votes if majority_is_valid else invalid_votes
         consensus_ratio = agreeing_nodes / effective_votes
-        
+
         # Check if consensus threshold is met
         consensus_reached = consensus_ratio >= self.consensus_threshold
-        
+
         # Determine status
         if consensus_reached:
             status = VerificationStatus.VERIFIED
@@ -582,7 +584,7 @@ class DistributedVerificationService:
             status = VerificationStatus.INCONSISTENT
         else:
             status = VerificationStatus.FAILED
-        
+
         return ConsensusResult(
             request_id=request_id,
             log_id=log_id,
@@ -597,16 +599,16 @@ class DistributedVerificationService:
             total_time_ms=total_time_ms,
             timestamp=datetime.now(timezone.utc)
         )
-    
+
     async def verify_batch(
         self,
         log_entries: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Verify a batch of audit log entries.
-        
+
         Args:
             log_entries: List of log entries with id, signature, hash, prev_hash
-            
+
         Returns:
             Batch verification result
         """
@@ -614,7 +616,7 @@ class DistributedVerificationService:
         verified_count = 0
         failed_count = 0
         total_time_ms = 0
-        
+
         for entry in log_entries:
             result = await self.verify_log(
                 log_id=entry["id"],
@@ -622,15 +624,15 @@ class DistributedVerificationService:
                 expected_hash=entry["hash"],
                 prev_hash=entry.get("prev_hash")
             )
-            
+
             results.append(result.to_dict())
             total_time_ms += result.total_time_ms
-            
+
             if result.is_valid and result.consensus_reached:
                 verified_count += 1
             else:
                 failed_count += 1
-        
+
         return {
             "total": len(log_entries),
             "verified": verified_count,
@@ -639,29 +641,29 @@ class DistributedVerificationService:
             "results": results,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
-    
+
     def get_node_status(self) -> Dict[str, Any]:
         """Get status of all verification nodes."""
         return {
             "total_nodes": len(self.nodes),
             "healthy_nodes": sum(
-                1 for n in self.nodes.values() 
+                1 for n in self.nodes.values()
                 if n.health == NodeHealth.HEALTHY
             ),
             "degraded_nodes": sum(
-                1 for n in self.nodes.values() 
+                1 for n in self.nodes.values()
                 if n.health == NodeHealth.DEGRADED
             ),
             "unhealthy_nodes": sum(
-                1 for n in self.nodes.values() 
+                1 for n in self.nodes.values()
                 if n.health in (NodeHealth.UNHEALTHY, NodeHealth.OFFLINE)
             ),
             "nodes": {
-                node_id: node.to_dict() 
+                node_id: node.to_dict()
                 for node_id, node in self.nodes.items()
             }
         }
-    
+
     def get_metrics(self) -> Dict[str, Any]:
         """Get verification metrics."""
         return {
@@ -677,10 +679,10 @@ class DistributedVerificationService:
             "timeout_ms": self.timeout_ms,
             "min_nodes": self.min_nodes
         }
-    
+
     async def add_node(self, node_config: Dict[str, Any]):
         """Add a new verification node.
-        
+
         Args:
             node_config: Node configuration with node_id, url, region
         """
@@ -690,16 +692,16 @@ class DistributedVerificationService:
             region=node_config.get("region", "unknown"),
             priority=node_config.get("priority", 0)
         )
-        
+
         # Perform initial health check
         await self._check_node_health(node)
-        
+
         self.nodes[node.node_id] = node
         logger.info(f"Added verification node: {node.node_id} ({node.url})")
-    
+
     async def remove_node(self, node_id: str):
         """Remove a verification node.
-        
+
         Args:
             node_id: ID of the node to remove
         """
@@ -712,10 +714,10 @@ class DistributedVerificationService:
 
 class VerificationNodeServer:
     """Verification node server implementation.
-    
+
     This is the server-side implementation that runs on each verification node.
     """
-    
+
     def __init__(
         self,
         node_id: str,
@@ -723,7 +725,7 @@ class VerificationNodeServer:
         public_key_pem: bytes
     ):
         """Initialize verification node server.
-        
+
         Args:
             node_id: Unique identifier for this node
             db_client: Database client for local audit log access
@@ -731,41 +733,41 @@ class VerificationNodeServer:
         """
         self.node_id = node_id
         self.db = db_client
-        
+
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.backends import default_backend
-        
+
         self.public_key = serialization.load_pem_public_key(
             public_key_pem,
             backend=default_backend()
         )
-    
+
     async def verify(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Process verification request.
-        
+
         Args:
             request: Verification request with log details
-            
+
         Returns:
             Verification result
         """
         from cryptography.hazmat.primitives import hashes
         from cryptography.hazmat.primitives.asymmetric import padding
-        
+
         try:
             log_id = request["log_id"]
             signature_hex = request["signature"]
             expected_hash = request["expected_hash"]
             prev_hash = request.get("prev_hash")
-            
+
             # Compute hash of expected_hash
             computed_hash = hashlib.sha256(expected_hash.encode()).hexdigest()
             hash_verified = computed_hash
-            
+
             # Verify signature
             signature_bytes = bytes.fromhex(signature_hex)
             hash_bytes = bytes.fromhex(expected_hash)
-            
+
             try:
                 self.public_key.verify(
                     signature_bytes,
@@ -779,7 +781,7 @@ class VerificationNodeServer:
                 signature_verified = True
             except Exception:
                 signature_verified = False
-            
+
             # Verify chain (if prev_hash provided)
             chain_verified = True
             if prev_hash:
@@ -796,13 +798,13 @@ class VerificationNodeServer:
                     """,
                     log_id
                 )
-                
+
                 if prev_log:
                     chain_verified = prev_log["signature"] == prev_hash
-            
+
             # Overall validity
             is_valid = signature_verified and chain_verified
-            
+
             return {
                 "is_valid": is_valid,
                 "hash_verified": hash_verified,
@@ -811,7 +813,7 @@ class VerificationNodeServer:
                 "node_id": self.node_id,
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             logger.error(f"Verification error on node {self.node_id}: {e}")
             return {
@@ -823,13 +825,13 @@ class VerificationNodeServer:
                 "error": str(e),
                 "timestamp": datetime.now(timezone.utc).isoformat()
             }
-    
+
     async def health_check(self) -> Dict[str, Any]:
         """Perform health check."""
         try:
             # Check database connectivity
             await self.db.fetchone("SELECT 1")
-            
+
             return {
                 "status": "healthy",
                 "node_id": self.node_id,

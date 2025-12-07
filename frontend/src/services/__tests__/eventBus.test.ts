@@ -64,7 +64,7 @@ describe("EventBus", () => {
   describe("off", () => {
     it("should remove specific listener", async () => {
       const handler = jest.fn();
-      const unsubscribe = eventBus.on("user:logout", handler);
+      eventBus.on("user:logout", handler); // Subscribe first
 
       eventBus.off("user:logout");
 
@@ -245,11 +245,7 @@ describe("EventBus", () => {
 
       await eventBus.emit("user:login", { userId: "123" });
 
-      expect(order).toEqual([
-        "middleware-before",
-        "handler",
-        "middleware-after",
-      ]);
+      expect(order).toEqual(["middleware-before", "handler", "middleware-after"]);
     });
 
     it("should allow middleware to modify event flow", async () => {
@@ -357,9 +353,7 @@ describe("EventBus", () => {
       await eventBus.emit("analysis:completed", {
         id: "123",
         result: {
-          issues: [
-            { id: "1", type: "error", severity: "high", message: "Test" },
-          ],
+          issues: [{ id: "1", type: "error", severity: "high", message: "Test" }],
           score: 85,
           summary: "Found 1 issue",
         },
@@ -368,9 +362,7 @@ describe("EventBus", () => {
       expect(analysisHandler).toHaveBeenCalledWith({
         id: "123",
         result: {
-          issues: [
-            { id: "1", type: "error", severity: "high", message: "Test" },
-          ],
+          issues: [{ id: "1", type: "error", severity: "high", message: "Test" }],
           score: 85,
           summary: "Found 1 issue",
         },

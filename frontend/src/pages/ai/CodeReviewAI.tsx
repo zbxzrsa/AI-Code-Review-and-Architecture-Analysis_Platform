@@ -110,7 +110,8 @@ export const CodeReviewAI: React.FC = () => {
   const [issues, setIssues] = useState<Issue[]>([]);
   const [hasReviewed, setHasReviewed] = useState(false);
   const [analysisId, setAnalysisId] = useState<string | null>(null);
-  const [reviewHistory, setReviewHistory] = useState<Array<{ timestamp: Date; score: number; issueCount: number }>>([]);
+  // Review history available for future analytics display
+  const [_reviewHistory, _setReviewHistory] = useState<Array<{ timestamp: Date; score: number; issueCount: number }>>([]);
 
   // API Hooks
   const analysisMutation = useCodeAnalysis();
@@ -136,7 +137,7 @@ export const CodeReviewAI: React.FC = () => {
       setIssues(result.issues);
       setAnalysisId(result.id);
       setHasReviewed(true);
-      
+
       // Add to history
       setReviewHistory((prev) => [
         { timestamp: new Date(), score: result.score, issueCount: result.issues.length },
@@ -167,7 +168,8 @@ export const CodeReviewAI: React.FC = () => {
     }
   }, [code, applyFixMutation, t]);
 
-  const handleFeedback = useCallback(async (helpful: boolean) => {
+  // Feedback handler available for future UI integration
+  const _handleFeedback = useCallback(async (helpful: boolean) => {
     if (!analysisId) return;
     await feedbackMutation.mutateAsync({ responseId: analysisId, helpful });
   }, [analysisId, feedbackMutation]);

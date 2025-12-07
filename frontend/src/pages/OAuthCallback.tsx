@@ -1,6 +1,6 @@
 /**
  * OAuth Callback Page
- * 
+ *
  * Handles OAuth callback from GitHub/GitLab and redirects user appropriately.
  * Shows loading state while processing and error state if authentication fails.
  */
@@ -46,8 +46,9 @@ const OAuthCallback: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { provider } = useParams<{ provider: string }>();
-  const { } = useAuth();  // Auth context available for future use
-  
+  // Auth context available if needed: const { login, user } = useAuth();
+  useAuth();  // Ensure auth context is initialized
+
   const [state, setState] = useState<CallbackState>('loading');
   const [result, setResult] = useState<CallbackResult | null>(null);
   const [progress, setProgress] = useState(0);
@@ -74,19 +75,19 @@ const OAuthCallback: React.FC = () => {
     if (oauthSuccess === 'true') {
       setState('processing');
       setProgress(50);
-      
+
       // OAuth was successful (backend handled it)
       setProgress(100);
-      
+
       setResult({
         success: true,
-        message: isNewUser 
-          ? 'Account created successfully!' 
+        message: isNewUser
+          ? 'Account created successfully!'
           : 'Connected successfully!',
         isNewUser,
       });
       setState('success');
-      
+
       // Redirect after short delay
       setTimeout(() => {
         if (isNewUser) {
@@ -95,7 +96,7 @@ const OAuthCallback: React.FC = () => {
           navigate('/repositories', { replace: true });
         }
       }, 2000);
-      
+
       return;
     }
 
@@ -103,7 +104,7 @@ const OAuthCallback: React.FC = () => {
     if (code && stateParam) {
       setState('processing');
       setProgress(25);
-      
+
       try {
         // The backend handles the code exchange via redirect
         // This code path is for direct API calls if needed
@@ -114,34 +115,34 @@ const OAuthCallback: React.FC = () => {
             credentials: 'include',
           }
         );
-        
+
         setProgress(75);
-        
+
         if (response.ok) {
           const data = await response.json();
           setProgress(100);
-          
+
           setResult({
             success: true,
-            message: data.is_new_user 
-              ? 'Account created successfully!' 
+            message: data.is_new_user
+              ? 'Account created successfully!'
               : 'Connected successfully!',
             isNewUser: data.is_new_user,
           });
           setState('success');
-          
+
           // Redirect
           setTimeout(() => {
-            navigate(data.is_new_user ? '/settings/profile' : '/repositories', { 
-              replace: true 
+            navigate(data.is_new_user ? '/settings/profile' : '/repositories', {
+              replace: true
             });
           }, 2000);
-          
+
         } else {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.detail || 'Authentication failed');
         }
-        
+
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Authentication failed');
         setState('error');
@@ -153,14 +154,14 @@ const OAuthCallback: React.FC = () => {
     setError('Invalid callback parameters');
     setState('error');
   }, [
-    code, 
-    stateParam, 
-    errorParam, 
-    errorDescription, 
-    oauthSuccess, 
-    oauthError, 
-    isNewUser, 
-    provider, 
+    code,
+    stateParam,
+    errorParam,
+    errorDescription,
+    oauthSuccess,
+    oauthError,
+    isNewUser,
+    provider,
     navigate
   ]);
 
@@ -177,9 +178,8 @@ const OAuthCallback: React.FC = () => {
     navigate('/repositories', { replace: true });
   };
 
-  const handleGoHome = useCallback(() => {
-    navigate('/', { replace: true });
-  }, [navigate]);
+  // handleGoHome available for future use if needed
+  // const handleGoHome = useCallback(() => navigate('/', { replace: true }), [navigate]);
 
   const providerName = providerNames[provider || ''] || provider || 'OAuth';
   const providerIcon = providerIcons[provider || ''] || <LinkOutlined style={{ fontSize: 48 }} />;
@@ -194,9 +194,9 @@ const OAuthCallback: React.FC = () => {
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       }}>
-        <Card 
-          style={{ 
-            width: 400, 
+        <Card
+          style={{
+            width: 400,
             textAlign: 'center',
             borderRadius: 12,
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
@@ -206,28 +206,28 @@ const OAuthCallback: React.FC = () => {
             <div style={{ color: '#1890ff' }}>
               {providerIcon}
             </div>
-            
+
             <Title level={4} style={{ margin: 0 }}>
               Connecting to {providerName}
             </Title>
-            
-            <Spin 
-              indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />} 
+
+            <Spin
+              indicator={<LoadingOutlined style={{ fontSize: 32 }} spin />}
             />
-            
+
             {state === 'processing' && (
-              <Progress 
-                percent={progress} 
-                status="active" 
+              <Progress
+                percent={progress}
+                status="active"
                 strokeColor={{
                   '0%': '#108ee9',
                   '100%': '#87d068',
                 }}
               />
             )}
-            
+
             <Text type="secondary">
-              {state === 'loading' 
+              {state === 'loading'
                 ? 'Initializing authentication...'
                 : 'Processing your request...'}
             </Text>
@@ -247,9 +247,9 @@ const OAuthCallback: React.FC = () => {
         minHeight: '100vh',
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
       }}>
-        <Card 
-          style={{ 
-            width: 450, 
+        <Card
+          style={{
+            width: 450,
             textAlign: 'center',
             borderRadius: 12,
             boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
@@ -265,8 +265,8 @@ const OAuthCallback: React.FC = () => {
                 : `Your ${providerName} account has been connected.`
             }
             extra={[
-              <Button 
-                type="primary" 
+              <Button
+                type="primary"
                 key="continue"
                 onClick={() => navigate(
                   result.isNewUser ? '/settings/profile' : '/repositories',
@@ -277,7 +277,7 @@ const OAuthCallback: React.FC = () => {
               </Button>,
             ]}
           />
-          
+
           <Text type="secondary">
             Redirecting automatically in 2 seconds...
           </Text>
@@ -295,9 +295,9 @@ const OAuthCallback: React.FC = () => {
       minHeight: '100vh',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     }}>
-      <Card 
-        style={{ 
-          width: 500, 
+      <Card
+        style={{
+          width: 500,
           textAlign: 'center',
           borderRadius: 12,
           boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
@@ -317,7 +317,7 @@ const OAuthCallback: React.FC = () => {
             </Button>,
           ]}
         />
-        
+
         {error && (
           <Alert
             message="Error Details"
@@ -327,7 +327,7 @@ const OAuthCallback: React.FC = () => {
             style={{ marginTop: 16, textAlign: 'left' }}
           />
         )}
-        
+
         <Paragraph type="secondary" style={{ marginTop: 24 }}>
           If this problem persists, please try:
         </Paragraph>

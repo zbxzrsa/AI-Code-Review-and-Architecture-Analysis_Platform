@@ -46,10 +46,45 @@ from .ollama_provider import (
     create_ollama_provider,
 )
 
+# Common utilities (consolidated from multiple modules)
+from .common import (
+    # String utilities
+    generate_id,
+    hash_string,
+    truncate,
+    slugify,
+    camel_to_snake,
+    snake_to_camel,
+    # DateTime utilities
+    utc_now,
+    iso_format,
+    parse_iso,
+    # Dictionary utilities
+    deep_merge,
+    flatten_dict,
+    get_nested,
+    set_nested,
+    # List utilities
+    chunk_list,
+    unique,
+    first,
+    last,
+    # Async utilities
+    run_with_timeout,
+    gather_with_concurrency,
+    # Decorators
+    retry,
+    log_execution,
+    # Validation
+    is_valid_email,
+    is_valid_uuid,
+    is_valid_url,
+)
+
 __all__ = [
     # Legacy AI client
     "AIProvider",
-    "AIResponse", 
+    "AIResponse",
     "OpenAIProvider",
     "AnthropicProvider",
     "AIClientRouter",
@@ -69,4 +104,29 @@ __all__ = [
     "OllamaProviderDirect",
     "CODE_REVIEW_PROMPTS",
     "create_ollama_provider",
+    # Common utilities
+    "generate_id",
+    "hash_string",
+    "truncate",
+    "slugify",
+    "camel_to_snake",
+    "snake_to_camel",
+    "utc_now",
+    "iso_format",
+    "parse_iso",
+    "deep_merge",
+    "flatten_dict",
+    "get_nested",
+    "set_nested",
+    "chunk_list",
+    "unique",
+    "first",
+    "last",
+    "run_with_timeout",
+    "gather_with_concurrency",
+    "retry",
+    "log_execution",
+    "is_valid_email",
+    "is_valid_uuid",
+    "is_valid_url",
 ]

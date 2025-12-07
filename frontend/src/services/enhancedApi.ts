@@ -83,17 +83,8 @@ function classifyError(error: AxiosError): ApiError {
   let message = "An unexpected error occurred";
   let retryable = false;
 
-  if (!error.response) {
-    if (error.code === "ECONNABORTED") {
-      code = ErrorCodes.TIMEOUT;
-      message = "Request timed out";
-      retryable = true;
-    } else {
-      code = ErrorCodes.NETWORK_ERROR;
-      message = "Network error. Please check your connection.";
-      retryable = true;
-    }
-  } else {
+  if (error.response) {
+    // Response error - use status code
     switch (status) {
       case 401:
         code = ErrorCodes.UNAUTHORIZED;
@@ -129,6 +120,14 @@ function classifyError(error: AxiosError): ApiError {
         retryable = true;
         break;
     }
+  } else if (error.code === "ECONNABORTED") {
+    code = ErrorCodes.TIMEOUT;
+    message = "Request timed out";
+    retryable = true;
+  } else {
+    code = ErrorCodes.NETWORK_ERROR;
+    message = "Network error. Please check your connection.";
+    retryable = true;
   }
 
   return {
@@ -191,11 +190,9 @@ class EnhancedApi {
         // Log response time
         const requestTime = response.config.headers["X-Request-Time"];
         if (requestTime) {
-          const duration = Date.now() - parseInt(requestTime as string);
+          const duration = Date.now() - Number.parseInt(requestTime as string);
           console.debug(
-            `[API] ${response.config.method?.toUpperCase()} ${
-              response.config.url
-            } - ${duration}ms`
+            `[API] ${response.config.method?.toUpperCase()} ${response.config.url} - ${duration}ms`
           );
         }
         return response;
@@ -213,12 +210,12 @@ class EnhancedApi {
   // ============================================
 
   private setupOnlineListener(): void {
-    window.addEventListener("online", () => {
+    globalThis.addEventListener("online", () => {
       this.isOnline = true;
       this.processOfflineQueue();
     });
 
-    window.addEventListener("offline", () => {
+    globalThis.addEventListener("offline", () => {
       this.isOnline = false;
     });
   }
@@ -226,9 +223,7 @@ class EnhancedApi {
   private async processOfflineQueue(): Promise<void> {
     // Debug: Processing offline queue
     if (import.meta.env.DEV) {
-      console.debug(
-        `[API] Processing ${this.offlineQueue.length} queued requests`
-      );
+      console.debug(`[API] Processing ${this.offlineQueue.length} queued requests`);
     }
 
     const queue = [...this.offlineQueue];
@@ -249,9 +244,7 @@ class EnhancedApi {
   // ============================================
 
   private getCacheKey(config: RequestOptions): string {
-    return `${config.method || "GET"}:${config.url}:${JSON.stringify(
-      config.params || {}
-    )}`;
+    return `${config.method || "GET"}:${config.url}:${JSON.stringify(config.params || {})}`;
   }
 
   private getFromCache(key: string): any | null {
@@ -318,9 +311,7 @@ class EnhancedApi {
     // Debug: Retry logging
     if (import.meta.env.DEV) {
       console.debug(
-        `[API] Retrying request (${retryCount + 1}/${maxRetries}) in ${
-          delay + jitter
-        }ms`
+        `[API] Retrying request (${retryCount + 1}/${maxRetries}) in ${delay + jitter}ms`
       );
     }
 
@@ -333,10 +324,7 @@ class EnhancedApi {
   // Core Request Method
   // ============================================
 
-  private async executeRequest(
-    config: RequestOptions,
-    retryCount: number = 0
-  ): Promise<any> {
+  private async executeRequest(config: RequestOptions, retryCount: number = 0): Promise<any> {
     try {
       const response = await this.client.request(config);
       return response.data;
@@ -411,34 +399,19 @@ class EnhancedApi {
     return this.request<T>({ ...options, method: "GET", url });
   }
 
-  public async post<T = any>(
-    url: string,
-    data?: any,
-    options?: RequestOptions
-  ): Promise<T> {
+  public async post<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
     return this.request<T>({ ...options, method: "POST", url, data });
   }
 
-  public async put<T = any>(
-    url: string,
-    data?: any,
-    options?: RequestOptions
-  ): Promise<T> {
+  public async put<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
     return this.request<T>({ ...options, method: "PUT", url, data });
   }
 
-  public async patch<T = any>(
-    url: string,
-    data?: any,
-    options?: RequestOptions
-  ): Promise<T> {
+  public async patch<T = any>(url: string, data?: any, options?: RequestOptions): Promise<T> {
     return this.request<T>({ ...options, method: "PATCH", url, data });
   }
 
-  public async delete<T = any>(
-    url: string,
-    options?: RequestOptions
-  ): Promise<T> {
+  public async delete<T = any>(url: string, options?: RequestOptions): Promise<T> {
     return this.request<T>({ ...options, method: "DELETE", url });
   }
 

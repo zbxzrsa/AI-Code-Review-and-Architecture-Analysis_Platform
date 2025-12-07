@@ -13,13 +13,13 @@ Features:
 
 Usage:
     from backend.shared.logging import get_logger, configure_logging
-    
+
     # Configure at application startup
     configure_logging(level="INFO", json_format=True)
-    
+
     # Get a logger
     logger = get_logger(__name__)
-    
+
     # Log with context
     logger.info("user_login", user_id="123", ip="192.168.1.1")
     logger.error("api_error", error_code=500, endpoint="/api/review")
@@ -75,15 +75,15 @@ def add_request_context(logger, method_name, event_dict):
     request_id = request_id_var.get()
     if request_id:
         event_dict['request_id'] = request_id
-    
+
     user_id = user_id_var.get()
     if user_id:
         event_dict['user_id'] = user_id
-    
+
     session_id = session_id_var.get()
     if session_id:
         event_dict['session_id'] = session_id
-    
+
     return event_dict
 
 
@@ -142,7 +142,7 @@ def censor_sensitive_data(logger, method_name, event_dict):
         'authorization', 'auth', 'credential', 'private_key',
         'access_token', 'refresh_token', 'bearer',
     }
-    
+
     def censor_dict(d: dict) -> dict:
         result = {}
         for key, value in d.items():
@@ -157,7 +157,7 @@ def censor_sensitive_data(logger, method_name, event_dict):
             else:
                 result[key] = value
         return result
-    
+
     return censor_dict(event_dict)
 
 
@@ -191,7 +191,7 @@ def configure_logging(
 ):
     """
     Configure structured logging for the application.
-    
+
     Args:
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         json_format: Output logs in JSON format
@@ -203,7 +203,7 @@ def configure_logging(
         include_caller_info: Include caller file/line info
     """
     log_level = LOG_LEVELS.get(level.upper(), logging.INFO)
-    
+
     if STRUCTLOG_AVAILABLE:
         _configure_structlog(
             log_level=log_level,
@@ -235,7 +235,7 @@ def _configure_structlog(
     include_caller_info: bool,
 ):
     """Configure structlog for structured logging."""
-    
+
     # Build processor chain
     shared_processors: List = [
         filter_by_level,
@@ -246,18 +246,18 @@ def _configure_structlog(
         add_request_context,
         add_service_context(service_name, version, environment),
     ]
-    
+
     if include_caller_info:
         shared_processors.append(add_caller_info)
-    
+
     shared_processors.extend([
         StackInfoRenderer(),
         format_exception_info,
     ])
-    
+
     if censor_sensitive:
         shared_processors.append(censor_sensitive_data)
-    
+
     # Final renderer
     if json_format:
         shared_processors.append(
@@ -267,7 +267,7 @@ def _configure_structlog(
         shared_processors.append(
             structlog.dev.ConsoleRenderer(colors=True)
         )
-    
+
     # Configure structlog
     structlog.configure(
         processors=shared_processors,
@@ -276,14 +276,14 @@ def _configure_structlog(
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
     )
-    
+
     # Configure stdlib logging to work with structlog
     logging.basicConfig(
         format="%(message)s",
         stream=sys.stdout,
         level=log_level,
     )
-    
+
     # Add file handler if specified
     if log_file:
         file_handler = logging.FileHandler(log_file)
@@ -298,7 +298,7 @@ def _configure_stdlib_logging(
     log_file: Optional[str],
 ):
     """Fallback configuration using stdlib logging."""
-    
+
     if json_format:
         formatter = JsonFormatter(service_name=service_name)
     else:
@@ -306,17 +306,17 @@ def _configure_stdlib_logging(
             fmt='%(asctime)s | %(levelname)-8s | %(name)s | %(message)s',
             datefmt='%Y-%m-%dT%H:%M:%S%z'
         )
-    
+
     # Console handler
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
     console_handler.setFormatter(formatter)
-    
+
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
     root_logger.handlers = [console_handler]
-    
+
     # Add file handler if specified
     if log_file:
         file_handler = logging.FileHandler(log_file)
@@ -332,14 +332,14 @@ def _configure_stdlib_logging(
 class JsonFormatter(logging.Formatter):
     """
     JSON formatter for stdlib logging.
-    
+
     Used as fallback when structlog is not available.
     """
-    
+
     def __init__(self, service_name: str = "coderev-platform"):
         super().__init__()
         self.service_name = service_name
-    
+
     def format(self, record: logging.LogRecord) -> str:
         log_data = {
             'timestamp': datetime.now(timezone.utc).isoformat(),
@@ -348,16 +348,16 @@ class JsonFormatter(logging.Formatter):
             'message': record.getMessage(),
             'service': self.service_name,
         }
-        
+
         # Add request context
         request_id = request_id_var.get()
         if request_id:
             log_data['request_id'] = request_id
-        
+
         user_id = user_id_var.get()
         if user_id:
             log_data['user_id'] = user_id
-        
+
         # Add exception info
         if record.exc_info:
             log_data['exception'] = {
@@ -365,7 +365,7 @@ class JsonFormatter(logging.Formatter):
                 'message': str(record.exc_info[1]) if record.exc_info[1] else None,
                 'traceback': self.formatException(record.exc_info),
             }
-        
+
         # Add extra fields
         for key, value in record.__dict__.items():
             if key not in {
@@ -376,7 +376,7 @@ class JsonFormatter(logging.Formatter):
                 'message', 'asctime',
             }:
                 log_data[key] = value
-        
+
         return json.dumps(log_data, default=str, ensure_ascii=False)
 
 
@@ -387,13 +387,13 @@ class JsonFormatter(logging.Formatter):
 def get_logger(name: str = None) -> Union['structlog.stdlib.BoundLogger', logging.Logger]:
     """
     Get a logger instance.
-    
+
     Args:
         name: Logger name (usually __name__)
-        
+
     Returns:
         structlog logger if available, otherwise stdlib logger
-        
+
     Usage:
         logger = get_logger(__name__)
         logger.info("event_name", key1="value1", key2="value2")
@@ -411,13 +411,13 @@ def get_logger(name: str = None) -> Union['structlog.stdlib.BoundLogger', loggin
 class LogContext:
     """
     Context manager for adding correlation IDs to logs.
-    
+
     Usage:
         async with LogContext(request_id="abc123", user_id="user-1"):
             logger.info("processing_request")
             # All logs within this context will have request_id and user_id
     """
-    
+
     def __init__(
         self,
         request_id: Optional[str] = None,
@@ -428,7 +428,7 @@ class LogContext:
         self.user_id = user_id
         self.session_id = session_id
         self._tokens = []
-    
+
     def __enter__(self):
         if self.request_id:
             self._tokens.append(request_id_var.set(self.request_id))
@@ -437,16 +437,16 @@ class LogContext:
         if self.session_id:
             self._tokens.append(session_id_var.set(self.session_id))
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
-        for token in self._tokens:
-            # Reset context variables
+        for _token in self._tokens:
+            # Reset context variables - tokens tracked for future reset support
             pass
         return False
-    
+
     async def __aenter__(self):
         return self.__enter__()
-    
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         return self.__exit__(exc_type, exc_val, exc_tb)
 
@@ -479,7 +479,7 @@ def clear_request_context():
 def log_function_call(logger=None, level: str = "INFO"):
     """
     Decorator to log function entry and exit.
-    
+
     Usage:
         @log_function_call(level="DEBUG")
         def process_data(data):
@@ -489,9 +489,9 @@ def log_function_call(logger=None, level: str = "INFO"):
         nonlocal logger
         if logger is None:
             logger = get_logger(func.__module__)
-        
+
         log_method = getattr(logger, level.lower(), logger.info)
-        
+
         @wraps(func)
         async def async_wrapper(*args, **kwargs):
             log_method(
@@ -516,7 +516,7 @@ def log_function_call(logger=None, level: str = "INFO"):
                     exc_info=True,
                 )
                 raise
-        
+
         @wraps(func)
         def sync_wrapper(*args, **kwargs):
             log_method(
@@ -541,12 +541,12 @@ def log_function_call(logger=None, level: str = "INFO"):
                     exc_info=True,
                 )
                 raise
-        
+
         import asyncio
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
-    
+
     return decorator
 
 
@@ -557,41 +557,41 @@ def log_function_call(logger=None, level: str = "INFO"):
 class RequestLoggingMiddleware:
     """
     ASGI middleware for request logging with correlation IDs.
-    
+
     Usage:
         from fastapi import FastAPI
         app = FastAPI()
         app.add_middleware(RequestLoggingMiddleware)
     """
-    
+
     def __init__(self, app):
         self.app = app
         self.logger = get_logger("http.request")
-    
+
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        
+
         import time
         import uuid
-        
+
         # Generate or extract request ID
         request_id = None
         for header_name, header_value in scope.get("headers", []):
             if header_name.lower() == b"x-request-id":
                 request_id = header_value.decode()
                 break
-        
+
         if not request_id:
             request_id = str(uuid.uuid4())[:8]
-        
+
         # Set context for this request
         set_request_context(request_id=request_id)
-        
+
         start_time = time.time()
         status_code = 500
-        
+
         async def send_wrapper(message):
             nonlocal status_code
             if message["type"] == "http.response.start":
@@ -601,12 +601,12 @@ class RequestLoggingMiddleware:
                 headers.append((b"x-request-id", request_id.encode()))
                 message["headers"] = headers
             await send(message)
-        
+
         try:
             await self.app(scope, receive, send_wrapper)
         finally:
             duration_ms = (time.time() - start_time) * 1000
-            
+
             self.logger.info(
                 "http_request",
                 method=scope.get("method", "UNKNOWN"),
@@ -615,7 +615,7 @@ class RequestLoggingMiddleware:
                 duration_ms=round(duration_ms, 2),
                 client_ip=scope.get("client", ("unknown", 0))[0],
             )
-            
+
             clear_request_context()
 
 
@@ -630,13 +630,13 @@ def init_logging(
 ):
     """
     Initialize logging from environment variables with sensible defaults.
-    
+
     Environment variables:
     - LOG_LEVEL: DEBUG, INFO, WARNING, ERROR, CRITICAL
     - LOG_FORMAT: json, text
     - ENVIRONMENT: development, staging, production
     - LOG_FILE: Path to log file (optional)
-    
+
     Usage:
         from backend.shared.logging import init_logging
         init_logging(service_name="auth-service")
@@ -646,10 +646,10 @@ def init_logging(
     environment = os.getenv("ENVIRONMENT", "development")
     log_file = os.getenv("LOG_FILE")
     version = os.getenv("APP_VERSION", "2.1.0")
-    
+
     if json_logs is None:
         json_logs = log_format.lower() == "json"
-    
+
     configure_logging(
         level=level,
         json_format=json_logs,
@@ -660,7 +660,7 @@ def init_logging(
         censor_sensitive=True,
         include_caller_info=(environment == "development"),
     )
-    
+
     logger = get_logger(__name__)
     logger.info(
         "logging_initialized",

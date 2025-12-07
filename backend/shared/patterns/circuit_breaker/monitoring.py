@@ -55,7 +55,7 @@ class Alert:
     timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     acknowledged: bool = False
     resolved: bool = False
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "alert_id": self.alert_id,
@@ -87,28 +87,28 @@ class MetricSnapshot:
 class CircuitBreakerMonitor:
     """
     Real-time monitoring for circuit breakers.
-    
+
     Features:
     - Continuous metrics collection
     - Alert generation
     - Historical data retention
     - Dashboard data generation
-    
+
     Usage:
         monitor = CircuitBreakerMonitor(manager)
         await monitor.start()
-        
+
         # Get current status
         status = monitor.get_dashboard_data()
-        
+
         # Get alerts
         alerts = monitor.get_active_alerts()
     """
-    
+
     # Alert thresholds
     HIGH_FAILURE_RATE_THRESHOLD = 0.30
     HIGH_LATENCY_THRESHOLD_MS = 5000
-    
+
     def __init__(
         self,
         manager: ProviderCircuitBreakerManager,
@@ -120,29 +120,29 @@ class CircuitBreakerMonitor:
         self.collection_interval = collection_interval_seconds
         self.history_retention = timedelta(hours=history_retention_hours)
         self.alert_callback = alert_callback
-        
+
         # Metrics history
         self._metrics_history: Dict[str, deque] = {}
         self._max_history_points = int(history_retention_hours * 3600 / collection_interval_seconds)
-        
+
         # Alerts
         self._alerts: List[Alert] = []
         self._alert_counter = 0
-        
+
         # Subscribers for real-time updates
         self._subscribers: Set[asyncio.Queue] = set()
-        
+
         # State
         self._running = False
         self._collection_task: Optional[asyncio.Task] = None
         self._lock = asyncio.Lock()
-    
+
     async def start(self):
         """Start the monitoring service."""
         self._running = True
         self._collection_task = asyncio.create_task(self._collection_loop())
         logger.info("Circuit breaker monitor started")
-    
+
     async def stop(self):
         """Stop the monitoring service."""
         self._running = False
@@ -151,9 +151,11 @@ class CircuitBreakerMonitor:
             try:
                 await self._collection_task
             except asyncio.CancelledError:
-                logger.debug("Collection task cancelled")
+                # Intentionally not re-raised: we initiated the cancellation
+                # during shutdown, so propagation is not needed
+                logger.debug("Collection task cancelled during shutdown")
         logger.info("Circuit breaker monitor stopped")
-    
+
     async def _collection_loop(self):
         """Main metrics collection loop."""
         while self._running:
@@ -168,23 +170,23 @@ class CircuitBreakerMonitor:
             except Exception as e:
                 logger.error(f"Metrics collection error: {e}")
                 await asyncio.sleep(1)
-    
+
     async def _collect_metrics(self):
         """Collect current metrics from all providers."""
         now = datetime.now(timezone.utc)
-        
+
         for provider_name in self.manager._providers:
             breaker = self.manager._breakers.get(provider_name)
             if not breaker:
                 continue
-            
+
             metrics = breaker.metrics
-            
+
             # Calculate requests per second
             rps = metrics.total_requests / max(
                 (now - metrics.last_state_change).total_seconds(), 1
             )
-            
+
             snapshot = MetricSnapshot(
                 timestamp=now,
                 provider_name=provider_name,
@@ -196,32 +198,32 @@ class CircuitBreakerMonitor:
                 failure_count=metrics.failed_requests,
                 rejected_count=metrics.rejected_requests,
             )
-            
+
             # Store in history
             if provider_name not in self._metrics_history:
                 self._metrics_history[provider_name] = deque(maxlen=self._max_history_points)
-            
+
             self._metrics_history[provider_name].append(snapshot)
-    
+
     async def _check_alerts(self):
         """Check for alert conditions."""
         for provider_name in self.manager._providers:
             health = self.manager.get_provider_health(provider_name)
             if not health:
                 continue
-            
+
             # Check circuit state change
             await self._check_circuit_state_alert(provider_name, health)
-            
+
             # Check high failure rate
             await self._check_failure_rate_alert(provider_name, health)
-            
+
             # Check high latency
             await self._check_latency_alert(provider_name, health)
-        
+
         # Check all providers down
         await self._check_all_providers_down()
-    
+
     async def _check_circuit_state_alert(self, provider_name: str, health: ProviderHealth):
         """Check for circuit state change alerts."""
         if health.circuit_state == CircuitState.OPEN:
@@ -243,7 +245,7 @@ class CircuitBreakerMonitor:
         elif health.circuit_state == CircuitState.CLOSED:
             # Resolve any open circuit alerts
             self._resolve_alerts(provider_name, AlertType.CIRCUIT_OPENED)
-    
+
     async def _check_failure_rate_alert(self, provider_name: str, health: ProviderHealth):
         """Check for high failure rate alerts."""
         if health.failure_rate > self.HIGH_FAILURE_RATE_THRESHOLD:
@@ -260,7 +262,7 @@ class CircuitBreakerMonitor:
                 )
         else:
             self._resolve_alerts(provider_name, AlertType.HIGH_FAILURE_RATE)
-    
+
     async def _check_latency_alert(self, provider_name: str, health: ProviderHealth):
         """Check for high latency alerts."""
         if health.avg_latency_ms > self.HIGH_LATENCY_THRESHOLD_MS:
@@ -277,11 +279,11 @@ class CircuitBreakerMonitor:
                 )
         else:
             self._resolve_alerts(provider_name, AlertType.HIGH_LATENCY)
-    
+
     async def _check_all_providers_down(self):
         """Check if all providers are unavailable."""
         available = self.manager.get_available_providers()
-        
+
         if not available:
             existing = self._find_active_alert("system", AlertType.ALL_PROVIDERS_DOWN)
             if not existing:
@@ -294,7 +296,7 @@ class CircuitBreakerMonitor:
                 )
         else:
             self._resolve_alerts("system", AlertType.ALL_PROVIDERS_DOWN)
-    
+
     async def _create_alert(
         self,
         alert_type: AlertType,
@@ -313,12 +315,12 @@ class CircuitBreakerMonitor:
             message=message,
             details=details,
         )
-        
+
         async with self._lock:
             self._alerts.append(alert)
-        
+
         logger.warning(f"Alert created: {message}")
-        
+
         # Notify callback
         if self.alert_callback:
             try:
@@ -328,7 +330,7 @@ class CircuitBreakerMonitor:
                     self.alert_callback(alert)
             except Exception as e:
                 logger.error(f"Alert callback error: {e}")
-    
+
     def _find_active_alert(
         self,
         provider_name: str,
@@ -341,7 +343,7 @@ class CircuitBreakerMonitor:
                 not alert.resolved):
                 return alert
         return None
-    
+
     def _resolve_alerts(self, provider_name: str, alert_type: AlertType):
         """Resolve alerts of a specific type for a provider."""
         for alert in self._alerts:
@@ -350,40 +352,40 @@ class CircuitBreakerMonitor:
                 not alert.resolved):
                 alert.resolved = True
                 logger.info(f"Alert resolved: {alert.message}")
-    
+
     async def _broadcast_update(self):
         """Broadcast status update to all subscribers."""
         if not self._subscribers:
             return
-        
+
         update = {
             "type": "status_update",
             "data": self.get_current_status(),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-        
+
         message = json.dumps(update)
-        
+
         dead_subscribers = set()
         for queue in self._subscribers:
             try:
                 queue.put_nowait(message)
             except asyncio.QueueFull:
                 dead_subscribers.add(queue)
-        
+
         # Remove dead subscribers
         self._subscribers -= dead_subscribers
-    
+
     def subscribe(self) -> asyncio.Queue:
         """Subscribe to real-time updates."""
         queue = asyncio.Queue(maxsize=100)
         self._subscribers.add(queue)
         return queue
-    
+
     def unsubscribe(self, queue: asyncio.Queue):
         """Unsubscribe from real-time updates."""
         self._subscribers.discard(queue)
-    
+
     def get_current_status(self) -> Dict[str, Any]:
         """Get current status of all circuit breakers."""
         providers = []
@@ -391,9 +393,9 @@ class CircuitBreakerMonitor:
             health = self.manager.get_provider_health(provider_name)
             if health:
                 providers.append(health.to_dict())
-        
+
         manager_metrics = self.manager.get_metrics()
-        
+
         return {
             "providers": providers,
             "metrics": manager_metrics,
@@ -401,7 +403,7 @@ class CircuitBreakerMonitor:
             "available_count": len(self.manager.get_available_providers()),
             "total_count": len(self.manager._providers),
         }
-    
+
     def get_active_alerts(self) -> List[Dict[str, Any]]:
         """Get all active (unresolved) alerts."""
         return [
@@ -409,7 +411,7 @@ class CircuitBreakerMonitor:
             for alert in self._alerts
             if not alert.resolved
         ]
-    
+
     def get_all_alerts(
         self,
         limit: int = 100,
@@ -417,12 +419,12 @@ class CircuitBreakerMonitor:
     ) -> List[Dict[str, Any]]:
         """Get alerts with optional filtering."""
         alerts = self._alerts
-        
+
         if not include_resolved:
             alerts = [a for a in alerts if not a.resolved]
-        
+
         return [a.to_dict() for a in alerts[-limit:]]
-    
+
     def acknowledge_alert(self, alert_id: str) -> bool:
         """Acknowledge an alert."""
         for alert in self._alerts:
@@ -430,7 +432,7 @@ class CircuitBreakerMonitor:
                 alert.acknowledged = True
                 return True
         return False
-    
+
     def get_metrics_history(
         self,
         provider_name: str,
@@ -439,9 +441,9 @@ class CircuitBreakerMonitor:
         """Get metrics history for a provider."""
         if provider_name not in self._metrics_history:
             return []
-        
+
         cutoff = datetime.now(timezone.utc) - timedelta(minutes=minutes)
-        
+
         history = []
         for snapshot in self._metrics_history[provider_name]:
             if snapshot.timestamp >= cutoff:
@@ -452,9 +454,9 @@ class CircuitBreakerMonitor:
                     "avg_latency_ms": round(snapshot.avg_latency_ms, 2),
                     "requests_per_second": round(snapshot.requests_per_second, 2),
                 })
-        
+
         return history
-    
+
     def get_dashboard_data(self) -> Dict[str, Any]:
         """Get comprehensive dashboard data."""
         return {
@@ -463,14 +465,14 @@ class CircuitBreakerMonitor:
             "metrics_summary": self._get_metrics_summary(),
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
-    
+
     def _get_metrics_summary(self) -> Dict[str, Any]:
         """Get aggregated metrics summary."""
         total_requests = 0
         total_failures = 0
         total_latency = 0
         count = 0
-        
+
         for provider_name in self.manager._providers:
             breaker = self.manager._breakers.get(provider_name)
             if breaker:
@@ -479,7 +481,7 @@ class CircuitBreakerMonitor:
                 total_failures += metrics.failed_requests
                 total_latency += metrics.avg_latency_ms
                 count += 1
-        
+
         return {
             "total_requests": total_requests,
             "total_failures": total_failures,
@@ -496,28 +498,28 @@ class CircuitBreakerMonitor:
 class CircuitBreakerWebSocketHandler:
     """
     WebSocket handler for real-time circuit breaker updates.
-    
+
     Usage with FastAPI:
         @app.websocket("/ws/circuit-breakers")
         async def ws_circuit_breakers(websocket: WebSocket):
             handler = CircuitBreakerWebSocketHandler(monitor)
             await handler.handle(websocket)
     """
-    
+
     def __init__(self, monitor: CircuitBreakerMonitor):
         self.monitor = monitor
-    
+
     async def handle(self, websocket):
         """Handle WebSocket connection."""
         await websocket.accept()
-        
+
         # Send initial status
         initial_data = self.monitor.get_dashboard_data()
         await websocket.send_json(initial_data)
-        
+
         # Subscribe to updates
         queue = self.monitor.subscribe()
-        
+
         try:
             while True:
                 # Wait for update

@@ -192,7 +192,9 @@ class MetricsCollector:
             try:
                 await self._collection_task
             except asyncio.CancelledError:
-                pass
+                # Intentionally not re-raised: we initiated the cancellation
+                # during shutdown, so propagation is not needed
+                logger.debug("Metrics collection task cancelled during shutdown")
         logger.info("Metrics collector stopped")
 
     async def _collection_loop(self):

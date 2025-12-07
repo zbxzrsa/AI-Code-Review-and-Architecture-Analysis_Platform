@@ -50,7 +50,37 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       outDir: "dist",
-      sourcemap: true,
+      sourcemap: mode !== "production", // Disable sourcemaps in production
+      minify: "terser",
+      terserOptions: {
+        compress: {
+          drop_console: mode === "production", // Remove console.log in production
+          drop_debugger: true,
+        },
+      },
+      rollupOptions: {
+        output: {
+          // Optimize chunk splitting for better caching
+          manualChunks: {
+            // Vendor chunks - separate large dependencies
+            "vendor-react": ["react", "react-dom", "react-router-dom"],
+            "vendor-antd": ["antd", "@ant-design/icons"],
+            "vendor-charts": ["echarts", "recharts"],
+            "vendor-editor": ["monaco-editor", "@monaco-editor/react"],
+            "vendor-utils": ["lodash-es", "date-fns", "axios"],
+          },
+          // Optimize asset naming for caching
+          chunkFileNames: "assets/js/[name]-[hash].js",
+          entryFileNames: "assets/js/[name]-[hash].js",
+          assetFileNames: "assets/[ext]/[name]-[hash].[ext]",
+        },
+      },
+      // Increase chunk size warning limit
+      chunkSizeWarningLimit: 1000,
+      // Enable CSS code splitting
+      cssCodeSplit: true,
+      // Target modern browsers for smaller bundles
+      target: "es2020",
     },
     test: {
       globals: true,

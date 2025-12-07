@@ -515,3 +515,67 @@ quick-help:
 	@echo "  API Docs:    http://localhost:8000/docs"
 	@echo "  Grafana:     http://localhost:3002"
 	@echo ""
+
+# ============================================================
+# Project Optimization
+# ============================================================
+
+.PHONY: optimize optimize-report optimize-deps optimize-build clean-cache
+
+# Run full project optimization analysis
+optimize:
+	@echo "Running project optimization analysis..."
+	python scripts/optimize_project.py --report --path .
+	@echo "Report saved to OPTIMIZATION_REPORT.md"
+
+# Generate optimization report only (no changes)
+optimize-report:
+	@echo "Generating optimization report..."
+	python scripts/optimize_project.py --dry-run --report --path .
+
+# Clean up Python cache and build artifacts
+clean-cache:
+	@echo "Cleaning Python cache..."
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
+	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
+	@echo "Cleaning frontend cache..."
+	rm -rf frontend/node_modules/.cache 2>/dev/null || true
+	rm -rf frontend/dist 2>/dev/null || true
+	@echo "Cache cleaned!"
+
+# Optimize Python dependencies
+optimize-deps:
+	@echo "Analyzing Python dependencies..."
+	pip install pipdeptree 2>/dev/null || true
+	pipdeptree --warn silence | grep -E "^\w+" | sort | uniq > deps-analysis.txt
+	@echo "Dependency analysis saved to deps-analysis.txt"
+
+# Optimize frontend build
+optimize-build:
+	@echo "Building optimized frontend..."
+	cd frontend && npm run build -- --mode production
+	@echo "Analyzing bundle size..."
+	du -sh frontend/dist/*
+	@echo "Build complete!"
+
+# Clean all artifacts
+clean-all: clean clean-cache
+	@echo "Removing additional artifacts..."
+	rm -rf .coverage htmlcov 2>/dev/null || true
+	rm -rf *.log 2>/dev/null || true
+	@echo "All artifacts cleaned!"
+
+# Show project size stats
+size-stats:
+	@echo "Project size analysis:"
+	@echo ""
+	@echo "Total size (excluding node_modules, .git):"
+	@du -sh --exclude=node_modules --exclude=.git . 2>/dev/null || du -sh . 2>/dev/null
+	@echo ""
+	@echo "By directory:"
+	@du -sh */ 2>/dev/null | sort -hr | head -15
+	@echo ""
+	@echo "Largest files:"
+	@find . -type f -not -path "./node_modules/*" -not -path "./.git/*" -exec du -h {} + 2>/dev/null | sort -hr | head -10

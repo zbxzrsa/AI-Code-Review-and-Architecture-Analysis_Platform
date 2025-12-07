@@ -157,7 +157,8 @@ class CacheWarmer:
                 await asyncio.sleep(interval_seconds)
                 await self.warm_expired()
             except asyncio.CancelledError:
-                break
+                # Re-raise to properly propagate cancellation
+                raise
             except Exception as e:
                 logger.error(f"Background warming error: {e}")
                 await asyncio.sleep(5)
@@ -170,8 +171,6 @@ class CacheWarmer:
 
     def get_stats(self) -> Dict[str, Any]:
         """Get warmer statistics"""
-        now = datetime.now(timezone.utc)
-
         expired_count = sum(
             1 for t in self._tasks.values()
             if t.needs_refresh()

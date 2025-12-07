@@ -59,26 +59,21 @@ export const adminKeys = {
   // Providers
   providers: () => [...adminKeys.all, "providers"] as const,
   providersList: () => [...adminKeys.providers(), "list"] as const,
-  provider: (providerId: string) =>
-    [...adminKeys.providers(), providerId] as const,
-  providerHealth: (providerId: string) =>
-    [...adminKeys.providers(), providerId, "health"] as const,
+  provider: (providerId: string) => [...adminKeys.providers(), providerId] as const,
+  providerHealth: (providerId: string) => [...adminKeys.providers(), providerId, "health"] as const,
   providerMetrics: (providerId: string, period?: string) =>
     [...adminKeys.providers(), providerId, "metrics", period] as const,
-  providerModels: (providerId: string) =>
-    [...adminKeys.providers(), providerId, "models"] as const,
+  providerModels: (providerId: string) => [...adminKeys.providers(), providerId, "models"] as const,
 
   // Audit
   audit: () => [...adminKeys.all, "audit"] as const,
   auditLogs: (filters: AuditFilters, page: number, pageSize: number) =>
     [...adminKeys.audit(), "logs", filters, page, pageSize] as const,
   auditLog: (logId: string) => [...adminKeys.audit(), "log", logId] as const,
-  auditAnalytics: (period?: string) =>
-    [...adminKeys.audit(), "analytics", period] as const,
+  auditAnalytics: (period?: string) => [...adminKeys.audit(), "analytics", period] as const,
   securityAlerts: (params?: { severity?: string; resolved?: boolean }) =>
     [...adminKeys.audit(), "alerts", params] as const,
-  loginPatterns: (period?: string) =>
-    [...adminKeys.audit(), "login-patterns", period] as const,
+  loginPatterns: (period?: string) => [...adminKeys.audit(), "login-patterns", period] as const,
 };
 
 // ============================================
@@ -103,8 +98,8 @@ export function useAdminUsers() {
         page: userPagination.page,
         limit: userPagination.pageSize,
         search: userFilters.search || undefined,
-        role: userFilters.role !== "all" ? userFilters.role : undefined,
-        status: userFilters.status !== "all" ? userFilters.status : undefined,
+        role: userFilters.role === "all" ? undefined : userFilters.role,
+        status: userFilters.status === "all" ? undefined : userFilters.status,
         sort_field: userSort.field,
         sort_order: userSort.order,
         start_date: userFilters.dateRange?.[0],
@@ -203,13 +198,7 @@ export function useSuspendUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      userId,
-      reason,
-    }: {
-      userId: string;
-      reason?: string;
-    }) => {
+    mutationFn: async ({ userId, reason }: { userId: string; reason?: string }) => {
       await apiService.admin.users.suspend(userId, reason);
     },
     onSuccess: () => {
@@ -284,9 +273,7 @@ export function useBulkUserAction() {
   const { clearUserSelection } = useAdminStore();
 
   return useMutation({
-    mutationFn: async (
-      data: Parameters<typeof apiService.admin.users.bulk>[0]
-    ) => {
+    mutationFn: async (data: Parameters<typeof apiService.admin.users.bulk>[0]) => {
       await apiService.admin.users.bulk(data);
     },
     onSuccess: (_, variables) => {
@@ -326,22 +313,20 @@ export function useImportUsers() {
  */
 export function useExportUsers() {
   return useMutation({
-    mutationFn: async (
-      params?: Parameters<typeof apiService.admin.users.export>[0]
-    ) => {
+    mutationFn: async (params?: Parameters<typeof apiService.admin.users.export>[0]) => {
       const response = await apiService.admin.users.export(params);
       return response.data;
     },
     onSuccess: (data, variables) => {
       const format = variables?.format || "csv";
-      const url = window.URL.createObjectURL(new Blob([data]));
+      const url = globalThis.URL.createObjectURL(new Blob([data]));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `users.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      globalThis.URL.revokeObjectURL(url);
       message.success("Export started");
     },
     onError: (error: unknown) => {
@@ -400,10 +385,7 @@ export function useUpdateProvider() {
       providerId: string;
       data: Parameters<typeof apiService.admin.providers.update>[1];
     }) => {
-      const response = await apiService.admin.providers.update(
-        providerId,
-        data
-      );
+      const response = await apiService.admin.providers.update(providerId, data);
       return response.data;
     },
     onSuccess: (data, { providerId }) => {
@@ -424,13 +406,7 @@ export function useUpdateProviderApiKey() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      providerId,
-      apiKey,
-    }: {
-      providerId: string;
-      apiKey: string;
-    }) => {
+    mutationFn: async ({ providerId, apiKey }: { providerId: string; apiKey: string }) => {
       await apiService.admin.providers.updateApiKey(providerId, apiKey);
     },
     onSuccess: () => {
@@ -487,10 +463,7 @@ export function useProviderHealth(providerId: string) {
 /**
  * Fetch provider metrics
  */
-export function useProviderMetrics(
-  providerId: string,
-  period?: "hour" | "day" | "week" | "month"
-) {
+export function useProviderMetrics(providerId: string, period?: "hour" | "day" | "week" | "month") {
   return useQuery({
     queryKey: adminKeys.providerMetrics(providerId, period),
     queryFn: async () => {
@@ -537,11 +510,7 @@ export function useUpdateProviderModel() {
       modelId: string;
       data: Parameters<typeof apiService.admin.providers.updateModel>[2];
     }) => {
-      const response = await apiService.admin.providers.updateModel(
-        providerId,
-        modelId,
-        data
-      );
+      const response = await apiService.admin.providers.updateModel(providerId, modelId, data);
       return response.data;
     },
     onSuccess: (_, { providerId }) => {
@@ -587,20 +556,15 @@ export function useAuditLogs() {
   const { auditFilters, auditPagination, setAuditLogs } = useAdminStore();
 
   return useQuery({
-    queryKey: adminKeys.auditLogs(
-      auditFilters,
-      auditPagination.page,
-      auditPagination.pageSize
-    ),
+    queryKey: adminKeys.auditLogs(auditFilters, auditPagination.page, auditPagination.pageSize),
     queryFn: async () => {
       const response = await apiService.admin.audit.list({
         page: auditPagination.page,
         limit: auditPagination.pageSize,
         search: auditFilters.search || undefined,
-        action: auditFilters.action !== "all" ? auditFilters.action : undefined,
-        resource:
-          auditFilters.resource !== "all" ? auditFilters.resource : undefined,
-        status: auditFilters.status !== "all" ? auditFilters.status : undefined,
+        action: auditFilters.action === "all" ? undefined : auditFilters.action,
+        resource: auditFilters.resource === "all" ? undefined : auditFilters.resource,
+        status: auditFilters.status === "all" ? undefined : auditFilters.status,
         user_id: auditFilters.userId,
         start_date: auditFilters.dateRange?.[0],
         end_date: auditFilters.dateRange?.[1],
@@ -637,24 +601,23 @@ export function useExportAuditLogs() {
     mutationFn: async (format: "csv" | "json" | "pdf" = "csv") => {
       const response = await apiService.admin.audit.export({
         format,
-        action: auditFilters.action !== "all" ? auditFilters.action : undefined,
-        resource:
-          auditFilters.resource !== "all" ? auditFilters.resource : undefined,
-        status: auditFilters.status !== "all" ? auditFilters.status : undefined,
+        action: auditFilters.action === "all" ? undefined : auditFilters.action,
+        resource: auditFilters.resource === "all" ? undefined : auditFilters.resource,
+        status: auditFilters.status === "all" ? undefined : auditFilters.status,
         start_date: auditFilters.dateRange?.[0],
         end_date: auditFilters.dateRange?.[1],
       });
       return { data: response.data, format };
     },
     onSuccess: ({ data, format }) => {
-      const url = window.URL.createObjectURL(new Blob([data]));
+      const url = globalThis.URL.createObjectURL(new Blob([data]));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `audit-logs.${format}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      window.URL.revokeObjectURL(url);
+      globalThis.URL.revokeObjectURL(url);
       message.success("Export completed");
     },
     onError: (error: unknown) => {
@@ -683,10 +646,7 @@ export function useAuditAnalytics(period?: "day" | "week" | "month") {
 /**
  * Fetch security alerts
  */
-export function useSecurityAlerts(params?: {
-  severity?: string;
-  resolved?: boolean;
-}) {
+export function useSecurityAlerts(params?: { severity?: string; resolved?: boolean }) {
   const { setSecurityAlerts } = useAdminStore();
 
   return useQuery({
@@ -707,13 +667,7 @@ export function useResolveAlert() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      alertId,
-      notes,
-    }: {
-      alertId: string;
-      notes?: string;
-    }) => {
+    mutationFn: async ({ alertId, notes }: { alertId: string; notes?: string }) => {
       await apiService.admin.audit.resolveAlert(alertId, notes);
     },
     onSuccess: () => {
@@ -736,9 +690,7 @@ export function useLoginPatterns(period?: "day" | "week" | "month") {
       const response = await apiService.admin.audit.getLoginPatterns({
         period,
       });
-      return ensureArray<{ hour: number; day: number; count: number }>(
-        response.data
-      );
+      return ensureArray<{ hour: number; day: number; count: number }>(response.data);
     },
   });
 }

@@ -137,7 +137,7 @@ async def main():
     async def api_call():
         return "success"
 
-    result = await breaker.execute(api_call)
+    _result = await breaker.execute(api_call)  # Result available for use
     print(f"✓ Circuit breaker: {breaker.state.value}")
 
     # ===========================================
@@ -147,7 +147,7 @@ async def main():
     print("\n" + "="*50)
     print("Integration Example Complete!")
     print("="*50)
-    print(f"""
+    print("""
 Modules Used:
 - Authentication V2: MFA, OAuth, Sessions
 - Caching V1/V2: Multi-level, Semantic

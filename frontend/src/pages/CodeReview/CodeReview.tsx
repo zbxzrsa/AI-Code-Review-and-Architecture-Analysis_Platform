@@ -1,6 +1,6 @@
 /**
  * Code Review Page with AI Interaction
- * 
+ *
  * Features:
  * - Code editor with syntax highlighting
  * - AI-powered code analysis
@@ -98,33 +98,33 @@ import jwt from 'jsonwebtoken';
 
 class AuthService {
   private secretKey = 'hardcoded-secret-key'; // Security issue!
-  
+
   async register(email, password) {
     // Missing input validation
     const hashedPassword = await hash(password, 10);
-    
+
     // SQL injection vulnerability
     const query = \`INSERT INTO users (email, password) VALUES ('\${email}', '\${hashedPassword}')\`;
     await db.execute(query);
-    
+
     return { success: true };
   }
-  
+
   async login(email, password) {
     const user = await db.findUser(email);
-    
+
     if (!user) {
       return null; // Should throw error for better error handling
     }
-    
+
     const valid = await compare(password, user.password);
     if (!valid) return null;
-    
+
     // Token expiration too long
     const token = jwt.sign({ userId: user.id }, this.secretKey, { expiresIn: '365d' });
     return { token, user };
   }
-  
+
   // Unused method - code smell
   private async resetPassword(email) {
     console.log('Resetting password for', email);
@@ -325,26 +325,26 @@ export const CodeReview: React.FC = () => {
   // Mock AI response
   const getMockResponse = (input: string): string => {
     const lowerInput = input.toLowerCase();
-    
+
     if (lowerInput.includes('fix') || lowerInput.includes('how')) {
       return `Based on my analysis, here's how to fix the issues:\n\n**1. Hardcoded Secret Key (Critical)**\n\`\`\`typescript\n// Replace this:\nprivate secretKey = 'hardcoded-secret-key';\n\n// With this:\nprivate secretKey = process.env.JWT_SECRET || '';\n\`\`\`\n\n**2. SQL Injection (Critical)**\n\`\`\`typescript\n// Use parameterized queries:\nconst query = 'INSERT INTO users (email, password) VALUES ($1, $2)';\nawait db.execute(query, [email, hashedPassword]);\n\`\`\`\n\n**3. Input Validation**\n\`\`\`typescript\nimport { z } from 'zod';\n\nconst schema = z.object({\n  email: z.string().email(),\n  password: z.string().min(8)\n});\n\nconst validated = schema.parse({ email, password });\n\`\`\``;
     }
-    
+
     if (lowerInput.includes('explain') || lowerInput.includes('what')) {
       return `I found several issues in your code:\n\n**Security Issues:**\n- Hardcoded JWT secret key - This is a critical security vulnerability. If your code is exposed, attackers can forge valid tokens.\n- SQL Injection - Direct string interpolation in SQL queries allows attackers to execute arbitrary SQL.\n\n**Best Practice Issues:**\n- Missing input validation - Always validate user input to prevent malformed data.\n- Long token expiration - 365 days is too long; use short-lived tokens with refresh mechanism.\n\n**Code Quality:**\n- Unused method - Dead code should be removed to improve maintainability.`;
     }
-    
+
     return `I can help you with your code! I've identified ${issues.length} issues in your code:\n\n- ${issues.filter(i => i.severity === 'critical').length} Critical issues\n- ${issues.filter(i => i.severity === 'high').length} High severity issues\n- ${issues.filter(i => i.severity === 'medium').length} Medium severity issues\n- ${issues.filter(i => i.severity === 'low').length} Low severity issues\n\nWould you like me to:\n1. Explain any specific issue in detail?\n2. Provide fixes for the critical issues?\n3. Suggest best practices for your code?`;
   };
 
   // Apply auto-fix - uses real API via hooks
   const applyFix = useCallback(async (issue: Issue) => {
     if (!issue.suggestion) return;
-    
+
     try {
-      const fixedCode = await applyFixMutation.mutateAsync({ 
-        issueId: issue.id, 
-        code 
+      const fixedCode = await applyFixMutation.mutateAsync({
+        issueId: issue.id,
+        code
       });
       setCode(fixedCode);
       setIssues(prev => prev.filter(i => i.id !== issue.id));
@@ -356,12 +356,12 @@ export const CodeReview: React.FC = () => {
     }
   }, [code, applyFixMutation, t]);
 
-  // Provide feedback on AI response
-  const provideFeedback = useCallback(async (helpful: boolean) => {
+  // Provide feedback on AI response (available for future UI integration)
+  const _provideFeedback = useCallback(async (helpful: boolean) => {
     if (!analysisId) return;
     try {
       await feedbackMutation.mutateAsync({ responseId: analysisId, helpful });
-    } catch (error) {
+    } catch {
       // Silently fail for feedback
     }
   }, [analysisId, feedbackMutation]);
@@ -546,7 +546,7 @@ export const CodeReview: React.FC = () => {
                     </Space>
                   </div>
                   <Divider style={{ margin: '12px 0' }} />
-                  
+
                   {/* Issues List */}
                   <List
                     className="issues-list"

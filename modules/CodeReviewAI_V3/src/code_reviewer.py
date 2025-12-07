@@ -85,8 +85,9 @@ class CodeReviewer:
 
         return result
 
-    def _detect_legacy(self, code: str, language: str) -> List[Finding]:
+    def _detect_legacy(self, code: str, _language: str) -> List[Finding]:
         """Legacy detection rules"""
+        # language parameter reserved for language-specific rules
         findings = []
         lines = code.split('\n')
 

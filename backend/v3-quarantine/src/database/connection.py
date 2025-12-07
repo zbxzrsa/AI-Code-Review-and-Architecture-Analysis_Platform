@@ -2,6 +2,7 @@
 Database connection and session management for V3 quarantine (read-only).
 """
 import logging
+from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import event
@@ -45,7 +46,7 @@ async def init_db():
         raise
 
 
-async def get_db_session() -> AsyncSession:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """Get database session (read-only)."""
     if SessionLocal is None:
         raise RuntimeError("Database not initialized")

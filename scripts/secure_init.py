@@ -68,10 +68,10 @@ def write_secrets_file(secrets_data: Dict[str, str], output_path: Path) -> None:
         f.write("# Production Secrets - KEEP SECURE!\n")
         f.write(f"# Generated at: {datetime.now().isoformat()}\n")
         f.write("# WARNING: Store this file securely and never commit to version control\n\n")
-        
+
         for key, value in secrets_data.items():
             f.write(f"{key}={value}\n")
-    
+
     # Set restrictive permissions (owner read/write only)
     os.chmod(output_path, 0o600)
 
@@ -82,24 +82,24 @@ def update_admin_password(database_url: str, new_password: str) -> bool:
         print("ERROR: psycopg2 and argon2-cffi are required for database operations")
         print("Install with: pip install psycopg2-binary argon2-cffi")
         return False
-    
+
     password_hash = hash_password(new_password)
-    
+
     try:
         conn = psycopg2.connect(database_url)
         with conn.cursor() as cur:
             # Update admin password
             cur.execute(
                 """
-                UPDATE auth.users 
-                SET password_hash = %s, 
+                UPDATE auth.users
+                SET password_hash = %s,
                     updated_at = NOW()
                 WHERE email = 'admin@example.com'
                 RETURNING id
                 """,
                 (password_hash,)
             )
-            
+
             result = cur.fetchone()
             if result:
                 conn.commit()
@@ -108,7 +108,7 @@ def update_admin_password(database_url: str, new_password: str) -> bool:
             else:
                 print("[WARN] No admin user found with email 'admin@example.com'")
                 return False
-                
+
     except psycopg2.Error as e:
         print(f"[ERROR] Database error: {e}")
         return False
@@ -121,7 +121,7 @@ def verify_database_connection(database_url: str) -> bool:
     """Verify database connection is working."""
     if not HAS_DEPENDENCIES:
         return False
-    
+
     try:
         conn = psycopg2.connect(database_url)
         with conn.cursor() as cur:
@@ -184,7 +184,7 @@ Examples:
     python secure_init.py --generate-secrets --output /secure/path/.env.production
         """
     )
-    
+
     parser.add_argument(
         "--database-url",
         help="PostgreSQL connection URL for updating admin password"
@@ -209,27 +209,27 @@ Examples:
         action="store_true",
         help="Show what would be done without making changes"
     )
-    
+
     args = parser.parse_args()
-    
+
     if args.show_checklist:
         print_security_checklist()
         return
-    
+
     if not args.generate_secrets:
         parser.print_help()
         print("\n[INFO] Use --generate-secrets to generate new production secrets")
         return
-    
+
     print("=" * 60)
     print("SECURE INITIALIZATION")
     print("=" * 60)
     print()
-    
+
     # Generate secrets
     print("[1/3] Generating secure secrets...")
     secrets_data = generate_all_secrets()
-    
+
     if args.dry_run:
         print("[DRY RUN] Would generate the following secrets:")
         for key in secrets_data:
@@ -238,13 +238,13 @@ Examples:
         output_path = Path(args.output)
         write_secrets_file(secrets_data, output_path)
         print(f"[OK] Secrets written to: {output_path}")
-        print(f"[OK] File permissions set to 600 (owner read/write only)")
-    
+        print("[OK] File permissions set to 600 (owner read/write only)")
+
     # Update database if URL provided
     if args.database_url:
         print()
         print("[2/3] Updating admin password in database...")
-        
+
         if args.dry_run:
             print("[DRY RUN] Would update admin password in database")
         else:
@@ -258,12 +258,12 @@ Examples:
     else:
         print()
         print("[2/3] Skipping database update (no --database-url provided)")
-    
+
     # Print summary
     print()
     print("[3/3] Summary")
     print("-" * 40)
-    
+
     if not args.dry_run:
         print(f"Secrets file: {args.output}")
         print(f"Admin password: ADMIN_PASSWORD in {args.output}")
@@ -273,7 +273,7 @@ Examples:
         print("2. Update your deployment configuration to use these secrets")
         print("3. Delete the local secrets file after deployment")
         print("4. Run --show-checklist to see full security checklist")
-    
+
     print()
     print("[OK] Secure initialization complete")
     print("=" * 60)

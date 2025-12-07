@@ -1,6 +1,6 @@
 /**
  * Main Application Component / 主应用组件
- * 
+ *
  * This is the root component that sets up:
  * 这是设置以下内容的根组件：
  * - Internationalization (i18n) / 国际化
@@ -112,6 +112,15 @@ const MLAutoPromotion = lazy(() => import('./pages/MLAutoPromotion'));
 // AI Interaction pages / AI交互页面
 const VersionControlAI = lazy(() => import('./pages/ai/VersionControlAI'));
 
+// Access Denied page / 访问被拒绝页面
+const AccessDenied = lazy(() => import('./pages/AccessDenied'));
+
+// Unified Dashboards / 统一仪表板
+const UnifiedDashboard = lazy(() => import('./pages/unified/UnifiedDashboard'));
+const V2ProductionHub = lazy(() => import('./pages/unified/V2ProductionHub'));
+const V1ExperimentalHub = lazy(() => import('./pages/unified/V1ExperimentalHub'));
+const V3LegacyHub = lazy(() => import('./pages/unified/V3LegacyHub'));
+
 // OAuth Callback / OAuth回调
 const OAuthCallback = lazy(() => import('./pages/OAuthCallback'));
 
@@ -130,11 +139,11 @@ const queryClient = new QueryClient({
  * Loading fallback component / 加载回退组件
  */
 const PageLoader: React.FC = () => (
-  <div style={{ 
-    display: 'flex', 
+  <div style={{
+    display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center', 
-    alignItems: 'center', 
+    justifyContent: 'center',
+    alignItems: 'center',
     height: '100vh',
     gap: 16
   }}>
@@ -158,7 +167,7 @@ export default function App() {
 
   // Get current language / 获取当前语言
   const currentLanguage = i18n.language;
-  
+
   // Get Ant Design locale / 获取 Ant Design 语言包
   const antdLocale = useMemo(() => {
     return antdLocales[currentLanguage] || enUS;
@@ -181,8 +190,8 @@ export default function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ConfigProvider 
-          theme={themeConfig} 
+        <ConfigProvider
+          theme={themeConfig}
           locale={antdLocale}
           direction={direction}
         >
@@ -197,7 +206,7 @@ export default function App() {
                     <Login />
                   </PublicRoute>
                 } />
-                
+
                 <Route path="/register" element={
                   <PublicRoute>
                     <Register />
@@ -207,6 +216,9 @@ export default function App() {
                 {/* OAuth Callback route / OAuth回调路由 */}
                 <Route path="/oauth/callback/:provider" element={<OAuthCallback />} />
 
+                {/* Access Denied page / 访问被拒绝页面 */}
+                <Route path="/access-denied" element={<AccessDenied />} />
+
                 {/* Protected routes with Layout / 受保护的路由（带布局） */}
                 <Route element={
                   <ProtectedRoute>
@@ -215,15 +227,29 @@ export default function App() {
                 }>
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/welcome" element={<WelcomeDashboard />} />
-                  
+
+                  {/* Unified Dashboard routes / 统一仪表板路由 */}
+                  <Route path="/hub" element={<UnifiedDashboard />} />
+                  <Route path="/hub/v2" element={<V2ProductionHub />} />
+                  <Route path="/hub/v1" element={
+                    <AdminRoute>
+                      <V1ExperimentalHub />
+                    </AdminRoute>
+                  } />
+                  <Route path="/hub/v3" element={
+                    <AdminRoute>
+                      <V3LegacyHub />
+                    </AdminRoute>
+                  } />
+
                   {/* Projects routes / 项目路由 */}
                   <Route path="/projects" element={<ProjectList />} />
                   <Route path="/projects/new" element={<NewProject />} />
                   <Route path="/projects/:id/settings" element={<ProjectSettings />} />
-                  
+
                   {/* Legacy projects route for backwards compatibility */}
                   <Route path="/projects/:projectId" element={<Projects />} />
-                  
+
                   <Route path="/review" element={<CodeReview />} />
                   <Route path="/review/:projectId" element={<CodeReview />} />
                   <Route path="/settings" element={<Settings />} />
@@ -232,7 +258,7 @@ export default function App() {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/help" element={<Help />} />
-                  
+
                   {/* Analytics & Security / 分析和安全 */}
                   <Route path="/analytics" element={<Analytics />} />
                   <Route path="/security" element={<SecurityDashboard />} />
@@ -361,7 +387,7 @@ export default function App() {
 
                 {/* Redirect root to dashboard */}
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                
+
                 {/* 404 redirect */}
                 <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>

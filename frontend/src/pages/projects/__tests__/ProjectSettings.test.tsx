@@ -1,6 +1,6 @@
 /**
  * ProjectSettings Component Tests
- * 
+ *
  * Tests for the project settings page with all configuration sections.
  */
 
@@ -154,7 +154,7 @@ const createWrapper = () => {
 
 // Helper to render with route
 const renderWithRoute = (component: React.ReactNode) => {
-  window.history.pushState({}, 'Test', '/projects/1/settings');
+  globalThis.history.pushState({}, 'Test', '/projects/1/settings');
   return render(component, { wrapper: createWrapper() });
 };
 
@@ -165,7 +165,7 @@ describe('ProjectSettings', () => {
 
   it('renders the project settings page with project name', async () => {
     renderWithRoute(<ProjectSettings />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('test-project')).toBeInTheDocument();
     });
@@ -173,7 +173,7 @@ describe('ProjectSettings', () => {
 
   it('renders all setting tabs', async () => {
     renderWithRoute(<ProjectSettings />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('General')).toBeInTheDocument();
       expect(screen.getByText('Team')).toBeInTheDocument();
@@ -186,7 +186,7 @@ describe('ProjectSettings', () => {
 
   it('renders back button', async () => {
     renderWithRoute(<ProjectSettings />);
-    
+
     await waitFor(() => {
       // Back button uses arrow-left icon, find by querying the icon or button class
       const backButton = document.querySelector('.ant-btn-icon-only');
@@ -202,7 +202,7 @@ describe('ProjectSettings General Tab', () => {
 
   it('renders project information form', async () => {
     renderWithRoute(<ProjectSettings />);
-    
+
     await waitFor(() => {
       expect(screen.getByLabelText(/project name/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/description/i)).toBeInTheDocument();
@@ -211,7 +211,7 @@ describe('ProjectSettings General Tab', () => {
 
   it('shows project metadata', async () => {
     renderWithRoute(<ProjectSettings />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Owner')).toBeInTheDocument();
       expect(screen.getByText('Created')).toBeInTheDocument();
@@ -222,7 +222,7 @@ describe('ProjectSettings General Tab', () => {
 
   it('has save button', async () => {
     renderWithRoute(<ProjectSettings />);
-    
+
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument();
     });
@@ -232,7 +232,7 @@ describe('ProjectSettings General Tab', () => {
 describe('ProjectSettings Accessibility', () => {
   it('has proper tab navigation', async () => {
     renderWithRoute(<ProjectSettings />);
-    
+
     await waitFor(() => {
       const tabs = screen.getAllByRole('tab');
       expect(tabs.length).toBeGreaterThan(0);

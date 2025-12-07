@@ -101,10 +101,10 @@ async def setup_two_factor(
 ):
     """
     Initialize 2FA setup
-    
+
     Generates a new TOTP secret and QR code for the user to scan
     with their authenticator app.
-    
+
     Note: This doesn't enable 2FA yet - user must verify the code first.
     """
     if current_user.two_factor_enabled:
@@ -112,21 +112,21 @@ async def setup_two_factor(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="2FA is already enabled. Disable it first to set up again.",
         )
-    
+
     # Generate new secret
     secret = two_factor_service.generate_secret()
-    
+
     # Generate QR code
     qr_code = two_factor_service.generate_qr_code(secret, current_user.email)
-    
+
     # Generate provisioning URI
     provisioning_uri = two_factor_service.generate_provisioning_uri(
         secret, current_user.email
     )
-    
+
     # Format secret for display
     formatted_secret = two_factor_service.format_secret_for_manual_entry(secret)
-    
+
     return TwoFactorSetupResponse(
         secret=formatted_secret,
         qr_code=qr_code,
@@ -141,7 +141,7 @@ async def verify_setup_code(
 ):
     """
     Verify TOTP code during setup
-    
+
     This endpoint is used to verify that the user has correctly
     configured their authenticator app before enabling 2FA.
     """
@@ -153,30 +153,30 @@ async def verify_setup_code(
             detail=f"Too many failed attempts. Try again in {seconds} seconds.",
             headers={"Retry-After": str(seconds)},
         )
-    
+
     # Get the pending secret (stored temporarily in session or passed from client)
     # In production, store this securely server-side
     pending_secret = getattr(current_user, "_pending_2fa_secret", None)
-    
+
     if not pending_secret:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No pending 2FA setup. Please start setup again.",
         )
-    
+
     # Verify the code
     is_valid = two_factor_service.verify_code(pending_secret, request.code)
-    
+
     # Record attempt
     two_factor_rate_limiter.record_attempt(str(current_user.id), is_valid)
-    
+
     if not is_valid:
         remaining = two_factor_rate_limiter.get_remaining_attempts(str(current_user.id))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid code. {remaining} attempts remaining.",
         )
-    
+
     return TwoFactorVerifyResponse(
         success=True,
         message="Code verified successfully. You can now enable 2FA.",
@@ -191,12 +191,12 @@ async def enable_two_factor(
 ):
     """
     Enable 2FA for the user
-    
+
     After verifying the TOTP code, this endpoint:
     1. Stores the encrypted secret
     2. Generates backup codes
     3. Enables 2FA for the account
-    
+
     Returns backup codes that user should save securely.
     """
     if current_user.two_factor_enabled:
@@ -204,10 +204,10 @@ async def enable_two_factor(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="2FA is already enabled.",
         )
-    
+
     # Remove spaces from secret
     secret = request.secret.replace(" ", "")
-    
+
     # Verify the code one more time
     is_valid = two_factor_service.verify_code(secret, request.code)
     if not is_valid:
@@ -215,20 +215,20 @@ async def enable_two_factor(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification code.",
         )
-    
+
     # Generate backup codes
     backup_codes = two_factor_service.generate_backup_codes()
-    
+
     # Hash backup codes for storage (used in production DB operations)
     _ = [  # noqa: F841 - reserved for DB storage
         two_factor_service.hash_backup_code(code)
         for code in backup_codes
     ]
-    
+
     # Encrypt secret for storage
     # encryption = SecretEncryption()
     # encrypted_secret = encryption.encrypt(secret)
-    
+
     # Update user in database
     # In production, use proper database operations:
     # current_user.two_factor_secret = encrypted_secret
@@ -236,13 +236,13 @@ async def enable_two_factor(
     # current_user.two_factor_enabled = True
     # current_user.two_factor_enabled_at = datetime.now(timezone.utc)
     # db.commit()
-    
+
     # Format backup codes for display
     formatted_codes = [
         two_factor_service.format_backup_code(code)
         for code in backup_codes
     ]
-    
+
     return BackupCodesResponse(
         backup_codes=formatted_codes,
         generated_at=datetime.now(timezone.utc),
@@ -258,7 +258,7 @@ async def disable_two_factor(
 ):
     """
     Disable 2FA for the user
-    
+
     Requires either:
     - Current password, OR
     - Valid 2FA code
@@ -268,36 +268,36 @@ async def disable_two_factor(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=TWO_FA_NOT_ENABLED,
         )
-    
+
     # Verify authorization
     authorized = False
-    
+
     if request.password:
         # Verify password
         if verify_password(request.password, current_user.hashed_password):
             authorized = True
-    
+
     if request.code and not authorized:
         # Verify 2FA code
         # encryption = SecretEncryption()
         # secret = encryption.decrypt(current_user.two_factor_secret)
         secret = current_user.two_factor_secret  # Placeholder
-        
+
         if two_factor_service.verify_code(secret, request.code):
             authorized = True
-    
+
     if not authorized:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid password or 2FA code.",
         )
-    
+
     # Disable 2FA
     # current_user.two_factor_enabled = False
     # current_user.two_factor_secret = None
     # current_user.two_factor_backup_codes = None
     # db.commit()
-    
+
     return {"success": True, "message": "2FA has been disabled."}
 
 
@@ -311,7 +311,7 @@ async def get_backup_codes_status(
 ):
     """
     Get backup codes status
-    
+
     Returns the number of remaining backup codes.
     Does NOT return the actual codes (they're only shown once).
     """
@@ -320,10 +320,10 @@ async def get_backup_codes_status(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=TWO_FA_NOT_ENABLED,
         )
-    
+
     # Count remaining backup codes
     remaining = len(current_user.two_factor_backup_codes or [])
-    
+
     return BackupCodesResponse(
         backup_codes=[],  # Never return actual codes
         generated_at=current_user.two_factor_enabled_at,
@@ -339,7 +339,7 @@ async def regenerate_backup_codes(
 ):
     """
     Regenerate backup codes
-    
+
     Requires valid 2FA code. Invalidates all previous backup codes.
     """
     if not current_user.two_factor_enabled:
@@ -347,36 +347,36 @@ async def regenerate_backup_codes(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=TWO_FA_NOT_ENABLED,
         )
-    
+
     # Verify 2FA code
     # encryption = SecretEncryption()
     # secret = encryption.decrypt(current_user.two_factor_secret)
     secret = current_user.two_factor_secret  # Placeholder
-    
+
     if not two_factor_service.verify_code(secret, request.code):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid verification code.",
         )
-    
+
     # Generate new backup codes
     backup_codes = two_factor_service.generate_backup_codes()
-    
+
     # Hash for storage (used in production DB operations)
     _ = [  # noqa: F841 - reserved for DB storage
         two_factor_service.hash_backup_code(code)
         for code in backup_codes
     ]
-    
+
     # TODO: Store hashed_codes in database when DB integration is complete
     # Example: current_user.two_factor_backup_codes = hashed_codes; db.commit()
-    
+
     # Format for display
     formatted_codes = [
         two_factor_service.format_backup_code(code)
         for code in backup_codes
     ]
-    
+
     return BackupCodesResponse(
         backup_codes=formatted_codes,
         generated_at=datetime.now(timezone.utc),
@@ -412,7 +412,7 @@ async def verify_two_factor_login(
 ):
     """
     Verify 2FA during login
-    
+
     Called after successful password authentication when 2FA is enabled.
     Accepts either TOTP code or backup code.
     """
@@ -420,13 +420,13 @@ async def verify_two_factor_login(
     # In production, use a secure session token system
     # user = validate_2fa_session_token(request.session_token)
     user = None  # Placeholder
-    
+
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired session.",
         )
-    
+
     # Check rate limiting
     is_locked, seconds = two_factor_rate_limiter.is_locked_out(str(user.id))
     if is_locked:
@@ -435,17 +435,17 @@ async def verify_two_factor_login(
             detail=f"Too many failed attempts. Try again in {seconds} seconds.",
             headers={"Retry-After": str(seconds)},
         )
-    
+
     is_valid = False
     used_backup_code = None
-    
+
     if request.is_backup_code:
         # Verify backup code
-        is_valid, used_hash = two_factor_service.verify_backup_code(
+        is_valid, _used_hash = two_factor_service.verify_backup_code(
             request.code,
             user.two_factor_backup_codes or [],
-        )
-        
+        )  # _used_hash available for removing used codes
+
         if is_valid:
             # Remove used backup code
             # user.two_factor_backup_codes.remove(used_hash)
@@ -457,25 +457,25 @@ async def verify_two_factor_login(
         # secret = encryption.decrypt(user.two_factor_secret)
         secret = user.two_factor_secret  # Placeholder
         is_valid = two_factor_service.verify_code(secret, request.code)
-    
+
     # Record attempt
     two_factor_rate_limiter.record_attempt(str(user.id), is_valid)
-    
+
     if not is_valid:
         remaining = two_factor_rate_limiter.get_remaining_attempts(str(user.id))
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Invalid code. {remaining} attempts remaining.",
         )
-    
+
     # Update last used
     # user.two_factor_last_used = datetime.now(timezone.utc)
     # db.commit()
-    
+
     # Generate JWT tokens
     # access_token = create_access_token(user)
     # refresh_token = create_refresh_token(user)
-    
+
     return {
         "success": True,
         "user": {

@@ -1,16 +1,16 @@
 /**
  * 安全仪表板页面 (Security Dashboard Page)
- * 
+ *
  * 功能描述:
  *   提供安全漏洞监控和合规状态的综合视图。
- * 
+ *
  * 主要特性:
  *   - 安全漏洞概览
  *   - OWASP Top 10 跟踪
  *   - CVE 监控
  *   - 合规状态
  *   - 安全趋势分析
- * 
+ *
  * 最后修改日期: 2024-12-07
  */
 
@@ -443,11 +443,12 @@ export const SecurityDashboard: React.FC = () => {
           >
             <Table
               columns={columns}
-              dataSource={severityFilter === 'all' 
-                ? mockVulnerabilities 
+              dataSource={severityFilter === 'all'
+                ? mockVulnerabilities
                 : mockVulnerabilities.filter(v => v.severity === severityFilter)
               }
               rowKey="id"
+              loading={loading}
               pagination={{ pageSize: 10 }}
             />
           </Card>

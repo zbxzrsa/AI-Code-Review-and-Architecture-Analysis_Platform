@@ -275,7 +275,9 @@ class HealthMonitor:
             try:
                 await self._monitor_task
             except asyncio.CancelledError:
-                pass
+                # Intentionally not re-raised: we initiated the cancellation
+                # during shutdown, so propagation is not needed
+                logger.debug("Health monitor task cancelled during shutdown")
 
         logger.info("Health monitor stopped")
 

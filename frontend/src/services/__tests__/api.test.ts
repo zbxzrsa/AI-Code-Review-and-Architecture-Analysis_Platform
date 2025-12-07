@@ -13,47 +13,48 @@
  * - All API methods
  */
 
-import axios, { AxiosError, AxiosHeaders } from "axios";
+import { describe, it, expect, beforeEach, vi, type Mock } from "vitest";
+import axios from "axios";
 import { api, apiService } from "../api";
 
 // Mock dependencies
-jest.mock("axios");
-jest.mock("../../store/authStore", () => ({
+vi.mock("axios");
+vi.mock("../../store/authStore", () => ({
   useAuthStore: {
-    getState: jest.fn(() => ({
-      logout: jest.fn(),
+    getState: vi.fn(() => ({
+      logout: vi.fn(),
     })),
   },
 }));
 
-jest.mock("../security", () => ({
+vi.mock("../security", () => ({
   csrfManager: {
-    ensureToken: jest.fn().mockResolvedValue("mock-csrf-token"),
-    setToken: jest.fn(),
-    clearToken: jest.fn(),
-    fetchToken: jest.fn().mockResolvedValue("new-csrf-token"),
+    ensureToken: vi.fn().mockResolvedValue("mock-csrf-token"),
+    setToken: vi.fn(),
+    clearToken: vi.fn(),
+    fetchToken: vi.fn().mockResolvedValue("new-csrf-token"),
   },
   rateLimiter: {
-    shouldLimit: jest.fn().mockReturnValue(false),
-    getResetTime: jest.fn().mockReturnValue(Date.now() + 60000),
+    shouldLimit: vi.fn().mockReturnValue(false),
+    getResetTime: vi.fn().mockReturnValue(Date.now() + 60000),
   },
   sessionSecurity: {
-    updateActivity: jest.fn(),
-    stopInactivityTimer: jest.fn(),
+    updateActivity: vi.fn(),
+    stopInactivityTimer: vi.fn(),
   },
 }));
 
-jest.mock("../errorLogging", () => ({
+vi.mock("../errorLogging", () => ({
   errorLoggingService: {
-    logNetworkError: jest.fn(),
+    logNetworkError: vi.fn(),
   },
 }));
 
-const mockedAxios = axios as jest.Mocked<typeof axios>;
+// Axios is mocked via vi.mock above - use vi.mocked(axios.method) for type-safe mocking
 
 describe("API Service", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("api instance", () => {
@@ -70,21 +71,22 @@ describe("API Service", () => {
 
   describe("apiService.auth", () => {
     beforeEach(() => {
-      mockedAxios.create.mockReturnValue({
-        post: jest.fn().mockResolvedValue({ data: { success: true } }),
-        get: jest.fn().mockResolvedValue({ data: { user: {} } }),
-        put: jest.fn().mockResolvedValue({ data: { success: true } }),
+      // Mock axios.create for this test suite
+      vi.mocked(axios.create).mockReturnValue({
+        post: vi.fn().mockResolvedValue({ data: { success: true } }),
+        get: vi.fn().mockResolvedValue({ data: { user: {} } }),
+        put: vi.fn().mockResolvedValue({ data: { success: true } }),
         interceptors: {
-          request: { use: jest.fn() },
-          response: { use: jest.fn() },
+          request: { use: vi.fn() },
+          response: { use: vi.fn() },
         },
         defaults: { headers: {} },
-      } as any);
+      } as unknown as ReturnType<typeof axios.create>);
     });
 
     it("login should call POST /auth/login with credentials", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: { token: "test" } });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: { token: "test" } });
+      (api.post as Mock) = mockPost;
 
       await apiService.auth.login("test@example.com", "password123");
 
@@ -96,14 +98,10 @@ describe("API Service", () => {
     });
 
     it("login should include invitation code when provided", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: { token: "test" } });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: { token: "test" } });
+      (api.post as Mock) = mockPost;
 
-      await apiService.auth.login(
-        "test@example.com",
-        "password123",
-        "INVITE123"
-      );
+      await apiService.auth.login("test@example.com", "password123", "INVITE123");
 
       expect(mockPost).toHaveBeenCalledWith("/auth/login", {
         email: "test@example.com",
@@ -113,8 +111,8 @@ describe("API Service", () => {
     });
 
     it("register should call POST /auth/register", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: { success: true } });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: { success: true } });
+      (api.post as Mock) = mockPost;
 
       const registerData = {
         email: "new@example.com",
@@ -129,8 +127,8 @@ describe("API Service", () => {
     });
 
     it("logout should call POST /auth/logout", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.auth.logout();
 
@@ -138,8 +136,8 @@ describe("API Service", () => {
     });
 
     it("refresh should call POST /auth/refresh", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.auth.refresh();
 
@@ -147,8 +145,8 @@ describe("API Service", () => {
     });
 
     it("me should call GET /auth/me", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: { user: {} } });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: { user: {} } });
+      (api.get as Mock) = mockGet;
 
       await apiService.auth.me();
 
@@ -156,8 +154,8 @@ describe("API Service", () => {
     });
 
     it("updateProfile should call PUT /auth/profile", async () => {
-      const mockPut = jest.fn().mockResolvedValue({ data: {} });
-      (api.put as jest.Mock) = mockPut;
+      const mockPut = vi.fn().mockResolvedValue({ data: {} });
+      (api.put as Mock) = mockPut;
 
       await apiService.auth.updateProfile({ name: "New Name" });
 
@@ -167,8 +165,8 @@ describe("API Service", () => {
     });
 
     it("changePassword should call POST /auth/change-password", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.auth.changePassword("oldPass", "newPass");
 
@@ -179,8 +177,8 @@ describe("API Service", () => {
     });
 
     it("verify2FA should call POST /auth/2fa/verify", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.auth.verify2FA("123456");
 
@@ -191,8 +189,8 @@ describe("API Service", () => {
     });
 
     it("verify2FA with backup code should set is_backup_code", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.auth.verify2FA("BACKUP123", true);
 
@@ -203,8 +201,8 @@ describe("API Service", () => {
     });
 
     it("resend2FA should call POST /auth/2fa/resend", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.auth.resend2FA();
 
@@ -214,8 +212,8 @@ describe("API Service", () => {
 
   describe("apiService.projects", () => {
     it("list should call GET /projects with params", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: [] });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: [] });
+      (api.get as Mock) = mockGet;
 
       await apiService.projects.list({ page: 1, limit: 10, search: "test" });
 
@@ -225,8 +223,8 @@ describe("API Service", () => {
     });
 
     it("get should call GET /projects/:id", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.projects.get("proj-123");
 
@@ -234,8 +232,8 @@ describe("API Service", () => {
     });
 
     it("create should call POST /projects", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       const projectData = {
         name: "Test Project",
@@ -248,8 +246,8 @@ describe("API Service", () => {
     });
 
     it("update should call PUT /projects/:id", async () => {
-      const mockPut = jest.fn().mockResolvedValue({ data: {} });
-      (api.put as jest.Mock) = mockPut;
+      const mockPut = vi.fn().mockResolvedValue({ data: {} });
+      (api.put as Mock) = mockPut;
 
       await apiService.projects.update("proj-123", { name: "Updated" });
 
@@ -259,8 +257,8 @@ describe("API Service", () => {
     });
 
     it("delete should call DELETE /projects/:id", async () => {
-      const mockDelete = jest.fn().mockResolvedValue({ data: {} });
-      (api.delete as jest.Mock) = mockDelete;
+      const mockDelete = vi.fn().mockResolvedValue({ data: {} });
+      (api.delete as Mock) = mockDelete;
 
       await apiService.projects.delete("proj-123");
 
@@ -268,8 +266,8 @@ describe("API Service", () => {
     });
 
     it("archive should call POST /projects/:id/archive", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.projects.archive("proj-123");
 
@@ -277,8 +275,8 @@ describe("API Service", () => {
     });
 
     it("restore should call POST /projects/:id/restore", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.projects.restore("proj-123");
 
@@ -286,8 +284,8 @@ describe("API Service", () => {
     });
 
     it("getStats should call GET /projects/:id/stats", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.projects.getStats("proj-123");
 
@@ -295,8 +293,8 @@ describe("API Service", () => {
     });
 
     it("getTeam should call GET /projects/:id/team", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: [] });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: [] });
+      (api.get as Mock) = mockGet;
 
       await apiService.projects.getTeam("proj-123");
 
@@ -304,8 +302,8 @@ describe("API Service", () => {
     });
 
     it("inviteMember should call POST /projects/:id/team/invite", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.projects.inviteMember("proj-123", {
         email: "member@test.com",
@@ -321,10 +319,8 @@ describe("API Service", () => {
 
   describe("apiService.analysis", () => {
     it("start should call POST /projects/:id/analyze", async () => {
-      const mockPost = jest
-        .fn()
-        .mockResolvedValue({ data: { sessionId: "sess-123" } });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: { sessionId: "sess-123" } });
+      (api.post as Mock) = mockPost;
 
       await apiService.analysis.start("proj-123", { files: ["src/index.ts"] });
 
@@ -334,8 +330,8 @@ describe("API Service", () => {
     });
 
     it("getSession should call GET /analyze/:sessionId", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.analysis.getSession("sess-123");
 
@@ -343,8 +339,8 @@ describe("API Service", () => {
     });
 
     it("getIssues should call GET /analyze/:sessionId/issues", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: [] });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: [] });
+      (api.get as Mock) = mockGet;
 
       await apiService.analysis.getIssues("sess-123", { severity: "high" });
 
@@ -354,32 +350,23 @@ describe("API Service", () => {
     });
 
     it("applyFix should call POST /analyze/:sessionId/issues/:issueId/fix", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.analysis.applyFix("sess-123", "issue-456");
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/analyze/sess-123/issues/issue-456/fix"
-      );
+      expect(mockPost).toHaveBeenCalledWith("/analyze/sess-123/issues/issue-456/fix");
     });
 
     it("dismissIssue should call POST with reason", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
-      await apiService.analysis.dismissIssue(
-        "sess-123",
-        "issue-456",
-        "False positive"
-      );
+      await apiService.analysis.dismissIssue("sess-123", "issue-456", "False positive");
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/analyze/sess-123/issues/issue-456/dismiss",
-        {
-          reason: "False positive",
-        }
-      );
+      expect(mockPost).toHaveBeenCalledWith("/analyze/sess-123/issues/issue-456/dismiss", {
+        reason: "False positive",
+      });
     });
 
     it("streamUrl should return correct URL", () => {
@@ -388,8 +375,8 @@ describe("API Service", () => {
     });
 
     it("getVulnerabilities should call GET /security/vulnerabilities", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: [] });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: [] });
+      (api.get as Mock) = mockGet;
 
       await apiService.analysis.getVulnerabilities({ severity: "critical" });
 
@@ -401,8 +388,8 @@ describe("API Service", () => {
 
   describe("apiService.experiments", () => {
     it("list should call GET /experiments", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: [] });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: [] });
+      (api.get as Mock) = mockGet;
 
       await apiService.experiments.list({ status: "running" });
 
@@ -412,8 +399,8 @@ describe("API Service", () => {
     });
 
     it("create should call POST /experiments", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       const expData = {
         name: "Test Experiment",
@@ -427,8 +414,8 @@ describe("API Service", () => {
     });
 
     it("start should call POST /experiments/:id/start", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.experiments.start("exp-123");
 
@@ -436,8 +423,8 @@ describe("API Service", () => {
     });
 
     it("promote should call POST /experiments/:id/promote", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.experiments.promote("exp-123");
 
@@ -445,13 +432,10 @@ describe("API Service", () => {
     });
 
     it("quarantine should call POST with reason", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
-      await apiService.experiments.quarantine(
-        "exp-123",
-        "Performance degradation"
-      );
+      await apiService.experiments.quarantine("exp-123", "Performance degradation");
 
       expect(mockPost).toHaveBeenCalledWith("/experiments/exp-123/quarantine", {
         reason: "Performance degradation",
@@ -461,8 +445,8 @@ describe("API Service", () => {
 
   describe("apiService.user", () => {
     it("getProfile should call GET /user/profile", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.user.getProfile();
 
@@ -470,8 +454,8 @@ describe("API Service", () => {
     });
 
     it("updateProfile should call PUT /user/profile", async () => {
-      const mockPut = jest.fn().mockResolvedValue({ data: {} });
-      (api.put as jest.Mock) = mockPut;
+      const mockPut = vi.fn().mockResolvedValue({ data: {} });
+      (api.put as Mock) = mockPut;
 
       await apiService.user.updateProfile({ name: "New Name", bio: "Hello" });
 
@@ -482,26 +466,20 @@ describe("API Service", () => {
     });
 
     it("uploadAvatar should use FormData", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       const file = new File(["test"], "avatar.png", { type: "image/png" });
       await apiService.user.uploadAvatar(file);
 
-      expect(mockPost).toHaveBeenCalledWith(
-        "/user/avatar",
-        expect.any(FormData),
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
+      expect(mockPost).toHaveBeenCalledWith("/user/avatar", expect.any(FormData), {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     });
 
     it("setup2FA should call POST /user/2fa/setup", async () => {
-      const mockPost = jest
-        .fn()
-        .mockResolvedValue({ data: { qrCode: "data:..." } });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: { qrCode: "data:..." } });
+      (api.post as Mock) = mockPost;
 
       await apiService.user.setup2FA();
 
@@ -509,8 +487,8 @@ describe("API Service", () => {
     });
 
     it("enable2FA should call POST /user/2fa/enable with code", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.user.enable2FA("123456");
 
@@ -520,8 +498,8 @@ describe("API Service", () => {
     });
 
     it("getSessions should call GET /user/sessions", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: [] });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: [] });
+      (api.get as Mock) = mockGet;
 
       await apiService.user.getSessions();
 
@@ -529,8 +507,8 @@ describe("API Service", () => {
     });
 
     it("revokeSession should call DELETE /user/sessions/:id", async () => {
-      const mockDelete = jest.fn().mockResolvedValue({ data: {} });
-      (api.delete as jest.Mock) = mockDelete;
+      const mockDelete = vi.fn().mockResolvedValue({ data: {} });
+      (api.delete as Mock) = mockDelete;
 
       await apiService.user.revokeSession("sess-123");
 
@@ -538,8 +516,8 @@ describe("API Service", () => {
     });
 
     it("downloadPersonalData should call GET with blob responseType", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: new Blob() });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: new Blob() });
+      (api.get as Mock) = mockGet;
 
       await apiService.user.downloadPersonalData();
 
@@ -551,8 +529,8 @@ describe("API Service", () => {
 
   describe("apiService.metrics", () => {
     it("getDashboard should call GET /metrics/dashboard", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.metrics.getDashboard();
 
@@ -560,8 +538,8 @@ describe("API Service", () => {
     });
 
     it("getSystem should call GET /metrics/system", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.metrics.getSystem();
 
@@ -569,8 +547,8 @@ describe("API Service", () => {
     });
 
     it("getProvider should call GET /metrics/providers/:provider", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.metrics.getProvider("openai");
 
@@ -578,8 +556,8 @@ describe("API Service", () => {
     });
 
     it("getUsage should call GET /metrics/usage with date params", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.metrics.getUsage({
         start_date: "2024-01-01",
@@ -594,8 +572,8 @@ describe("API Service", () => {
 
   describe("apiService.audit", () => {
     it("list should call GET /audit with filters", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: [] });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: [] });
+      (api.get as Mock) = mockGet;
 
       await apiService.audit.list({
         entity: "user",
@@ -610,8 +588,8 @@ describe("API Service", () => {
     });
 
     it("get should call GET /audit/:id", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: {} });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: {} });
+      (api.get as Mock) = mockGet;
 
       await apiService.audit.get("audit-123");
 
@@ -621,8 +599,8 @@ describe("API Service", () => {
 
   describe("apiService.repositories", () => {
     it("list should call GET /repositories", async () => {
-      const mockGet = jest.fn().mockResolvedValue({ data: [] });
-      (api.get as jest.Mock) = mockGet;
+      const mockGet = vi.fn().mockResolvedValue({ data: [] });
+      (api.get as Mock) = mockGet;
 
       await apiService.repositories.list({ provider: "github" });
 
@@ -632,8 +610,8 @@ describe("API Service", () => {
     });
 
     it("connect should call POST /repositories/connect", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.repositories.connect({
         provider: "github",
@@ -647,8 +625,8 @@ describe("API Service", () => {
     });
 
     it("sync should call POST /repositories/:id/sync", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.repositories.sync("repo-123");
 
@@ -656,8 +634,8 @@ describe("API Service", () => {
     });
 
     it("analyze should call POST /repositories/:id/analyze", async () => {
-      const mockPost = jest.fn().mockResolvedValue({ data: {} });
-      (api.post as jest.Mock) = mockPost;
+      const mockPost = vi.fn().mockResolvedValue({ data: {} });
+      (api.post as Mock) = mockPost;
 
       await apiService.repositories.analyze("repo-123", {
         files: ["src/index.ts"],

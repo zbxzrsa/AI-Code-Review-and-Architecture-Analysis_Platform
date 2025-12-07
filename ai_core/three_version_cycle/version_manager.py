@@ -49,7 +49,7 @@ class VersionConfig:
     min_samples_for_evaluation: int = 1000
     auto_promote: bool = False
     auto_degrade: bool = True
-    
+
     # Thresholds
     accuracy_threshold: float = 0.85
     error_rate_threshold: float = 0.05
@@ -69,31 +69,31 @@ class VersionMetrics:
     accuracy_count: int = 0
     cost_total: float = 0
     last_updated: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    
+
     @property
     def success_rate(self) -> float:
         if self.total_requests == 0:
             return 0
         return self.successful_requests / self.total_requests
-    
+
     @property
     def error_rate(self) -> float:
         if self.total_requests == 0:
             return 0
         return self.failed_requests / self.total_requests
-    
+
     @property
     def avg_latency_ms(self) -> float:
         if self.successful_requests == 0:
             return 0
         return self.total_latency_ms / self.successful_requests
-    
+
     @property
     def avg_accuracy(self) -> float:
         if self.accuracy_count == 0:
             return 0
         return self.accuracy_sum / self.accuracy_count
-    
+
     @property
     def avg_cost_per_request(self) -> float:
         if self.total_requests == 0:
@@ -181,14 +181,14 @@ DEFAULT_CONFIGS = {
 class VersionManager:
     """
     Manages the three-version self-evolution cycle.
-    
+
     Responsibilities:
     - Track state and metrics for each version
     - Manage technology experiments
     - Handle promotions (V1→V2) and degradations (V2→V3)
     - Re-evaluate quarantined technologies
     """
-    
+
     def __init__(
         self,
         configs: Optional[Dict[Version, VersionConfig]] = None,
@@ -198,48 +198,48 @@ class VersionManager:
         self.configs = configs or DEFAULT_CONFIGS.copy()
         self.event_bus = event_bus
         self.db = db_connection
-        
+
         # State tracking
         self._states: Dict[Version, VersionState] = {
             Version.V1_EXPERIMENTAL: VersionState.ACTIVE,
             Version.V2_PRODUCTION: VersionState.ACTIVE,
             Version.V3_QUARANTINE: VersionState.ACTIVE,
         }
-        
+
         # Metrics
         self._metrics: Dict[Version, VersionMetrics] = {
             v: VersionMetrics(version=v) for v in Version
         }
-        
+
         # Technologies
         self._technologies: Dict[str, Technology] = {}
         self._version_technologies: Dict[Version, Set[str]] = {
             v: set() for v in Version
         }
-        
+
         # Promotion history
         self._promotion_history: List[PromotionRecord] = []
-        
+
         # Locks
         self._promotion_lock = asyncio.Lock()
         self._state_lock = asyncio.Lock()
-    
+
     # =========================================================================
     # State Management
     # =========================================================================
-    
+
     def get_state(self, version: Version) -> VersionState:
         """Get current state of a version."""
         return self._states[version]
-    
+
     async def set_state(self, version: Version, state: VersionState) -> bool:
         """Set state of a version."""
         async with self._state_lock:
             old_state = self._states[version]
             self._states[version] = state
-            
+
             logger.info(f"Version {version.value} state: {old_state.value} → {state.value}")
-            
+
             if self.event_bus:
                 await self.event_bus.publish("version_state_changed", {
                     "version": version.value,
@@ -247,13 +247,13 @@ class VersionManager:
                     "new_state": state.value,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
-            
+
             return True
-    
+
     # =========================================================================
     # Metrics Management
     # =========================================================================
-    
+
     def record_request(
         self,
         version: Version,
@@ -265,32 +265,32 @@ class VersionManager:
         """Record a request for metrics tracking."""
         metrics = self._metrics[version]
         metrics.total_requests += 1
-        
+
         if success:
             metrics.successful_requests += 1
             metrics.total_latency_ms += latency_ms
         else:
             metrics.failed_requests += 1
-        
+
         if accuracy is not None:
             metrics.accuracy_sum += accuracy
             metrics.accuracy_count += 1
-        
+
         metrics.cost_total += cost
         metrics.last_updated = datetime.now(timezone.utc)
-    
+
     def get_metrics(self, version: Version) -> VersionMetrics:
         """Get metrics for a version."""
         return self._metrics[version]
-    
+
     def get_all_metrics(self) -> Dict[Version, VersionMetrics]:
         """Get metrics for all versions."""
         return self._metrics.copy()
-    
+
     # =========================================================================
     # Technology Management
     # =========================================================================
-    
+
     def register_technology(
         self,
         name: str,
@@ -302,7 +302,7 @@ class VersionManager:
     ) -> Technology:
         """Register a new technology for experimentation."""
         tech_id = str(uuid.uuid4())
-        
+
         tech = Technology(
             tech_id=tech_id,
             name=name,
@@ -312,22 +312,22 @@ class VersionManager:
             source=source,
             version_introduced=version,
         )
-        
+
         self._technologies[tech_id] = tech
         self._version_technologies[version].add(tech_id)
-        
+
         logger.info(f"Registered technology: {name} ({tech_id}) in {version.value}")
         return tech
-    
+
     def get_technology(self, tech_id: str) -> Optional[Technology]:
         """Get a technology by ID."""
         return self._technologies.get(tech_id)
-    
+
     def get_version_technologies(self, version: Version) -> List[Technology]:
         """Get all technologies in a version."""
         tech_ids = self._version_technologies[version]
         return [self._technologies[tid] for tid in tech_ids if tid in self._technologies]
-    
+
     def update_technology_metrics(
         self,
         tech_id: str,
@@ -337,26 +337,26 @@ class VersionManager:
         tech = self._technologies.get(tech_id)
         if not tech:
             return False
-        
+
         tech.metrics.update(metrics)
         return True
-    
+
     # =========================================================================
     # Promotion and Degradation
     # =========================================================================
-    
+
     def evaluate_for_promotion(self, tech_id: str) -> Dict[str, Any]:
         """Evaluate if a technology is ready for promotion."""
         tech = self._technologies.get(tech_id)
         if not tech:
             return {"eligible": False, "reason": "Technology not found"}
-        
+
         if tech.version_introduced != Version.V1_EXPERIMENTAL:
             return {"eligible": False, "reason": "Technology not in V1"}
-        
+
         config = self.configs[Version.V2_PRODUCTION]
         metrics = tech.metrics
-        
+
         # Check thresholds
         checks = {
             "accuracy": metrics.get("accuracy", 0) >= config.accuracy_threshold,
@@ -364,9 +364,9 @@ class VersionManager:
             "latency": metrics.get("latency_p95_ms", float("inf")) <= config.latency_p95_threshold_ms,
             "sample_size": metrics.get("sample_count", 0) >= config.min_samples_for_evaluation,
         }
-        
+
         eligible = all(checks.values())
-        
+
         return {
             "eligible": eligible,
             "tech_id": tech_id,
@@ -379,7 +379,7 @@ class VersionManager:
                 "min_samples": config.min_samples_for_evaluation,
             },
         }
-    
+
     async def promote_technology(
         self,
         tech_id: str,
@@ -390,18 +390,18 @@ class VersionManager:
             tech = self._technologies.get(tech_id)
             if not tech:
                 raise ValueError(f"Technology {tech_id} not found")
-            
+
             if tech_id not in self._version_technologies[Version.V1_EXPERIMENTAL]:
                 raise ValueError(f"Technology {tech_id} not in V1")
-            
+
             # Record metrics before promotion
             metrics_before = tech.metrics.copy()
-            
+
             # Move technology
             self._version_technologies[Version.V1_EXPERIMENTAL].discard(tech_id)
             self._version_technologies[Version.V2_PRODUCTION].add(tech_id)
             tech.status = "promoted"
-            
+
             # Create promotion record
             record = PromotionRecord(
                 record_id=str(uuid.uuid4()),
@@ -411,11 +411,11 @@ class VersionManager:
                 reason=reason,
                 metrics_before=metrics_before,
             )
-            
+
             self._promotion_history.append(record)
-            
+
             logger.info(f"Promoted technology {tech.name} from V1 to V2")
-            
+
             if self.event_bus:
                 await self.event_bus.publish("technology_promoted", {
                     "tech_id": tech_id,
@@ -425,9 +425,9 @@ class VersionManager:
                     "reason": reason,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
-            
+
             return record
-    
+
     async def degrade_technology(
         self,
         tech_id: str,
@@ -439,18 +439,18 @@ class VersionManager:
             tech = self._technologies.get(tech_id)
             if not tech:
                 raise ValueError(f"Technology {tech_id} not found")
-            
+
             if tech_id not in self._version_technologies[from_version]:
                 raise ValueError(f"Technology {tech_id} not in {from_version.value}")
-            
+
             # Record metrics before degradation
             metrics_before = tech.metrics.copy()
-            
+
             # Move technology
             self._version_technologies[from_version].discard(tech_id)
             self._version_technologies[Version.V3_QUARANTINE].add(tech_id)
             tech.status = "quarantined"
-            
+
             # Create degradation record
             record = PromotionRecord(
                 record_id=str(uuid.uuid4()),
@@ -460,11 +460,11 @@ class VersionManager:
                 reason=reason,
                 metrics_before=metrics_before,
             )
-            
+
             self._promotion_history.append(record)
-            
+
             logger.warning(f"Degraded technology {tech.name} to V3: {reason}")
-            
+
             if self.event_bus:
                 await self.event_bus.publish("technology_quarantined", {
                     "tech_id": tech_id,
@@ -473,9 +473,9 @@ class VersionManager:
                     "reason": reason,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
-            
+
             return record
-    
+
     def re_evaluate_quarantined(
         self,
         tech_id: str,
@@ -484,39 +484,39 @@ class VersionManager:
         tech = self._technologies.get(tech_id)
         if not tech:
             return {"success": False, "reason": "Technology not found"}
-        
+
         if tech_id not in self._version_technologies[Version.V3_QUARANTINE]:
             return {"success": False, "reason": "Technology not in V3"}
-        
+
         # Check if enough time has passed (at least 30 days)
-        config = self.configs[Version.V3_QUARANTINE]
+        _config = self.configs[Version.V3_QUARANTINE]  # Available for config-based checks
         time_since_quarantine = datetime.now(timezone.utc) - tech.created_at
-        
+
         if time_since_quarantine.days < 30:
             return {
                 "success": False,
                 "reason": f"Minimum quarantine period not met ({time_since_quarantine.days}/30 days)",
             }
-        
+
         # Move back to V1 for re-experimentation
         self._version_technologies[Version.V3_QUARANTINE].discard(tech_id)
         self._version_technologies[Version.V1_EXPERIMENTAL].add(tech_id)
         tech.status = "re-evaluating"
         tech.metrics = {}  # Reset metrics
-        
+
         logger.info(f"Re-evaluating quarantined technology: {tech.name}")
-        
+
         return {
             "success": True,
             "tech_id": tech_id,
             "name": tech.name,
             "new_version": "v1",
         }
-    
+
     # =========================================================================
     # Reporting
     # =========================================================================
-    
+
     def get_status_report(self) -> Dict[str, Any]:
         """Get comprehensive status report."""
         return {

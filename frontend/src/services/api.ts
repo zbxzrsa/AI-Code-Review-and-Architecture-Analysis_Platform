@@ -14,12 +14,7 @@
  * - 速率限制感知
  */
 
-import axios, {
-  AxiosInstance,
-  AxiosError,
-  InternalAxiosRequestConfig,
-  AxiosResponse,
-} from "axios";
+import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig, AxiosResponse } from "axios";
 import { useAuthStore } from "../store/authStore";
 import { csrfManager, rateLimiter, sessionSecurity } from "./security";
 import { errorLoggingService } from "./errorLogging";
@@ -40,10 +35,7 @@ const CSRF_PROTECTED_METHODS = new Set(["post", "put", "patch", "delete"]);
 /**
  * Endpoints that are rate-limited with specific configs
  */
-const RATE_LIMITED_ENDPOINTS: Record<
-  string,
-  { maxRequests: number; windowMs: number }
-> = {
+const RATE_LIMITED_ENDPOINTS: Record<string, { maxRequests: number; windowMs: number }> = {
   "/auth/login": { maxRequests: 5, windowMs: 60000 },
   "/auth/register": { maxRequests: 3, windowMs: 60000 },
   "/auth/password/reset": { maxRequests: 3, windowMs: 300000 },
@@ -98,9 +90,7 @@ api.interceptors.request.use(
     sessionSecurity.updateActivity();
 
     // Check rate limiting for specific endpoints
-    for (const [endpoint, rateConfig] of Object.entries(
-      RATE_LIMITED_ENDPOINTS
-    )) {
+    for (const [endpoint, rateConfig] of Object.entries(RATE_LIMITED_ENDPOINTS)) {
       if (url.includes(endpoint)) {
         if (rateLimiter.shouldLimit(endpoint, rateConfig)) {
           const resetTime = rateLimiter.getResetTime(endpoint);
@@ -179,7 +169,7 @@ api.interceptors.response.use(
       if (url.includes("/auth/refresh") || url.includes("/auth/login")) {
         useAuthStore.getState().logout();
         csrfManager.clearToken();
-        window.location.href = "/login";
+        globalThis.location.href = "/login";
         throw error;
       }
 
@@ -220,9 +210,9 @@ api.interceptors.response.use(
 
         // Redirect to login with return URL
         const returnUrl = encodeURIComponent(
-          window.location.pathname + window.location.search
+          globalThis.location.pathname + globalThis.location.search
         );
-        window.location.href = `/login?returnUrl=${returnUrl}`;
+        globalThis.location.href = `/login?returnUrl=${returnUrl}`;
 
         throw refreshError;
       }
@@ -233,10 +223,7 @@ api.interceptors.response.use(
       const responseData = error.response.data as any;
 
       // If CSRF token invalid, fetch new one and retry
-      if (
-        responseData?.error?.includes("CSRF") ||
-        responseData?.code === "CSRF_INVALID"
-      ) {
+      if (responseData?.error?.includes("CSRF") || responseData?.code === "CSRF_INVALID") {
         if (!originalRequest._retryCount || originalRequest._retryCount < 2) {
           originalRequest._retryCount = (originalRequest._retryCount || 0) + 1;
 
@@ -262,12 +249,7 @@ api.interceptors.response.use(
     }
 
     // Log error
-    errorLoggingService.logNetworkError(
-      error,
-      url,
-      originalRequest?.method || "unknown",
-      status
-    );
+    errorLoggingService.logNetworkError(error, url, originalRequest?.method || "unknown", status);
 
     throw error;
   }
@@ -287,12 +269,8 @@ export const apiService = {
     /**
      * Register new account
      */
-    register: (data: {
-      email: string;
-      password: string;
-      name: string;
-      invitation_code: string;
-    }) => api.post("/auth/register", data),
+    register: (data: { email: string; password: string; name: string; invitation_code: string }) =>
+      api.post("/auth/register", data),
 
     /**
      * Logout - clears httpOnly cookies
@@ -313,8 +291,7 @@ export const apiService = {
     /**
      * Update user profile
      */
-    updateProfile: (data: { name?: string; avatar?: string }) =>
-      api.put("/auth/profile", data),
+    updateProfile: (data: { name?: string; avatar?: string }) => api.put("/auth/profile", data),
 
     /**
      * Change password
@@ -403,8 +380,7 @@ export const apiService = {
     getStats: (id: string) => api.get(`/projects/${id}/stats`),
 
     // Files
-    getFiles: (id: string, path?: string) =>
-      api.get(`/projects/${id}/files`, { params: { path } }),
+    getFiles: (id: string, path?: string) => api.get(`/projects/${id}/files`, { params: { path } }),
 
     getFile: (id: string, path: string) =>
       api.get(`/projects/${id}/files/${encodeURIComponent(path)}`),
@@ -440,8 +416,7 @@ export const apiService = {
     /**
      * Remove team member
      */
-    removeMember: (id: string, memberId: string) =>
-      api.delete(`/projects/${id}/team/${memberId}`),
+    removeMember: (id: string, memberId: string) => api.delete(`/projects/${id}/team/${memberId}`),
 
     // Webhooks
     /**
@@ -452,10 +427,8 @@ export const apiService = {
     /**
      * Create webhook
      */
-    createWebhook: (
-      id: string,
-      data: { url: string; events: string[]; secret?: string }
-    ) => api.post(`/projects/${id}/webhooks`, data),
+    createWebhook: (id: string, data: { url: string; events: string[]; secret?: string }) =>
+      api.post(`/projects/${id}/webhooks`, data),
 
     /**
      * Update webhook
@@ -495,8 +468,7 @@ export const apiService = {
     /**
      * Revoke API key
      */
-    revokeApiKey: (id: string, keyId: string) =>
-      api.delete(`/projects/${id}/api-keys/${keyId}`),
+    revokeApiKey: (id: string, keyId: string) => api.delete(`/projects/${id}/api-keys/${keyId}`),
 
     /**
      * Get API key usage
@@ -533,14 +505,12 @@ export const apiService = {
     /**
      * Disconnect OAuth provider
      */
-    disconnect: (provider: string) =>
-      api.delete(`/auth/oauth/connections/${provider}`),
+    disconnect: (provider: string) => api.delete(`/auth/oauth/connections/${provider}`),
 
     /**
      * List repositories from OAuth provider
      */
-    listRepositories: (provider: string) =>
-      api.get(`/repositories/oauth/${provider}`),
+    listRepositories: (provider: string) => api.get(`/repositories/oauth/${provider}`),
   },
 
   // ============================================
@@ -614,10 +584,8 @@ export const apiService = {
     /**
      * Get repository commits
      */
-    getCommits: (
-      id: string,
-      params?: { branch?: string; page?: number; limit?: number }
-    ) => api.get(`/repositories/${id}/commits`, { params }),
+    getCommits: (id: string, params?: { branch?: string; page?: number; limit?: number }) =>
+      api.get(`/repositories/${id}/commits`, { params }),
 
     /**
      * Analyze repository code
@@ -629,22 +597,16 @@ export const apiService = {
 
   // Analysis
   analysis: {
-    start: (
-      projectId: string,
-      options?: { files?: string[]; version?: string }
-    ) => api.post(`/projects/${projectId}/analyze`, options),
+    start: (projectId: string, options?: { files?: string[]; version?: string }) =>
+      api.post(`/projects/${projectId}/analyze`, options),
 
     getSession: (sessionId: string) => api.get(`/analyze/${sessionId}`),
 
-    getSessions: (
-      projectId: string,
-      params?: { page?: number; limit?: number }
-    ) => api.get(`/projects/${projectId}/sessions`, { params }),
+    getSessions: (projectId: string, params?: { page?: number; limit?: number }) =>
+      api.get(`/projects/${projectId}/sessions`, { params }),
 
-    getIssues: (
-      sessionId: string,
-      params?: { severity?: string; type?: string }
-    ) => api.get(`/analyze/${sessionId}/issues`, { params }),
+    getIssues: (sessionId: string, params?: { severity?: string; type?: string }) =>
+      api.get(`/analyze/${sessionId}/issues`, { params }),
 
     applyFix: (sessionId: string, issueId: string) =>
       api.post(`/analyze/${sessionId}/issues/${issueId}/fix`),
@@ -652,8 +614,7 @@ export const apiService = {
     dismissIssue: (sessionId: string, issueId: string, reason?: string) =>
       api.post(`/analyze/${sessionId}/issues/${issueId}/dismiss`, { reason }),
 
-    streamUrl: (sessionId: string) =>
-      `${API_BASE_URL}/analyze/${sessionId}/stream`,
+    streamUrl: (sessionId: string) => `${API_BASE_URL}/analyze/${sessionId}/stream`,
 
     // Security vulnerabilities
     getVulnerabilities: (params?: {
@@ -707,8 +668,7 @@ export const apiService = {
     getHistory: (params?: { page?: number; limit?: number }) =>
       api.get("/versions/history", { params }),
 
-    rollback: (versionId: string) =>
-      api.post(`/versions/${versionId}/rollback`),
+    rollback: (versionId: string) => api.post(`/versions/${versionId}/rollback`),
   },
 
   // Audit (Admin)
@@ -732,8 +692,7 @@ export const apiService = {
 
     getSystem: () => api.get("/metrics/system"),
 
-    getProvider: (provider: string) =>
-      api.get(`/metrics/providers/${provider}`),
+    getProvider: (provider: string) => api.get(`/metrics/providers/${provider}`),
 
     getUsage: (params?: { start_date?: string; end_date?: string }) =>
       api.get("/metrics/usage", { params }),
@@ -778,8 +737,7 @@ export const apiService = {
     /**
      * Update user settings
      */
-    updateSettings: (data: Record<string, unknown>) =>
-      api.put("/user/settings", data),
+    updateSettings: (data: Record<string, unknown>) => api.put("/user/settings", data),
 
     /**
      * Update privacy settings
@@ -814,14 +772,12 @@ export const apiService = {
     /**
      * Initiate OAuth connection
      */
-    connectOAuth: (provider: string) =>
-      api.post(`/user/oauth/connect/${provider}`),
+    connectOAuth: (provider: string) => api.post(`/user/oauth/connect/${provider}`),
 
     /**
      * Disconnect OAuth provider
      */
-    disconnectOAuth: (provider: string) =>
-      api.delete(`/user/oauth/${provider}`),
+    disconnectOAuth: (provider: string) => api.delete(`/user/oauth/${provider}`),
 
     // Password
     /**
@@ -833,8 +789,7 @@ export const apiService = {
     /**
      * Request password reset email
      */
-    requestPasswordReset: (email: string) =>
-      api.post("/user/password/reset-request", { email }),
+    requestPasswordReset: (email: string) => api.post("/user/password/reset-request", { email }),
 
     /**
      * Reset password with token
@@ -901,8 +856,7 @@ export const apiService = {
     /**
      * Revoke a specific session
      */
-    revokeSession: (sessionId: string) =>
-      api.delete(`/user/sessions/${sessionId}`),
+    revokeSession: (sessionId: string) => api.delete(`/user/sessions/${sessionId}`),
 
     /**
      * Revoke all sessions except current
@@ -932,11 +886,8 @@ export const apiService = {
     /**
      * Create API key
      */
-    createApiKey: (data: {
-      name: string;
-      permissions: string[];
-      expiresAt?: string;
-    }) => api.post("/user/api-keys", data),
+    createApiKey: (data: { name: string; permissions: string[]; expiresAt?: string }) =>
+      api.post("/user/api-keys", data),
 
     /**
      * Revoke API key
@@ -946,10 +897,8 @@ export const apiService = {
     /**
      * Get API key usage statistics
      */
-    getApiKeyUsage: (
-      keyId: string,
-      params?: { start_date?: string; end_date?: string }
-    ) => api.get(`/user/api-keys/${keyId}/usage`, { params }),
+    getApiKeyUsage: (keyId: string, params?: { start_date?: string; end_date?: string }) =>
+      api.get(`/user/api-keys/${keyId}/usage`, { params }),
 
     // Integrations
     /**
@@ -960,8 +909,7 @@ export const apiService = {
     /**
      * Connect Slack workspace
      */
-    connectSlack: (code: string) =>
-      api.post("/user/integrations/slack/connect", { code }),
+    connectSlack: (code: string) => api.post("/user/integrations/slack/connect", { code }),
 
     /**
      * Disconnect Slack
@@ -971,8 +919,7 @@ export const apiService = {
     /**
      * Connect Microsoft Teams
      */
-    connectTeams: (code: string) =>
-      api.post("/user/integrations/teams/connect", { code }),
+    connectTeams: (code: string) => api.post("/user/integrations/teams/connect", { code }),
 
     /**
      * Disconnect Teams
@@ -988,12 +935,8 @@ export const apiService = {
     /**
      * Create webhook
      */
-    createWebhook: (data: {
-      name: string;
-      url: string;
-      events: string[];
-      secret?: string;
-    }) => api.post("/user/webhooks", data),
+    createWebhook: (data: { name: string; url: string; events: string[]; secret?: string }) =>
+      api.post("/user/webhooks", data),
 
     /**
      * Update webhook
@@ -1011,29 +954,24 @@ export const apiService = {
     /**
      * Delete webhook
      */
-    deleteWebhook: (webhookId: string) =>
-      api.delete(`/user/webhooks/${webhookId}`),
+    deleteWebhook: (webhookId: string) => api.delete(`/user/webhooks/${webhookId}`),
 
     /**
      * Test webhook
      */
-    testWebhook: (webhookId: string) =>
-      api.post(`/user/webhooks/${webhookId}/test`),
+    testWebhook: (webhookId: string) => api.post(`/user/webhooks/${webhookId}/test`),
 
     /**
      * Get webhook delivery logs
      */
-    getWebhookLogs: (
-      webhookId: string,
-      params?: { page?: number; limit?: number }
-    ) => api.get(`/user/webhooks/${webhookId}/logs`, { params }),
+    getWebhookLogs: (webhookId: string, params?: { page?: number; limit?: number }) =>
+      api.get(`/user/webhooks/${webhookId}/logs`, { params }),
 
     // Data & Privacy (GDPR)
     /**
      * Download personal data
      */
-    downloadPersonalData: () =>
-      api.get("/user/data/export", { responseType: "blob" }),
+    downloadPersonalData: () => api.get("/user/data/export", { responseType: "blob" }),
 
     /**
      * Request account deletion
@@ -1044,8 +982,7 @@ export const apiService = {
     /**
      * Confirm account deletion
      */
-    confirmAccountDeletion: (token: string) =>
-      api.post("/user/account/delete-confirm", { token }),
+    confirmAccountDeletion: (token: string) => api.post("/user/account/delete-confirm", { token }),
 
     /**
      * Cancel account deletion
@@ -1139,20 +1076,17 @@ export const apiService = {
       /**
        * Reactivate user
        */
-      reactivate: (userId: string) =>
-        api.post(`/admin/users/${userId}/reactivate`),
+      reactivate: (userId: string) => api.post(`/admin/users/${userId}/reactivate`),
 
       /**
        * Reset user password
        */
-      resetPassword: (userId: string) =>
-        api.post(`/admin/users/${userId}/reset-password`),
+      resetPassword: (userId: string) => api.post(`/admin/users/${userId}/reset-password`),
 
       /**
        * Resend welcome email
        */
-      resendWelcome: (userId: string) =>
-        api.post(`/admin/users/${userId}/resend-welcome`),
+      resendWelcome: (userId: string) => api.post(`/admin/users/${userId}/resend-welcome`),
 
       /**
        * Bulk user operations
@@ -1177,11 +1111,8 @@ export const apiService = {
       /**
        * Export users to CSV
        */
-      export: (params?: {
-        role?: string;
-        status?: string;
-        format?: "csv" | "json";
-      }) => api.get("/admin/users/export", { params, responseType: "blob" }),
+      export: (params?: { role?: string; status?: string; format?: "csv" | "json" }) =>
+        api.get("/admin/users/export", { params, responseType: "blob" }),
 
       /**
        * Get user statistics
@@ -1226,14 +1157,12 @@ export const apiService = {
       /**
        * Test provider connectivity
        */
-      test: (providerId: string) =>
-        api.post(`/admin/providers/${providerId}/test`),
+      test: (providerId: string) => api.post(`/admin/providers/${providerId}/test`),
 
       /**
        * Get provider health status
        */
-      getHealth: (providerId: string) =>
-        api.get(`/admin/providers/${providerId}/health`),
+      getHealth: (providerId: string) => api.get(`/admin/providers/${providerId}/health`),
 
       /**
        * Get provider metrics
@@ -1248,8 +1177,7 @@ export const apiService = {
       /**
        * Get provider models
        */
-      getModels: (providerId: string) =>
-        api.get(`/admin/providers/${providerId}/models`),
+      getModels: (providerId: string) => api.get(`/admin/providers/${providerId}/models`),
 
       /**
        * Update model configuration
@@ -1353,8 +1281,7 @@ export const apiService = {
       /**
        * Update system settings
        */
-      update: (settings: Record<string, unknown>) =>
-        api.put("/admin/settings", settings),
+      update: (settings: Record<string, unknown>) => api.put("/admin/settings", settings),
 
       /**
        * Get system health

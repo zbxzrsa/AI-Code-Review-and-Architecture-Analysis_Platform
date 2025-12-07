@@ -55,10 +55,8 @@ export const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
  */
 export function parseLogLevel(level: string): LogLevel {
   const normalizedLevel = level.toLowerCase();
-  const entry = Object.entries(LOG_LEVEL_NAMES).find(
-    ([, name]) => name === normalizedLevel
-  );
-  return entry ? (parseInt(entry[0], 10) as LogLevel) : LogLevel.INFO;
+  const entry = Object.entries(LOG_LEVEL_NAMES).find(([, name]) => name === normalizedLevel);
+  return entry ? (Number.parseInt(entry[0], 10) as LogLevel) : LogLevel.INFO;
 }
 
 /**
@@ -252,8 +250,7 @@ class Logger {
    * Set the minimum log level
    */
   setLevel(level: LogLevel | string): void {
-    this.config.level =
-      typeof level === "string" ? parseLogLevel(level) : level;
+    this.config.level = typeof level === "string" ? parseLogLevel(level) : level;
   }
 
   /**
@@ -404,12 +401,7 @@ class Logger {
     duration: number,
     context?: Record<string, unknown>
   ): void {
-    const level =
-      status >= 500
-        ? LogLevel.ERROR
-        : status >= 400
-        ? LogLevel.WARN
-        : LogLevel.HTTP;
+    const level = status >= 500 ? LogLevel.ERROR : status >= 400 ? LogLevel.WARN : LogLevel.HTTP;
 
     this.log(level, `${method} ${url} ${status} ${duration}ms`, {
       method,
@@ -508,5 +500,4 @@ export const logger = new Logger();
 export { Logger, ContextLogger, ConsoleTransport, RemoteTransport };
 
 // Convenience exports
-export const createLogger = (config?: Partial<LoggerConfig>) =>
-  new Logger(config);
+export const createLogger = (config?: Partial<LoggerConfig>) => new Logger(config);

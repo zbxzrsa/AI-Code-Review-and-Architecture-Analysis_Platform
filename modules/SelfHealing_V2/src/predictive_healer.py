@@ -180,7 +180,7 @@ class PredictiveHealer:
             thresholds = self._thresholds[metric_name]
             current = window.mean()
             trend = window.trend()
-            std = window.std()
+            _std = window.std()  # Available for anomaly detection
 
             # Check current level
             if current >= thresholds.get("critical", float("inf")):

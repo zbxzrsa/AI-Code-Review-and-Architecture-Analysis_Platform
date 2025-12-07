@@ -215,7 +215,7 @@ class FormatNormalizer:
             return None
         
         def add_hint(match):
-            fence = match.group(1)
+            _fence = match.group(1)  # Available for fence style customization
             lang = match.group(2)
             code = match.group(3)
             

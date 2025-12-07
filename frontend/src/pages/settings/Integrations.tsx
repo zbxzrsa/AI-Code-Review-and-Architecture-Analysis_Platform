@@ -1,7 +1,7 @@
 ﻿/**
  * Integrations & Webhooks Page
  * 集成和Webhooks页面
- * 
+ *
  * Features:
  * - Git provider connections (GitHub, GitLab, Bitbucket)
  * - CI/CD integrations
@@ -159,18 +159,18 @@ export const Integrations: React.FC = () => {
     if (gitProviders.some(p => p.id === provider)) {
       try {
         // Use fetch directly to avoid axios interceptors that might redirect on 401
-        const response = await fetch(`/api/auth/oauth/connect/${provider}?return_url=${encodeURIComponent(window.location.href)}`);
-        
+        const response = await fetch(`/api/auth/oauth/connect/${provider}?return_url=${encodeURIComponent(globalThis.location.href)}`);
+
         if (!response.ok) {
           const error = await response.json();
           throw new Error(error.detail || 'Failed to initiate OAuth');
         }
-        
+
         const data = await response.json();
-        
+
         if (data.authorization_url) {
           // Redirect to OAuth provider
-          window.location.href = data.authorization_url;
+          globalThis.location.href = data.authorization_url;
         } else if (data.connected) {
           // Already connected (Bitbucket API Token)
           message.success(`${provider} is already connected via API Token`);
@@ -197,7 +197,7 @@ export const Integrations: React.FC = () => {
   const handleSaveWebhook = async (values: any) => {
     // Demo mode - save to local state
     if (editingWebhook) {
-      setWebhooks(prev => prev.map(w => 
+      setWebhooks(prev => prev.map(w =>
         w.id === editingWebhook.id ? { ...w, ...values } : w
       ));
       message.success('Webhook updated');
@@ -226,7 +226,7 @@ export const Integrations: React.FC = () => {
     message.success(`Test event sent to ${webhook.url}`);
   };
 
-  const _isConnected = (provider: string) => 
+  const _isConnected = (provider: string) =>
     integrations.some(i => i.provider === provider && i.status === 'connected');
 
   return (
@@ -258,7 +258,7 @@ export const Integrations: React.FC = () => {
                 {gitProviders.map(provider => {
                   const integration = integrations.find(i => i.provider === provider.id);
                   const connected = integration?.status === 'connected';
-                  
+
                   return (
                     <Col xs={24} sm={12} md={6} key={provider.id}>
                       <Card
@@ -319,7 +319,7 @@ export const Integrations: React.FC = () => {
                 {notificationProviders.map(provider => {
                   const integration = integrations.find(i => i.provider === provider.id);
                   const connected = integration?.status === 'connected';
-                  
+
                   return (
                     <Col xs={24} sm={12} md={6} key={provider.id}>
                       <Card hoverable style={{ textAlign: 'center' }}>

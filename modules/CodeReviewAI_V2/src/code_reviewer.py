@@ -119,7 +119,7 @@ class ProductionStrategy(ReviewStrategy):
                     severity=severity.value,
                     confidence=0.9,
                     suggestion=f"Address security concern: {issue}",
-                    explanation=f"This pattern may indicate a security vulnerability.",
+                    explanation="This pattern may indicate a security vulnerability.",
                     cwe_id=cwe,
                     rule_id=f"SEC-{cwe}",
                     code_snippet=lines[line_num - 1] if line_num <= len(lines) else "",
@@ -245,7 +245,7 @@ class CodeReviewer:
 
         # Check circuit breaker
         if not self.circuit_breaker.can_execute():
-            logger.warning(f"Circuit breaker open, returning empty result")
+            logger.warning("Circuit breaker open, returning empty result")
             return self._create_error_result(
                 review_id, code_hash, "Circuit breaker open", start_time
             )

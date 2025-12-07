@@ -38,7 +38,7 @@ class TestMetricSeries:
         series.add(200.0, timestamp)
 
         assert len(series.values) == 2
-        assert series.get_latest() == 200.0
+        assert series.get_latest() == pytest.approx(200.0)
 
     def test_get_latest_empty(self):
         """Getting latest from empty series should return None."""
@@ -79,7 +79,7 @@ class TestMetricSeries:
             series.add(float(i), datetime.now().isoformat())
 
         avg = series.get_aggregate(AggregationType.AVG, window_minutes=60)
-        assert avg == 30.0
+        assert avg == pytest.approx(30.0)
 
     def test_aggregate_sum(self):
         """Sum aggregation should work correctly."""
@@ -93,7 +93,7 @@ class TestMetricSeries:
             series.add(float(i), datetime.now().isoformat())
 
         total = series.get_aggregate(AggregationType.SUM, window_minutes=60)
-        assert total == 60.0
+        assert total == pytest.approx(60.0)
 
     def test_aggregate_min_max(self):
         """Min/Max aggregations should work correctly."""
@@ -106,8 +106,8 @@ class TestMetricSeries:
         for i in [50, 20, 80, 30]:
             series.add(float(i), datetime.now().isoformat())
 
-        assert series.get_aggregate(AggregationType.MIN, window_minutes=60) == 20.0
-        assert series.get_aggregate(AggregationType.MAX, window_minutes=60) == 80.0
+        assert series.get_aggregate(AggregationType.MIN, window_minutes=60) == pytest.approx(20.0)
+        assert series.get_aggregate(AggregationType.MAX, window_minutes=60) == pytest.approx(80.0)
 
     def test_aggregate_count(self):
         """Count aggregation should work correctly."""
@@ -139,9 +139,9 @@ class TestMetricSeries:
         p95 = series.get_aggregate(AggregationType.PERCENTILE_95, window_minutes=60)
         p99 = series.get_aggregate(AggregationType.PERCENTILE_99, window_minutes=60)
 
-        assert p50 == 49.5  # Median
-        assert p95 == 95.0
-        assert p99 == 99.0
+        assert p50 == pytest.approx(49.5)  # Median
+        assert p95 == pytest.approx(95.0)
+        assert p99 == pytest.approx(99.0)
 
     def test_aggregate_window_filtering(self):
         """Aggregation should only include values within window."""
@@ -161,7 +161,7 @@ class TestMetricSeries:
 
         # With short window, old value should be excluded
         avg = series.get_aggregate(AggregationType.AVG, window_minutes=5)
-        assert avg == 20.0  # Only recent values
+        assert avg == pytest.approx(20.0)  # Only recent values
 
     def test_aggregate_empty_series(self):
         """Aggregation of empty series should return None."""
@@ -189,7 +189,7 @@ class TestMetric:
         )
 
         assert metric.name == "cpu_usage"
-        assert metric.value == 75.5
+        assert metric.value == pytest.approx(75.5)
         assert metric.source == MetricSource.SYSTEM
         assert metric.labels["host"] == "server1"
 
@@ -209,7 +209,7 @@ class TestMetric:
         data = metric.to_dict()
 
         assert data["name"] == "memory_used"
-        assert data["value"] == 1024.0
+        assert data["value"] == pytest.approx(1024.0)
         assert data["source"] == "system"
         assert data["type"] == "gauge"
 
@@ -301,7 +301,7 @@ class TestMetricsCollector:
         all_metrics = await collector.collect_all()
 
         assert "custom_test" in all_metrics
-        assert all_metrics["custom_test"]["custom_metric"] == 42.0
+        assert all_metrics["custom_test"]["custom_metric"] == pytest.approx(42.0)
 
     @pytest.mark.asyncio
     async def test_metric_callback(self):

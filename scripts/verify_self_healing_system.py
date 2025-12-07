@@ -25,6 +25,19 @@ PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "backend" / "shared"))
 
 
+# =============================================================================
+# Check Name Constants (avoid duplicate literals)
+# =============================================================================
+
+CHECK_PACKAGE_EXPORTS = "Package exports"
+CHECK_INTEGRATION_WORKFLOW = "Integration workflow"
+CHECK_CALLBACK_WIRING = "Callback wiring"
+CHECK_HEALTH_THRESHOLDS = "Health thresholds"
+CHECK_REPAIR_STRATEGIES = "Repair strategies"
+CHECK_ALERT_CHANNELS = "Alert channels"
+CHECK_UNIT_TESTS = "Unit tests"
+
+
 class CheckStatus(Enum):
     PASS = "✅ PASS"
     FAIL = "❌ FAIL"
@@ -153,20 +166,20 @@ class SelfHealingVerifier:
 
             if not missing:
                 self.add_result(CheckResult(
-                    name="Package exports",
+                    name=CHECK_PACKAGE_EXPORTS,
                     status=CheckStatus.PASS,
                     message=f"All {len(expected_exports)} exports available"
                 ))
             else:
                 self.add_result(CheckResult(
-                    name="Package exports",
+                    name=CHECK_PACKAGE_EXPORTS,
                     status=CheckStatus.FAIL,
                     message=f"Missing: {', '.join(missing)}"
                 ))
 
         except ImportError as e:
             self.add_result(CheckResult(
-                name="Package exports",
+                name=CHECK_PACKAGE_EXPORTS,
                 status=CheckStatus.FAIL,
                 message=str(e)
             ))
@@ -452,20 +465,20 @@ class SelfHealingVerifier:
 
             if stats.get("issues_detected", 0) > 0:
                 self.add_result(CheckResult(
-                    name="Integration workflow",
+                    name=CHECK_INTEGRATION_WORKFLOW,
                     status=CheckStatus.PASS,
                     message=f"Issues detected: {stats.get('issues_detected')}, Alerts: {stats.get('alerts_sent', 0)}"
                 ))
             else:
                 self.add_result(CheckResult(
-                    name="Integration workflow",
+                    name=CHECK_INTEGRATION_WORKFLOW,
                     status=CheckStatus.WARN,
                     message="No issues detected from bad metrics"
                 ))
 
         except Exception as e:
             self.add_result(CheckResult(
-                name="Integration workflow",
+                name=CHECK_INTEGRATION_WORKFLOW,
                 status=CheckStatus.FAIL,
                 message=str(e)
             ))
@@ -488,20 +501,20 @@ class SelfHealingVerifier:
 
             if callbacks_wired:
                 self.add_result(CheckResult(
-                    name="Callback wiring",
+                    name=CHECK_CALLBACK_WIRING,
                     status=CheckStatus.PASS,
                     message="All callbacks connected"
                 ))
             else:
                 self.add_result(CheckResult(
-                    name="Callback wiring",
+                    name=CHECK_CALLBACK_WIRING,
                     status=CheckStatus.FAIL,
                     message="Some callbacks not connected"
                 ))
 
         except Exception as e:
             self.add_result(CheckResult(
-                name="Callback wiring",
+                name=CHECK_CALLBACK_WIRING,
                 status=CheckStatus.FAIL,
                 message=str(e)
             ))
@@ -515,20 +528,20 @@ class SelfHealingVerifier:
 
             if len(monitor.health_checks) > 0:
                 self.add_result(CheckResult(
-                    name="Health thresholds",
+                    name=CHECK_HEALTH_THRESHOLDS,
                     status=CheckStatus.PASS,
                     message=f"{len(monitor.health_checks)} checks configured"
                 ))
             else:
                 self.add_result(CheckResult(
-                    name="Health thresholds",
+                    name=CHECK_HEALTH_THRESHOLDS,
                     status=CheckStatus.WARN,
                     message="No default health checks configured"
                 ))
 
         except Exception as e:
             self.add_result(CheckResult(
-                name="Health thresholds",
+                name=CHECK_HEALTH_THRESHOLDS,
                 status=CheckStatus.FAIL,
                 message=str(e)
             ))
@@ -545,20 +558,20 @@ class SelfHealingVerifier:
 
             if actual >= 5:  # At least the main 5 actions
                 self.add_result(CheckResult(
-                    name="Repair strategies",
+                    name=CHECK_REPAIR_STRATEGIES,
                     status=CheckStatus.PASS,
                     message=f"{actual} strategies configured"
                 ))
             else:
                 self.add_result(CheckResult(
-                    name="Repair strategies",
+                    name=CHECK_REPAIR_STRATEGIES,
                     status=CheckStatus.WARN,
                     message=f"Only {actual}/{expected} strategies configured"
                 ))
 
         except Exception as e:
             self.add_result(CheckResult(
-                name="Repair strategies",
+                name=CHECK_REPAIR_STRATEGIES,
                 status=CheckStatus.FAIL,
                 message=str(e)
             ))
@@ -573,20 +586,20 @@ class SelfHealingVerifier:
             # Check routing rules
             if hasattr(manager, 'routing_rules') and len(manager.routing_rules) > 0:
                 self.add_result(CheckResult(
-                    name="Alert channels",
+                    name=CHECK_ALERT_CHANNELS,
                     status=CheckStatus.PASS,
                     message=f"{len(manager.routing_rules)} routing rules configured"
                 ))
             else:
                 self.add_result(CheckResult(
-                    name="Alert channels",
+                    name=CHECK_ALERT_CHANNELS,
                     status=CheckStatus.WARN,
                     message="No routing rules found"
                 ))
 
         except Exception as e:
             self.add_result(CheckResult(
-                name="Alert channels",
+                name=CHECK_ALERT_CHANNELS,
                 status=CheckStatus.FAIL,
                 message=str(e)
             ))
@@ -602,19 +615,19 @@ class SelfHealingVerifier:
 
         if len(existing) >= 2:
             self.add_result(CheckResult(
-                name="Unit tests",
+                name=CHECK_UNIT_TESTS,
                 status=CheckStatus.PASS,
                 message=f"{len(existing)} test files found"
             ))
         elif len(existing) > 0:
             self.add_result(CheckResult(
-                name="Unit tests",
+                name=CHECK_UNIT_TESTS,
                 status=CheckStatus.WARN,
                 message=f"Only {len(existing)} test files found"
             ))
         else:
             self.add_result(CheckResult(
-                name="Unit tests",
+                name=CHECK_UNIT_TESTS,
                 status=CheckStatus.FAIL,
                 message="No unit test files found"
             ))

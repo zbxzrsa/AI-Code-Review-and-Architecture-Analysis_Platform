@@ -24,15 +24,16 @@ from .config import get_settings, Settings
 
 class MockDatabase:
     """Mock database for development."""
-    
+
     def __init__(self):
         self.connected = True
         self._data: Dict[str, Any] = {}
-    
-    def execute(self, query: str, params: tuple = None):
+
+    def execute(self, query: str, _params: tuple = None):
         """Mock query execution."""
+        # params reserved for parameterized queries in real implementation
         return []
-    
+
     def close(self):
         """Close connection."""
         self.connected = False
@@ -44,10 +45,10 @@ _db_instance: Optional[MockDatabase] = None
 def get_db() -> Generator[MockDatabase, None, None]:
     """
     Get database connection.
-    
+
     Yields:
         Database connection instance
-        
+
     Usage:
         @router.get("/items")
         async def get_items(db = Depends(get_db)):
@@ -56,7 +57,7 @@ def get_db() -> Generator[MockDatabase, None, None]:
     global _db_instance
     if _db_instance is None:
         _db_instance = MockDatabase()
-    
+
     try:
         yield _db_instance
     finally:
@@ -95,16 +96,16 @@ async def get_current_user(
 ) -> Dict[str, Any]:
     """
     Get currently authenticated user.
-    
+
     Args:
         authorization: Bearer token from Authorization header
-        
+
     Returns:
         User information dict
-        
+
     Raises:
         HTTPException: If token is invalid or user not found
-        
+
     Usage:
         @router.get("/me")
         async def get_me(user = Depends(get_current_user)):
@@ -116,22 +117,22 @@ async def get_current_user(
             detail="Invalid authorization header format",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     token = authorization.split(" ")[1]
-    
+
     # Check session
     session = MOCK_SESSIONS.get(token)
     if not session:
         # For development, accept any token and return mock user
         if settings.mock_mode:
             return MOCK_USERS.get("user-001", {})
-        
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Check expiration
     expires_at = datetime.fromisoformat(session.get("expires_at", ""))
     if datetime.now(timezone.utc) > expires_at:
@@ -141,17 +142,17 @@ async def get_current_user(
             detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     # Get user
     user_id = session.get("user_id")
     user = MOCK_USERS.get(user_id)
-    
+
     if not user or not user.get("is_active"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found or inactive",
         )
-    
+
     return user
 
 
@@ -161,12 +162,12 @@ async def get_optional_user(
 ) -> Optional[Dict[str, Any]]:
     """
     Get current user if authenticated, None otherwise.
-    
+
     Useful for endpoints that work with or without authentication.
     """
     if not authorization:
         return None
-    
+
     try:
         return await get_current_user(authorization, settings)
     except HTTPException:
@@ -187,7 +188,7 @@ async def require_admin(
 ) -> Dict[str, Any]:
     """
     Require admin role.
-    
+
     Raises:
         HTTPException: If user is not an admin
     """

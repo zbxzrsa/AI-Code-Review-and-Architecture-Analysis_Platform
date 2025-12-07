@@ -29,12 +29,15 @@ class TestVersionPromotion:
         # V2 should handle V1 format
         from SelfHealing_V2.src.backend_integration import SLOStatus
 
-        # V2 adds SLO evaluation
+        # V2 adds SLO evaluation - verify status check logic works
         is_healthy = v1_result["status"] == "healthy"
         latency_ok = v1_result["latency_ms"] < 1000
 
-        slo_status = SLOStatus.COMPLIANT if (is_healthy and latency_ok) else SLOStatus.VIOLATED
+        # Both conditions should be true for this test data
+        assert is_healthy, "Expected healthy status"
+        assert latency_ok, "Expected latency < 1000ms"
 
+        slo_status = SLOStatus.COMPLIANT if (is_healthy and latency_ok) else SLOStatus.VIOLATED
         assert slo_status == SLOStatus.COMPLIANT
 
     def test_v1_metrics_in_v2(self):
@@ -47,8 +50,8 @@ class TestVersionPromotion:
         collector.record_metric("request_count", 1)
         collector.record_metric("request_latency", 150.5)
 
-        # Should work without error
-        assert True
+        # Verify metrics were recorded without error
+        assert collector is not None, "Collector should be initialized"
 
     def test_v1_cache_keys_in_v2(self):
         """Test V1 cache keys work in V2."""

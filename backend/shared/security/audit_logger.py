@@ -166,7 +166,7 @@ class TamperProofAuditLogger:
 
             # Compute hash
             log_hash = self._compute_log_hash(log_entry)
-            log_hash_hex = log_hash.hex()
+            _log_hash_hex = log_hash.hex()  # Available for debug logging
 
             # Sign hash
             signature = self._sign_hash(log_hash)

@@ -1,6 +1,6 @@
 /**
  * ProtectedRoute Component Tests
- * 
+ *
  * Tests for authentication and authorization routing
  */
 
@@ -231,7 +231,7 @@ describe('ProtectedRoute', () => {
 
   it('calls onAccessDenied when access is denied', async () => {
     const onAccessDenied = vi.fn();
-    
+
     mockUseAuthStore.mockReturnValue({
       isAuthenticated: true,
       user: { id: '1', role: 'user', permissions: [] },
@@ -390,18 +390,10 @@ describe('ProtectedRoute Accessibility', () => {
 // Direct URL Access Prevention Tests
 // ============================================
 describe('Direct URL Access Prevention', () => {
-  const adminPaths = [
-    '/admin/users',
-    '/admin/ai-models',
-    '/admin/providers',
-    '/admin/security',
-    '/admin/audit',
-    '/admin/health',
-    '/admin/experiments',
-    '/admin/evolution',
-    '/admin/auto-fix',
-    '/admin/vulnerabilities',
-  ];
+  // Admin paths for reference (used in individual tests below):
+  // '/admin/users', '/admin/ai-models', '/admin/providers', '/admin/security',
+  // '/admin/audit', '/admin/health', '/admin/experiments', '/admin/evolution',
+  // '/admin/auto-fix', '/admin/vulnerabilities'
 
   beforeEach(() => {
     vi.clearAllMocks();

@@ -70,7 +70,6 @@ class TestAlertManager:
         assert "test_alert" in alerts._rules
 
     def test_fire_alert(self, alerts):
-        fired = False
         rule = AlertRule(
             name="fire_test",
             condition=lambda: True,

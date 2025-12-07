@@ -1,7 +1,7 @@
 /**
  * Reports Page
  * 报告页面
- * 
+ *
  * Features:
  * - Generate code review reports
  * - Security scan reports
@@ -55,7 +55,6 @@ import {
 } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { api } from '../services/api';
-// import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -217,11 +216,11 @@ export const Reports: React.FC = () => {
         createdAt: new Date().toISOString(),
       };
       setReports(prev => [newReport, ...prev]);
-      
+
       // Simulate completion
       setTimeout(() => {
-        setReports(prev => prev.map(r => 
-          r.id === newReport.id 
+        setReports(prev => prev.map(r =>
+          r.id === newReport.id
             ? { ...r, status: 'completed', completedAt: new Date().toISOString(), size: '1.2 MB' }
             : r
         ));
@@ -330,8 +329,8 @@ export const Reports: React.FC = () => {
           {record.status === 'completed' && (
             <>
               <Tooltip title="Download">
-                <Button 
-                  size="small" 
+                <Button
+                  size="small"
                   icon={<DownloadOutlined />}
                   onClick={() => handleDownload(record)}
                 />
@@ -402,8 +401,8 @@ export const Reports: React.FC = () => {
       dataIndex: 'enabled',
       width: 100,
       render: (enabled, record) => (
-        <Switch 
-          checked={enabled} 
+        <Switch
+          checked={enabled}
           onChange={(checked) => handleToggleSchedule(record.id, checked)}
         />
       ),
@@ -448,8 +447,8 @@ export const Reports: React.FC = () => {
       <Row gutter={16} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={8}>
           <Card>
-            <Statistic 
-              title="Reports Generated" 
+            <Statistic
+              title="Reports Generated"
               value={reports.filter(r => r.status === 'completed').length}
               prefix={<FileTextOutlined />}
             />
@@ -457,8 +456,8 @@ export const Reports: React.FC = () => {
         </Col>
         <Col xs={24} sm={8}>
           <Card>
-            <Statistic 
-              title="Scheduled Reports" 
+            <Statistic
+              title="Scheduled Reports"
               value={scheduledReports.filter(s => s.enabled).length}
               prefix={<ScheduleOutlined />}
             />
@@ -466,8 +465,8 @@ export const Reports: React.FC = () => {
         </Col>
         <Col xs={24} sm={8}>
           <Card>
-            <Statistic 
-              title="In Progress" 
+            <Statistic
+              title="In Progress"
               value={reports.filter(r => r.status === 'generating').length}
               prefix={<SyncOutlined />}
             />

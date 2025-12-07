@@ -31,7 +31,7 @@ Context Map:
 
 Relationship Types:
 - U/D: Upstream/Downstream
-- ACL: Anti-Corruption Layer  
+- ACL: Anti-Corruption Layer
 - CS: Conformist
 - PL: Published Language
 """
@@ -44,6 +44,17 @@ from typing import Any, Dict, List, Optional, Set, Type
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Constants for Bounded Context Names
+# =============================================================================
+
+CONTEXT_CODE_ANALYSIS = "Code Analysis"
+CONTEXT_VERSION_MANAGEMENT = "Version Management"
+CONTEXT_USER_AUTHENTICATION = "User Authentication"
+CONTEXT_PROVIDER_MANAGEMENT = "Provider Management"
+CONTEXT_AUDIT_COMPLIANCE = "Audit & Compliance"
 
 
 class SubdomainType(str, Enum):
@@ -69,39 +80,39 @@ class RelationshipType(str, Enum):
 class BoundedContext:
     """
     Represents a bounded context in the domain.
-    
+
     A bounded context defines a clear boundary within which
     a particular domain model is defined and applicable.
     """
     name: str
     subdomain_type: SubdomainType
     description: str
-    
+
     # Entities in this context
     entities: List[str] = field(default_factory=list)
-    
+
     # Value objects
     value_objects: List[str] = field(default_factory=list)
-    
+
     # Aggregates (root entities)
     aggregates: List[str] = field(default_factory=list)
-    
+
     # Domain events published
     events_published: List[str] = field(default_factory=list)
-    
+
     # Domain events subscribed to
     events_subscribed: List[str] = field(default_factory=list)
-    
+
     # Services
     domain_services: List[str] = field(default_factory=list)
     application_services: List[str] = field(default_factory=list)
-    
+
     # Repositories
     repositories: List[str] = field(default_factory=list)
-    
+
     # Team ownership
     team: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "name": self.name,
@@ -127,7 +138,7 @@ class ContextRelationship:
     relationship_type: RelationshipType
     description: str
     integration_pattern: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "upstream": self.upstream_context,
@@ -141,19 +152,19 @@ class ContextRelationship:
 class ContextMap:
     """
     Maps all bounded contexts and their relationships.
-    
+
     Provides a high-level view of the domain structure.
     """
-    
+
     def __init__(self):
         self._contexts: Dict[str, BoundedContext] = {}
         self._relationships: List[ContextRelationship] = []
-    
+
     def add_context(self, context: BoundedContext):
         """Add a bounded context."""
         self._contexts[context.name] = context
         logger.info(f"Added bounded context: {context.name}")
-    
+
     def add_relationship(self, relationship: ContextRelationship):
         """Add a relationship between contexts."""
         self._relationships.append(relationship)
@@ -161,18 +172,18 @@ class ContextMap:
             f"Added relationship: {relationship.upstream_context} -> "
             f"{relationship.downstream_context} ({relationship.relationship_type.value})"
         )
-    
+
     def get_context(self, name: str) -> Optional[BoundedContext]:
         """Get a bounded context by name."""
         return self._contexts.get(name)
-    
+
     def get_contexts_by_type(self, subdomain_type: SubdomainType) -> List[BoundedContext]:
         """Get all contexts of a specific subdomain type."""
         return [
             ctx for ctx in self._contexts.values()
             if ctx.subdomain_type == subdomain_type
         ]
-    
+
     def get_upstream_contexts(self, context_name: str) -> List[str]:
         """Get all upstream contexts for a given context."""
         return [
@@ -180,7 +191,7 @@ class ContextMap:
             for rel in self._relationships
             if rel.downstream_context == context_name
         ]
-    
+
     def get_downstream_contexts(self, context_name: str) -> List[str]:
         """Get all downstream contexts for a given context."""
         return [
@@ -188,7 +199,7 @@ class ContextMap:
             for rel in self._relationships
             if rel.upstream_context == context_name
         ]
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Export context map as dictionary."""
         return {
@@ -198,7 +209,7 @@ class ContextMap:
             },
             "relationships": [rel.to_dict() for rel in self._relationships],
         }
-    
+
     def generate_plantuml(self) -> str:
         """Generate PlantUML diagram for context map."""
         lines = [
@@ -210,7 +221,7 @@ class ContextMap:
             "title AI Code Review Platform - Context Map",
             "",
         ]
-        
+
         # Add contexts
         for name, ctx in self._contexts.items():
             color = {
@@ -218,21 +229,21 @@ class ContextMap:
                 SubdomainType.SUPPORTING: "SUPPORTING",
                 SubdomainType.GENERIC: "GENERIC",
             }[ctx.subdomain_type]
-            
+
             lines.append(f'rectangle "{name}\\n({ctx.subdomain_type.value})" as {name.replace(" ", "_")} {color}')
-        
+
         lines.append("")
-        
+
         # Add relationships
         for rel in self._relationships:
             upstream = rel.upstream_context.replace(" ", "_")
             downstream = rel.downstream_context.replace(" ", "_")
             label = rel.relationship_type.value.replace("_", " ")
             lines.append(f'{upstream} --> {downstream} : {label}')
-        
+
         lines.append("")
         lines.append("@enduml")
-        
+
         return "\n".join(lines)
 
 
@@ -243,10 +254,10 @@ class ContextMap:
 def create_platform_context_map() -> ContextMap:
     """Create the context map for the AI Code Review Platform."""
     ctx_map = ContextMap()
-    
+
     # Core Domain: Code Analysis
     code_analysis = BoundedContext(
-        name="Code Analysis",
+        name=CONTEXT_CODE_ANALYSIS,
         subdomain_type=SubdomainType.CORE,
         description="Core code analysis and review functionality using AI models",
         entities=[
@@ -269,17 +280,17 @@ def create_platform_context_map() -> ContextMap:
         team="Core Platform Team"
     )
     ctx_map.add_context(code_analysis)
-    
+
     # Core Domain: Version Management
     version_management = BoundedContext(
-        name="Version Management",
+        name=CONTEXT_VERSION_MANAGEMENT,
         subdomain_type=SubdomainType.CORE,
         description="Three-version cycle management (V1/V2/V3) for AI model evolution",
         entities=[
             "Experiment", "Version", "Promotion", "Degradation", "Evaluation"
         ],
         value_objects=[
-            "VersionId", "ExperimentMetrics", "PromotionCriteria", 
+            "VersionId", "ExperimentMetrics", "PromotionCriteria",
             "ModelConfiguration", "EvaluationResult"
         ],
         aggregates=["Experiment", "Version"],
@@ -298,10 +309,10 @@ def create_platform_context_map() -> ContextMap:
         team="AI Platform Team"
     )
     ctx_map.add_context(version_management)
-    
+
     # Supporting Domain: User & Authentication
     user_auth = BoundedContext(
-        name="User Authentication",
+        name=CONTEXT_USER_AUTHENTICATION,
         subdomain_type=SubdomainType.SUPPORTING,
         description="User management, authentication, and authorization",
         entities=[
@@ -322,10 +333,10 @@ def create_platform_context_map() -> ContextMap:
         team="Platform Security Team"
     )
     ctx_map.add_context(user_auth)
-    
+
     # Supporting Domain: Provider Management
     provider_management = BoundedContext(
-        name="Provider Management",
+        name=CONTEXT_PROVIDER_MANAGEMENT,
         subdomain_type=SubdomainType.SUPPORTING,
         description="AI provider configuration, health monitoring, and quota management",
         entities=[
@@ -350,7 +361,7 @@ def create_platform_context_map() -> ContextMap:
         team="Infrastructure Team"
     )
     ctx_map.add_context(provider_management)
-    
+
     # Generic Domain: Audit & Compliance
     audit_compliance = BoundedContext(
         name="Audit Compliance",
@@ -378,9 +389,9 @@ def create_platform_context_map() -> ContextMap:
         team="Security & Compliance Team"
     )
     ctx_map.add_context(audit_compliance)
-    
+
     # Define Relationships
-    
+
     # Code Analysis <-> Version Management (Partnership)
     ctx_map.add_relationship(ContextRelationship(
         upstream_context="Version Management",
@@ -389,7 +400,7 @@ def create_platform_context_map() -> ContextMap:
         description="Version Management provides model configuration to Code Analysis",
         integration_pattern="Domain Events + Shared Kernel"
     ))
-    
+
     # User Auth -> Code Analysis (ACL)
     ctx_map.add_relationship(ContextRelationship(
         upstream_context="User Authentication",
@@ -398,7 +409,7 @@ def create_platform_context_map() -> ContextMap:
         description="Code Analysis uses Auth through anti-corruption layer",
         integration_pattern="ACL with User context translation"
     ))
-    
+
     # User Auth -> Version Management (ACL)
     ctx_map.add_relationship(ContextRelationship(
         upstream_context="User Authentication",
@@ -407,7 +418,7 @@ def create_platform_context_map() -> ContextMap:
         description="Version Management uses Auth for admin access control",
         integration_pattern="ACL with Role-based access"
     ))
-    
+
     # Provider Management <-> Code Analysis (Customer-Supplier)
     ctx_map.add_relationship(ContextRelationship(
         upstream_context="Provider Management",
@@ -416,7 +427,7 @@ def create_platform_context_map() -> ContextMap:
         description="Code Analysis is customer of Provider Management",
         integration_pattern="Provider interface abstraction"
     ))
-    
+
     # Provider Management <-> Version Management (Conformist)
     ctx_map.add_relationship(ContextRelationship(
         upstream_context="Provider Management",
@@ -425,7 +436,7 @@ def create_platform_context_map() -> ContextMap:
         description="Version Management conforms to Provider health model",
         integration_pattern="Health status events"
     ))
-    
+
     # All -> Audit (Published Language)
     for ctx_name in ["Code Analysis", "Version Management", "User Authentication", "Provider Management"]:
         ctx_map.add_relationship(ContextRelationship(
@@ -435,7 +446,7 @@ def create_platform_context_map() -> ContextMap:
             description=f"{ctx_name} publishes events to Audit using standard schema",
             integration_pattern="Domain Events with standard audit schema"
         ))
-    
+
     return ctx_map
 
 
@@ -446,16 +457,16 @@ def create_platform_context_map() -> ContextMap:
 class AntiCorruptionLayer(ABC):
     """
     Base class for anti-corruption layers.
-    
+
     Translates between different bounded contexts while
     protecting the domain model from external influence.
     """
-    
+
     @abstractmethod
     def translate_inbound(self, external_data: Dict[str, Any]) -> Any:
         """Translate external data to domain model."""
         pass
-    
+
     @abstractmethod
     def translate_outbound(self, domain_object: Any) -> Dict[str, Any]:
         """Translate domain object to external format."""
@@ -466,7 +477,7 @@ class UserContextACL(AntiCorruptionLayer):
     """
     ACL for translating User Authentication context to other contexts.
     """
-    
+
     def translate_inbound(self, external_data: Dict[str, Any]) -> 'ActorInfo':
         """Translate user data to actor info used in other contexts."""
         return ActorInfo(
@@ -475,7 +486,7 @@ class UserContextACL(AntiCorruptionLayer):
             permissions=external_data.get("permissions", []),
             roles=external_data.get("roles", []),
         )
-    
+
     def translate_outbound(self, domain_object: Any) -> Dict[str, Any]:
         """Translate domain action to audit format."""
         return {
@@ -498,7 +509,7 @@ class ProviderContextACL(AntiCorruptionLayer):
     """
     ACL for translating Provider Management context to Code Analysis.
     """
-    
+
     def translate_inbound(self, external_data: Dict[str, Any]) -> 'ProviderEndpoint':
         """Translate provider data to endpoint info."""
         return ProviderEndpoint(
@@ -507,7 +518,7 @@ class ProviderContextACL(AntiCorruptionLayer):
             is_available=external_data.get("status") == "healthy",
             latency_ms=external_data.get("avg_latency_ms", 0),
         )
-    
+
     def translate_outbound(self, domain_object: Any) -> Dict[str, Any]:
         """Translate analysis result to usage tracking format."""
         return {

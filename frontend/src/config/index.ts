@@ -51,8 +51,8 @@ function getEnvBool(key: string, defaultValue = false): boolean {
 function getEnvInt(key: string, defaultValue = 0): number {
   const value = import.meta.env[key];
   if (value === undefined) return defaultValue;
-  const parsed = parseInt(value, 10);
-  if (isNaN(parsed)) {
+  const parsed = Number.parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
     throw new ConfigValidationError(key, `Invalid integer: ${value}`);
   }
   return parsed;
@@ -126,10 +126,7 @@ export const featureFlags = {
  */
 export const uiConfig = {
   /** Default theme */
-  defaultTheme: getEnv("VITE_DEFAULT_THEME", "system") as
-    | "light"
-    | "dark"
-    | "system",
+  defaultTheme: getEnv("VITE_DEFAULT_THEME", "system") as "light" | "dark" | "system",
 
   /** Default language */
   defaultLanguage: getEnv("VITE_DEFAULT_LANGUAGE", "en"),
@@ -181,8 +178,7 @@ export const devConfig = {
 /**
  * Current environment
  */
-export const environment: Environment = (import.meta.env.MODE ||
-  "development") as Environment;
+export const environment: Environment = (import.meta.env.MODE || "development") as Environment;
 
 /**
  * Environment checks

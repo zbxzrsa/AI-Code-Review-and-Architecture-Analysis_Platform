@@ -83,29 +83,29 @@ class EvaluationReport:
     started_at: datetime
     completed_at: Optional[datetime]
     status: str
-    
+
     # Overall metrics
     overall_pass_rate: float
     total_tests: int
     passed_tests: int
     failed_tests: int
-    
+
     # Category breakdown
     category_results: Dict[str, Dict[str, Any]]
-    
+
     # Individual results
     test_results: List[TestCaseResult]
-    
+
     # Statistical summary
     avg_precision: float
     avg_recall: float
     avg_f1: float
     avg_latency_ms: float
     total_cost_usd: float
-    
+
     # Comparison with baseline
     baseline_comparison: Optional[Dict[str, Any]] = None
-    
+
     # Decision
     promotion_recommended: bool = False
     recommendation_reason: str = ""
@@ -113,7 +113,7 @@ class EvaluationReport:
 
 class GoldSetEvaluator:
     """Evaluates versions against gold-set benchmarks"""
-    
+
     def __init__(
         self,
         ai_service_url: str = "http://crai-service.platform-v1-exp.svc:8080",
@@ -123,7 +123,7 @@ class GoldSetEvaluator:
         self.config_path = config_path
         self.gold_sets: Dict[str, Any] = {}
         self.client = httpx.AsyncClient(timeout=60.0)
-        
+
     async def load_gold_sets(self):
         """Load gold-set configurations"""
         try:
@@ -140,17 +140,17 @@ class GoldSetEvaluator:
         except Exception as e:
             logger.error(f"Failed to load gold-sets: {e}")
             self.gold_sets = {}
-    
+
     def _calculate_set_metrics(self, set_results: List[TestCaseResult], gold_set: Dict) -> Dict[str, Any]:
         """Calculate metrics for a single gold-set."""
         total = len(set_results)
         if total == 0:
             return self._empty_set_metrics(gold_set)
-        
+
         passed = sum(1 for r in set_results if r.result == TestResult.PASSED)
         pass_rate = passed / total
         required = gold_set.get('required_pass_rate', 0.9)
-        
+
         return {
             'gold_set_id': gold_set.get('id', 'unknown'),
             'name': gold_set['name'],
@@ -163,7 +163,7 @@ class GoldSetEvaluator:
             'avg_recall': sum(r.recall for r in set_results) / total,
             'avg_f1': sum(r.f1_score for r in set_results) / total,
         }
-    
+
     def _empty_set_metrics(self, gold_set: Dict) -> Dict[str, Any]:
         """Return empty metrics for a gold-set."""
         return {
@@ -178,13 +178,13 @@ class GoldSetEvaluator:
             'avg_recall': 0,
             'avg_f1': 0,
         }
-    
+
     def _calculate_overall_metrics(self, test_results: List[TestCaseResult]) -> Dict[str, float]:
         """Calculate overall metrics from test results."""
         total = len(test_results)
         if total == 0:
             return {'precision': 0, 'recall': 0, 'f1': 0, 'latency': 0, 'cost': 0, 'pass_rate': 0}
-        
+
         passed = sum(1 for r in test_results if r.result == TestResult.PASSED)
         return {
             'precision': sum(r.precision for r in test_results) / total,
@@ -194,7 +194,7 @@ class GoldSetEvaluator:
             'cost': sum(r.cost_usd for r in test_results),
             'pass_rate': passed / total,
         }
-    
+
     async def evaluate_version(
         self,
         version_id: str,
@@ -203,41 +203,41 @@ class GoldSetEvaluator:
         test_sets: Optional[List[str]] = None
     ) -> EvaluationReport:
         """Run full gold-set evaluation"""
-        
+
         evaluation_id = hashlib.sha256(
             f"{version_id}:{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()[:16]
-        
+
         started_at = datetime.now(timezone.utc)
         test_results: List[TestCaseResult] = []
         category_results: Dict[str, Dict[str, Any]] = {}
-        
+
         # Run gold-sets
         sets_to_run = test_sets or list(self.gold_sets.keys())
         for set_id in sets_to_run:
             if set_id not in self.gold_sets:
                 logger.warning(f"Gold-set {set_id} not found, skipping")
                 continue
-                
+
             gold_set = self.gold_sets[set_id]
             logger.info(f"Running gold-set: {gold_set['name']}")
-            
+
             set_results = await self._run_gold_set(gold_set, version_id, model_version, prompt_version)
             test_results.extend(set_results)
-            
+
             gold_set['id'] = set_id  # Add ID for metrics calculation
             category_results[gold_set['category']] = self._calculate_set_metrics(set_results, gold_set)
-        
+
         # Calculate overall metrics
         metrics = self._calculate_overall_metrics(test_results)
         total_tests = len(test_results)
         passed_tests = sum(1 for r in test_results if r.result == TestResult.PASSED)
-        
+
         # Check promotion criteria
         promotion_recommended, recommendation_reason = self._check_promotion_criteria(
             metrics['pass_rate'], category_results
         )
-        
+
         return EvaluationReport(
             evaluation_id=evaluation_id,
             version_id=version_id,
@@ -259,7 +259,7 @@ class GoldSetEvaluator:
             promotion_recommended=promotion_recommended,
             recommendation_reason=recommendation_reason
         )
-    
+
     async def _run_gold_set(
         self,
         gold_set: Dict[str, Any],
@@ -269,7 +269,7 @@ class GoldSetEvaluator:
     ) -> List[TestCaseResult]:
         """Run all tests in a gold-set"""
         results = []
-        
+
         for test_case in gold_set.get('test_cases', []):
             try:
                 result = await self._run_test_case(
@@ -294,9 +294,9 @@ class GoldSetEvaluator:
                     cost_usd=0,
                     details={'error': str(e)}
                 ))
-        
+
         return results
-    
+
     async def _run_test_case(
         self,
         test_case: Dict[str, Any],
@@ -306,7 +306,7 @@ class GoldSetEvaluator:
     ) -> TestCaseResult:
         """Run a single test case"""
         start_time = datetime.now(timezone.utc)
-        
+
         # Call AI service
         response = await self.client.post(
             f"{self.ai_service_url}/analyze",
@@ -318,9 +318,9 @@ class GoldSetEvaluator:
                 'prompt_version': prompt_version,
             }
         )
-        
+
         latency_ms = int((datetime.now(timezone.utc) - start_time).total_seconds() * 1000)
-        
+
         if response.status_code != 200:
             return TestCaseResult(
                 test_id=test_case['id'],
@@ -335,18 +335,18 @@ class GoldSetEvaluator:
                 cost_usd=0,
                 details={'error': f"HTTP {response.status_code}"}
             )
-        
+
         result_data = response.json()
         actual_issues = result_data.get('issues', [])
         expected_issues = test_case.get('expected_issues', [])
         cost_usd = result_data.get('cost_usd', 0)
-        
+
         # Calculate precision, recall, F1
         precision, recall, f1 = self._calculate_metrics(expected_issues, actual_issues)
-        
+
         # Determine pass/fail
         passed = self._check_test_passed(test_case, actual_issues, precision, recall)
-        
+
         return TestCaseResult(
             test_id=test_case['id'],
             test_name=test_case['name'],
@@ -364,7 +364,7 @@ class GoldSetEvaluator:
                 'confidence': result_data.get('confidence', 0),
             }
         )
-    
+
     def _calculate_metrics(
         self,
         expected: List[Dict[str, Any]],
@@ -373,52 +373,52 @@ class GoldSetEvaluator:
         """Calculate precision, recall, F1 score"""
         if not expected and not actual:
             return 1.0, 1.0, 1.0
-        
+
         if not expected:
             return 0.0, 1.0, 0.0  # No false negatives, but all are false positives
-        
+
         if not actual:
             return 1.0, 0.0, 0.0  # No false positives, but all are false negatives
-        
+
         # Match issues by type and approximate location
         true_positives = 0
-        
+
         for exp in expected:
             for act in actual:
                 if self._issues_match(exp, act):
                     true_positives += 1
                     break
-        
+
         precision = true_positives / len(actual) if actual else 0
         recall = true_positives / len(expected) if expected else 0
         f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
-        
+
         return precision, recall, f1
-    
+
     def _issues_match(self, expected: Dict[str, Any], actual: Dict[str, Any]) -> bool:
         """Check if two issues match"""
         # Match by type
         if expected.get('type') != actual.get('type'):
             return False
-        
+
         # Match by severity (allow one level difference)
         severity_order = ['low', 'medium', 'high', 'critical']
         exp_sev = severity_order.index(expected.get('severity', 'medium'))
         act_sev = severity_order.index(actual.get('severity', 'medium'))
         if abs(exp_sev - act_sev) > 1:
             return False
-        
+
         # Match by line (allow ±5 lines tolerance)
         if 'line' in expected and 'line' in actual:
             if abs(expected['line'] - actual['line']) > 5:
                 return False
-        
+
         return True
-    
+
     def _check_test_passed(
         self,
         test_case: Dict[str, Any],
-        actual_issues: List[Dict[str, Any]],
+        _actual_issues: List[Dict[str, Any]],  # Available for detailed analysis
         precision: float,
         recall: float
     ) -> bool:
@@ -426,11 +426,11 @@ class GoldSetEvaluator:
         # For security tests, prioritize recall (don't miss vulnerabilities)
         if test_case.get('vulnerability'):
             return recall >= 0.8
-        
+
         # For general tests, use F1 threshold
         f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
         return f1 >= 0.7
-    
+
     def _check_promotion_criteria(
         self,
         overall_pass_rate: float,
@@ -438,34 +438,34 @@ class GoldSetEvaluator:
     ) -> tuple[bool, str]:
         """Check if version meets promotion criteria"""
         thresholds = self.evaluation_config.get('promotion_thresholds', {})
-        
+
         overall_required = thresholds.get('overall_pass_rate', 0.90)
         critical_required = thresholds.get('critical_category_min', 0.95)
         non_critical_required = thresholds.get('non_critical_category_min', 0.75)
-        
+
         # Check overall
         if overall_pass_rate < overall_required:
             return False, f"Overall pass rate {overall_pass_rate:.2%} below threshold {overall_required:.2%}"
-        
+
         # Check critical categories (security, injection)
         critical_categories = ['security', 'injection']
         for cat in critical_categories:
             if cat in category_results:
                 if category_results[cat]['pass_rate'] < critical_required:
                     return False, f"Critical category '{cat}' pass rate {category_results[cat]['pass_rate']:.2%} below threshold {critical_required:.2%}"
-        
+
         # Check non-critical categories
         for cat, results in category_results.items():
             if cat not in critical_categories:
                 if results['pass_rate'] < non_critical_required:
                     return False, f"Category '{cat}' pass rate {results['pass_rate']:.2%} below threshold {non_critical_required:.2%}"
-        
+
         return True, "All criteria met"
 
 
 class ShadowComparisonEvaluator:
     """Compares V1 shadow outputs with V2 baseline"""
-    
+
     def __init__(
         self,
         prometheus_url: str = "http://prometheus.platform-monitoring.svc:9090",
@@ -488,7 +488,7 @@ class ShadowComparisonEvaluator:
         self.v1_db_url = v1_db_url
         self.v2_db_url = v2_db_url
         self.client = httpx.AsyncClient(timeout=30.0)
-    
+
     async def compare_outputs(
         self,
         version_id: str,
@@ -496,10 +496,10 @@ class ShadowComparisonEvaluator:
         sample_size: int = 1000
     ) -> Dict[str, Any]:
         """Compare V1 outputs with V2 baseline"""
-        
+
         # Query paired requests from database
         # (V1 shadow requests linked to V2 production requests)
-        
+
         comparison_results = {
             'version_id': version_id,
             'time_range_hours': time_range_hours,
@@ -509,21 +509,21 @@ class ShadowComparisonEvaluator:
             'agreement_analysis': {},
             'quality_comparison': {}
         }
-        
+
         # Query Prometheus for aggregate metrics
         metrics = await self._query_comparison_metrics(version_id, time_range_hours)
         comparison_results['metrics'] = metrics
-        
+
         # Calculate agreement scores
         agreement = await self._calculate_agreement(version_id, sample_size)
         comparison_results['agreement_analysis'] = agreement
-        
+
         # Quality comparison
         quality = await self._compare_quality(version_id, sample_size)
         comparison_results['quality_comparison'] = quality
-        
+
         return comparison_results
-    
+
     async def _query_comparison_metrics(
         self,
         version_id: str,
@@ -535,7 +535,7 @@ class ShadowComparisonEvaluator:
             'latency_delta': f'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{version="{version_id}"}}[{time_range_hours}h])) by (le)) - histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{{version="baseline"}}[{time_range_hours}h])) by (le))',
             'cost_ratio': f'avg(request_cost{{version="{version_id}"}}) / avg(request_cost{{version="baseline"}})',
         }
-        
+
         metrics = {}
         for name, query in queries.items():
             try:
@@ -551,13 +551,13 @@ class ShadowComparisonEvaluator:
             except Exception as e:
                 logger.error(f"Failed to query {name}: {e}")
                 metrics[name] = None
-        
+
         return metrics
-    
+
     async def _calculate_agreement(
         self,
-        version_id: str,
-        sample_size: int
+        _version_id: str,  # Used for database query in production
+        _sample_size: int  # Used for database query in production
     ) -> Dict[str, Any]:
         """Calculate agreement between V1 and V2 outputs"""
         # Placeholder - would query database for paired outputs
@@ -567,11 +567,11 @@ class ShadowComparisonEvaluator:
             'location_agreement': 0.75,
             'overall_agreement': 0.80,
         }
-    
+
     async def _compare_quality(
         self,
-        version_id: str,
-        sample_size: int
+        _version_id: str,  # Used for database query in production
+        _sample_size: int  # Used for database query in production
     ) -> Dict[str, Any]:
         """Compare output quality metrics"""
         return {
@@ -624,7 +624,7 @@ async def evaluate_gold_set(
     background_tasks: BackgroundTasks
 ):
     """Trigger gold-set evaluation"""
-    
+
     async def run_evaluation():
         report = await evaluator.evaluate_version(
             request.version_id,
@@ -634,9 +634,9 @@ async def evaluate_gold_set(
         )
         evaluation_results[report.evaluation_id] = report
         logger.info(f"Evaluation {report.evaluation_id} completed: {report.overall_pass_rate:.2%} pass rate")
-    
+
     background_tasks.add_task(run_evaluation)
-    
+
     return {
         "status": "started",
         "message": f"Evaluation started for version {request.version_id}",
@@ -656,7 +656,7 @@ async def get_evaluation_status(version_id: str):
                 "promotion_recommended": report.promotion_recommended,
                 "recommendation_reason": report.recommendation_reason
             }
-    
+
     return {"status": "not_found", "message": f"No evaluation found for version {version_id}"}
 
 
@@ -684,7 +684,7 @@ async def get_results(version_id: str):
                 "promotion_recommended": report.promotion_recommended,
                 "recommendation_reason": report.recommendation_reason
             }
-    
+
     raise HTTPException(404, f"No results found for version {version_id}")
 
 

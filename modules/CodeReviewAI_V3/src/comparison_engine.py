@@ -133,7 +133,7 @@ class ComparisonEngine:
     def _generate_recommendation(
         self,
         score_delta: float,
-        findings_delta: int,
+        _findings_delta: int,  # Reserved for future enhanced recommendations
         latency_delta: float,
         is_significant: bool,
     ) -> str:

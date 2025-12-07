@@ -89,8 +89,9 @@ class VersionMigrator:
 
         return result
 
-    async def _convert_code(self, module_name: str) -> Dict[str, Any]:
+    async def _convert_code(self, _module_name: str) -> Dict[str, Any]:
         """Convert code for new version."""
+        # module_name reserved for actual conversion logic
         # Simulate code conversion
         await asyncio.sleep(0.1)
 
@@ -99,18 +100,21 @@ class VersionMigrator:
             "warnings": []
         }
 
-    async def _migrate_config(self, module_name: str) -> Dict[str, Any]:
+    async def _migrate_config(self, _module_name: str) -> Dict[str, Any]:
         """Migrate configuration."""
+        # module_name reserved for module-specific config migration
         await asyncio.sleep(0.05)
         return {"migrated": True}
 
-    async def _resolve_dependencies(self, module_name: str) -> Dict[str, Any]:
+    async def _resolve_dependencies(self, _module_name: str) -> Dict[str, Any]:
         """Resolve dependency changes."""
+        # module_name reserved for dependency resolution
         await asyncio.sleep(0.05)
         return {"resolved": True}
 
-    async def _adapt_apis(self, module_name: str) -> Dict[str, Any]:
+    async def _adapt_apis(self, _module_name: str) -> Dict[str, Any]:
         """Adapt API calls for new version."""
+        # module_name reserved for API adaptation
         await asyncio.sleep(0.05)
         return {"adapted": True}
 

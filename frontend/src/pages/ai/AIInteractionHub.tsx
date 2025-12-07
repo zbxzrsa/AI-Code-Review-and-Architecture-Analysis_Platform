@@ -1,7 +1,7 @@
 /**
  * AI Interaction Hub
  * Central hub for interacting with all three AI versions
- * 
+ *
  * Features:
  * - V1 Experimental AI (shadow testing, new technologies)
  * - V2 Production AI (stable, user-facing)
@@ -129,7 +129,7 @@ const VersionCard: React.FC<{
   onSelect: () => void;
 }> = ({ version, isActive, onSelect }) => {
   const { t } = useTranslation();
-  
+
   const getVersionColor = (v: string) => {
     switch (v) {
       case 'v1': return '#722ed1';
@@ -224,7 +224,7 @@ const ChatMessage: React.FC<{
   const renderContent = (content: string) => {
     // Simple markdown-like rendering
     const parts = content.split(/(```[\s\S]*?```)/g);
-    
+
     return parts.map((part, index) => {
       if (part.startsWith('```') && part.endsWith('```')) {
         const match = part.match(/```(\w+)?\n?([\s\S]*?)```/);
@@ -360,15 +360,15 @@ export const AIInteractionHub: React.FC = () => {
   const [compareMode, setCompareMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [streamingEnabled, setStreamingEnabled] = useState(true);
-  const [totalTokens, setTotalTokens] = useState(0);
+  const [_totalTokens, setTotalTokens] = useState(0);  // Tracked for future analytics display
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // API Hooks
-  const { data: versions, isLoading: versionsLoading } = useAIVersions();
-  const { data: cycleStatus } = useCycleStatus();
+  // API Hooks - data available for future use when replacing mock data
+  const { data: _versions, isLoading: _versionsLoading } = useAIVersions();
+  const { data: _cycleStatus } = useCycleStatus();
   const chatMutation = useAIChat();
   const compareMutation = useAICompare();
-  
+
   const isLoading = chatMutation.isPending || compareMutation.isPending;
 
   const scrollToBottom = useCallback(() => {
@@ -425,7 +425,7 @@ Try asking me anything about your code!`,
       if (compareMode) {
         // Compare all versions
         const result = await compareMutation.mutateAsync({ message: messageText });
-        
+
         const comparisonResponse: AIMessage = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
@@ -449,9 +449,9 @@ ${result.v3.content}
         setMessages((prev) => [...prev, comparisonResponse]);
       } else {
         // Single version chat
-        const result = await chatMutation.mutateAsync({ 
-          message: messageText, 
-          version: activeVersion 
+        const result = await chatMutation.mutateAsync({
+          message: messageText,
+          version: activeVersion
         });
 
         const response: AIMessage = {

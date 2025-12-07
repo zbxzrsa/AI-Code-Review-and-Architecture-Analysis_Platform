@@ -10,36 +10,51 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { usePermissions, APP_FEATURES, Permission } from "../usePermissions";
+import { usePermissions, APP_FEATURES } from "../usePermissions";
+
+// Mock user type
+type MockUser = {
+  id: string;
+  email: string;
+  name: string;
+  role: "admin" | "user" | "viewer" | "guest";
+  avatar: string | null;
+};
 
 // Mock the auth store
-const mockUser = {
+const mockUser: MockUser = {
   id: "1",
   email: "test@example.com",
   name: "Test User",
-  role: "user" as const,
+  role: "user",
   avatar: null,
 };
 
-const mockAdminUser = {
-  ...mockUser,
-  role: "admin" as const,
+const mockAdminUser: MockUser = {
+  id: "1",
+  email: "admin@example.com",
   name: "Admin User",
+  role: "admin",
+  avatar: null,
 };
 
-const mockViewerUser = {
-  ...mockUser,
-  role: "viewer" as const,
+const mockViewerUser: MockUser = {
+  id: "1",
+  email: "viewer@example.com",
   name: "Viewer User",
+  role: "viewer",
+  avatar: null,
 };
 
-const mockGuestUser = {
-  ...mockUser,
-  role: "guest" as const,
+const mockGuestUser: MockUser = {
+  id: "1",
+  email: "guest@example.com",
   name: "Guest User",
+  role: "guest",
+  avatar: null,
 };
 
-let mockAuthState = {
+let mockAuthState: { user: MockUser | null; isAuthenticated: boolean } = {
   user: mockUser,
   isAuthenticated: true,
 };
@@ -50,10 +65,8 @@ vi.mock("../../store/authStore", () => ({
 
 describe("usePermissions Hook", () => {
   beforeEach(() => {
-    mockAuthState = {
-      user: mockUser,
-      isAuthenticated: true,
-    };
+    mockAuthState.user = mockUser;
+    mockAuthState.isAuthenticated = true;
   });
 
   afterEach(() => {
@@ -165,9 +178,7 @@ describe("usePermissions Hook", () => {
       mockAuthState.user = mockAdminUser;
       const { result } = renderHook(() => usePermissions());
 
-      const userFeatures = APP_FEATURES.filter(
-        (f) => !f.isAdminOnly && f.requiredRole === "user"
-      );
+      const userFeatures = APP_FEATURES.filter((f) => !f.isAdminOnly && f.requiredRole === "user");
 
       userFeatures.forEach((feature) => {
         expect(result.current.canAccess(feature)).toBe(true);
@@ -178,9 +189,7 @@ describe("usePermissions Hook", () => {
       mockAuthState.user = mockUser;
       const { result } = renderHook(() => usePermissions());
 
-      const userFeatures = APP_FEATURES.filter(
-        (f) => !f.isAdminOnly && f.requiredRole === "user"
-      );
+      const userFeatures = APP_FEATURES.filter((f) => !f.isAdminOnly && f.requiredRole === "user");
 
       userFeatures.forEach((feature) => {
         expect(result.current.canAccess(feature)).toBe(true);
@@ -191,9 +200,7 @@ describe("usePermissions Hook", () => {
       mockAuthState.user = mockViewerUser;
       const { result } = renderHook(() => usePermissions());
 
-      const viewerFeatures = APP_FEATURES.filter(
-        (f) => f.requiredRole === "viewer"
-      );
+      const viewerFeatures = APP_FEATURES.filter((f) => f.requiredRole === "viewer");
 
       viewerFeatures.forEach((feature) => {
         expect(result.current.canAccess(feature)).toBe(true);
@@ -234,13 +241,7 @@ describe("usePermissions Hook", () => {
     });
 
     it("all authenticated users can access non-admin paths", () => {
-      const testPaths = [
-        "/dashboard",
-        "/projects",
-        "/review",
-        "/settings",
-        "/profile",
-      ];
+      const testPaths = ["/dashboard", "/projects", "/review", "/settings", "/profile"];
 
       // Test for admin
       mockAuthState.user = mockAdminUser;
@@ -345,24 +346,16 @@ describe("usePermissions Hook", () => {
       mockAuthState.user = mockUser;
       const { result } = renderHook(() => usePermissions());
 
-      expect(
-        result.current.hasAnyPermission(["read:projects", "admin:all"])
-      ).toBe(true);
-      expect(
-        result.current.hasAnyPermission(["admin:all", "admin:users"])
-      ).toBe(false);
+      expect(result.current.hasAnyPermission(["read:projects", "admin:all"])).toBe(true);
+      expect(result.current.hasAnyPermission(["admin:all", "admin:users"])).toBe(false);
     });
 
     it("handles hasAllPermissions correctly", () => {
       mockAuthState.user = mockUser;
       const { result } = renderHook(() => usePermissions());
 
-      expect(
-        result.current.hasAllPermissions(["read:projects", "write:projects"])
-      ).toBe(true);
-      expect(
-        result.current.hasAllPermissions(["read:projects", "admin:all"])
-      ).toBe(false);
+      expect(result.current.hasAllPermissions(["read:projects", "write:projects"])).toBe(true);
+      expect(result.current.hasAllPermissions(["read:projects", "admin:all"])).toBe(false);
     });
 
     it("returns correct role label", () => {

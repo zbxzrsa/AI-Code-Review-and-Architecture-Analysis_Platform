@@ -8,7 +8,7 @@
  * - Error handling
  */
 
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { renderHook, act } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach, afterEach } from "vitest";
 
 // Mock dependencies before importing the hook
@@ -94,7 +94,13 @@ vi.mock("../../store/authStore", () => {
 
 import { useAuth } from "../useAuth";
 import { api } from "../../services/api";
-import { __resetMockState, __setMockState } from "../../store/authStore";
+import * as authStoreModule from "../../store/authStore";
+
+// Get mock helpers - these are added by vi.mock above
+const { __resetMockState, __setMockState } = authStoreModule as unknown as {
+  __resetMockState: () => void;
+  __setMockState: (state: Record<string, unknown>) => void;
+};
 
 describe("useAuth", () => {
   beforeEach(() => {
@@ -129,7 +135,7 @@ describe("useAuth", () => {
 
       const { result } = renderHook(() => useAuth());
 
-      let success: boolean;
+      let success = false;
       await act(async () => {
         success = await result.current.login({
           email: "test@example.com",
@@ -137,7 +143,7 @@ describe("useAuth", () => {
         });
       });
 
-      expect(success!).toBe(true);
+      expect(success).toBe(true);
       expect(api.post).toHaveBeenCalledWith("/auth/login", {
         email: "test@example.com",
         password: "password123",
@@ -157,7 +163,7 @@ describe("useAuth", () => {
 
       const { result } = renderHook(() => useAuth());
 
-      let success: boolean;
+      let success = false;
       await act(async () => {
         success = await result.current.login({
           email: "wrong@example.com",
@@ -165,7 +171,7 @@ describe("useAuth", () => {
         });
       });
 
-      expect(success!).toBe(false);
+      expect(success).toBe(false);
     });
 
     it("should handle network errors during login", async () => {
@@ -173,7 +179,7 @@ describe("useAuth", () => {
 
       const { result } = renderHook(() => useAuth());
 
-      let success: boolean;
+      let success = false;
       await act(async () => {
         success = await result.current.login({
           email: "test@example.com",
@@ -181,7 +187,7 @@ describe("useAuth", () => {
         });
       });
 
-      expect(success!).toBe(false);
+      expect(success).toBe(false);
     });
   });
 
@@ -208,7 +214,7 @@ describe("useAuth", () => {
 
       const { result } = renderHook(() => useAuth());
 
-      let success: boolean;
+      let success = false;
       await act(async () => {
         success = await result.current.register({
           email: "newuser@example.com",
@@ -218,7 +224,7 @@ describe("useAuth", () => {
         });
       });
 
-      expect(success!).toBe(true);
+      expect(success).toBe(true);
       expect(api.post).toHaveBeenCalledWith("/auth/register", {
         email: "newuser@example.com",
         password: "securepassword123",
@@ -240,7 +246,7 @@ describe("useAuth", () => {
 
       const { result } = renderHook(() => useAuth());
 
-      let success: boolean;
+      let success = false;
       await act(async () => {
         success = await result.current.register({
           email: "existing@example.com",
@@ -250,7 +256,7 @@ describe("useAuth", () => {
         });
       });
 
-      expect(success!).toBe(false);
+      expect(success).toBe(false);
     });
   });
 

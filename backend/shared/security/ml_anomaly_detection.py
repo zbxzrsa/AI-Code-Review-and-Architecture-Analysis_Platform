@@ -65,7 +65,7 @@ class AnomalyAlert:
     acknowledged: bool = False
     resolved: bool = False
     resolution_notes: Optional[str] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "alert_id": self.alert_id,
@@ -94,7 +94,7 @@ class DetectionRule:
     enabled: bool = True
     cooldown_seconds: int = 300  # Minimum time between alerts
     last_triggered: Optional[datetime] = None
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "rule_id": self.rule_id,
@@ -118,7 +118,7 @@ class ModelMetrics:
     false_positive_rate: float
     training_samples: int
     last_trained: datetime
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "accuracy": self.accuracy,
@@ -133,7 +133,7 @@ class ModelMetrics:
 
 class FeatureExtractor:
     """Extract features from audit logs for ML models."""
-    
+
     # Feature categories
     TEMPORAL_FEATURES = [
         "hour_of_day", "day_of_week", "is_weekend", "is_business_hours"
@@ -148,48 +148,48 @@ class FeatureExtractor:
     SEQUENTIAL_FEATURES = [
         "action_sequence_hash", "entity_sequence_hash", "time_since_last"
     ]
-    
+
     def __init__(self):
         self._action_encoder: Dict[str, int] = {}
         self._entity_encoder: Dict[str, int] = {}
         self._next_action_id = 0
         self._next_entity_id = 0
-    
+
     def _encode_action(self, action: str) -> int:
         """Encode action string to integer."""
         if action not in self._action_encoder:
             self._action_encoder[action] = self._next_action_id
             self._next_action_id += 1
         return self._action_encoder[action]
-    
+
     def _encode_entity(self, entity: str) -> int:
         """Encode entity string to integer."""
         if entity not in self._entity_encoder:
             self._entity_encoder[entity] = self._next_entity_id
             self._next_entity_id += 1
         return self._entity_encoder[entity]
-    
+
     def extract_features(
         self,
         log_entry: Dict[str, Any],
         context: Dict[str, Any]
     ) -> np.ndarray:
         """Extract features from a single log entry.
-        
+
         Args:
             log_entry: Single audit log entry
             context: Context with historical data
-            
+
         Returns:
             Feature vector as numpy array
         """
         features = []
-        
+
         # Parse timestamp
         ts = log_entry.get("timestamp") or log_entry.get("ts")
         if isinstance(ts, str):
             ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
-        
+
         # Temporal features
         features.append(ts.hour / 24.0)  # hour_of_day normalized
         features.append(ts.weekday() / 7.0)  # day_of_week normalized
@@ -197,7 +197,7 @@ class FeatureExtractor:
         features.append(
             1.0 if 9 <= ts.hour <= 17 and ts.weekday() < 5 else 0.0
         )  # is_business_hours
-        
+
         # Behavioral features from context
         actor_history = context.get("actor_history", {})
         features.append(min(actor_history.get("actions_per_hour", 0) / 100.0, 1.0))
@@ -205,70 +205,70 @@ class FeatureExtractor:
         features.append(min(actor_history.get("unique_resources", 0) / 50.0, 1.0))
         features.append(actor_history.get("action_diversity", 0))
         features.append(actor_history.get("entity_diversity", 0))
-        
+
         # Volumetric features from context
         volume = context.get("volume", {})
         features.append(min(volume.get("log_count_1h", 0) / 1000.0, 1.0))
         features.append(min(volume.get("log_count_24h", 0) / 10000.0, 1.0))
         features.append(min(volume.get("burst_ratio", 1.0), 5.0) / 5.0)
-        
+
         # Sequential features
         features.append(self._encode_action(log_entry.get("action", "")) / 100.0)
         features.append(self._encode_entity(log_entry.get("entity", "")) / 100.0)
         features.append(
             min(context.get("time_since_last", 0) / 3600.0, 1.0)
         )  # Normalized to 1 hour
-        
+
         # Categorical features (one-hot encoded)
         action_code = self._encode_action(log_entry.get("action", ""))
         entity_code = self._encode_entity(log_entry.get("entity", ""))
         status_code = 1.0 if log_entry.get("status") == "success" else 0.0
-        
+
         features.extend([action_code / 20.0, entity_code / 20.0, status_code])
-        
+
         return np.array(features, dtype=np.float32)
-    
+
     def extract_batch_features(
         self,
         log_entries: List[Dict[str, Any]],
         contexts: List[Dict[str, Any]]
     ) -> np.ndarray:
         """Extract features from multiple log entries.
-        
+
         Args:
             log_entries: List of audit log entries
             contexts: List of contexts for each entry
-            
+
         Returns:
             Feature matrix as numpy array (n_samples, n_features)
         """
         features_list = []
-        
+
         for log_entry, context in zip(log_entries, contexts):
             features = self.extract_features(log_entry, context)
             features_list.append(features)
-        
+
         return np.array(features_list)
 
 
 class AnomalyDetector(ABC):
     """Abstract base class for anomaly detectors."""
-    
+
     @abstractmethod
     def fit(self, X: np.ndarray) -> None:
         """Train the model on normal data."""
         pass
-    
+
     @abstractmethod
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Predict anomaly scores."""
         pass
-    
+
     @abstractmethod
     def save(self, path: str) -> None:
         """Save model to file."""
         pass
-    
+
     @abstractmethod
     def load(self, path: str) -> None:
         """Load model from file."""
@@ -277,7 +277,7 @@ class AnomalyDetector(ABC):
 
 class IsolationForestDetector(AnomalyDetector):
     """Isolation Forest-based anomaly detector."""
-    
+
     def __init__(
         self,
         n_estimators: int = 100,
@@ -289,12 +289,12 @@ class IsolationForestDetector(AnomalyDetector):
         self.random_state = random_state
         self.model = None
         self._is_fitted = False
-    
+
     def fit(self, X: np.ndarray) -> None:
         """Train Isolation Forest on normal data."""
         try:
             from sklearn.ensemble import IsolationForest
-            
+
             self.model = IsolationForest(
                 n_estimators=self.n_estimators,
                 contamination=self.contamination,
@@ -307,22 +307,22 @@ class IsolationForestDetector(AnomalyDetector):
         except ImportError:
             logger.warning("sklearn not available, using simple detector")
             self._fit_simple(X)
-    
+
     def _fit_simple(self, X: np.ndarray) -> None:
         """Simple fallback training without sklearn."""
         self._mean = np.mean(X, axis=0)
         self._std = np.std(X, axis=0) + 1e-10
         self._is_fitted = True
-    
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Predict anomaly scores.
-        
+
         Returns:
             Anomaly scores (higher = more anomalous, 0-1 range)
         """
         if not self._is_fitted:
             raise RuntimeError("Model not fitted")
-        
+
         if self.model is not None:
             # sklearn model
             # decision_function returns negative scores for anomalies
@@ -337,7 +337,7 @@ class IsolationForestDetector(AnomalyDetector):
             # Normalize
             scores = np.clip(scores / 5.0, 0, 1)
             return scores
-    
+
     def save(self, path: str) -> None:
         """Save model to file."""
         data = {
@@ -346,26 +346,26 @@ class IsolationForestDetector(AnomalyDetector):
             "random_state": self.random_state,
             "is_fitted": self._is_fitted
         }
-        
+
         if self.model is not None:
             data["model"] = self.model
         else:
             data["mean"] = self._mean
             data["std"] = self._std
-        
+
         with open(path, "wb") as f:
             pickle.dump(data, f)
-    
+
     def load(self, path: str) -> None:
         """Load model from file."""
         with open(path, "rb") as f:
             data = pickle.load(f)
-        
+
         self.n_estimators = data["n_estimators"]
         self.contamination = data["contamination"]
         self.random_state = data["random_state"]
         self._is_fitted = data["is_fitted"]
-        
+
         if "model" in data:
             self.model = data["model"]
         else:
@@ -375,7 +375,7 @@ class IsolationForestDetector(AnomalyDetector):
 
 class LocalOutlierFactorDetector(AnomalyDetector):
     """Local Outlier Factor-based anomaly detector."""
-    
+
     def __init__(
         self,
         n_neighbors: int = 20,
@@ -386,12 +386,12 @@ class LocalOutlierFactorDetector(AnomalyDetector):
         self.model = None
         self._training_data = None
         self._is_fitted = False
-    
+
     def fit(self, X: np.ndarray) -> None:
         """Train LOF on normal data."""
         try:
             from sklearn.neighbors import LocalOutlierFactor
-            
+
             self.model = LocalOutlierFactor(
                 n_neighbors=min(self.n_neighbors, len(X) - 1),
                 contamination=self.contamination,
@@ -405,12 +405,12 @@ class LocalOutlierFactorDetector(AnomalyDetector):
             logger.warning("sklearn not available, using simple detector")
             self._training_data = X.copy()
             self._is_fitted = True
-    
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Predict anomaly scores."""
         if not self._is_fitted:
             raise RuntimeError("Model not fitted")
-        
+
         if self.model is not None:
             scores = -self.model.decision_function(X)
             scores = (scores - scores.min()) / (scores.max() - scores.min() + 1e-10)
@@ -426,7 +426,7 @@ class LocalOutlierFactorDetector(AnomalyDetector):
             scores = np.array(scores)
             scores = np.clip(scores / np.percentile(scores, 95), 0, 1)
             return scores
-    
+
     def save(self, path: str) -> None:
         """Save model to file."""
         data = {
@@ -437,15 +437,15 @@ class LocalOutlierFactorDetector(AnomalyDetector):
         }
         if self.model is not None:
             data["model"] = self.model
-        
+
         with open(path, "wb") as f:
             pickle.dump(data, f)
-    
+
     def load(self, path: str) -> None:
         """Load model from file."""
         with open(path, "rb") as f:
             data = pickle.load(f)
-        
+
         self.n_neighbors = data["n_neighbors"]
         self.contamination = data["contamination"]
         self._is_fitted = data["is_fitted"]
@@ -455,7 +455,7 @@ class LocalOutlierFactorDetector(AnomalyDetector):
 
 class AutoencoderDetector(AnomalyDetector):
     """Autoencoder-based anomaly detector."""
-    
+
     def __init__(
         self,
         encoding_dim: int = 8,
@@ -469,22 +469,22 @@ class AutoencoderDetector(AnomalyDetector):
         self.epochs = epochs
         self.batch_size = batch_size
         self.threshold_percentile = threshold_percentile
-        
+
         self._model = None
         self._threshold = None
         self._input_dim = None
         self._is_fitted = False
-    
+
     def _build_model(self, input_dim: int):
         """Build autoencoder model."""
         try:
             import torch
             import torch.nn as nn
-            
+
             class Autoencoder(nn.Module):
                 def __init__(self, input_dim, hidden_dims, encoding_dim):
                     super().__init__()
-                    
+
                     # Encoder
                     encoder_layers = []
                     prev_dim = input_dim
@@ -497,7 +497,7 @@ class AutoencoderDetector(AnomalyDetector):
                         prev_dim = dim
                     encoder_layers.append(nn.Linear(prev_dim, encoding_dim))
                     self.encoder = nn.Sequential(*encoder_layers)
-                    
+
                     # Decoder
                     decoder_layers = []
                     prev_dim = encoding_dim
@@ -510,59 +510,59 @@ class AutoencoderDetector(AnomalyDetector):
                         prev_dim = dim
                     decoder_layers.append(nn.Linear(prev_dim, input_dim))
                     self.decoder = nn.Sequential(*decoder_layers)
-                
+
                 def forward(self, x):
                     encoded = self.encoder(x)
                     decoded = self.decoder(encoded)
                     return decoded
-            
+
             self._model = Autoencoder(input_dim, self.hidden_dims, self.encoding_dim)
             self._input_dim = input_dim
             return True
-            
+
         except ImportError:
             logger.warning("PyTorch not available, using simple reconstruction")
             return False
-    
+
     def fit(self, X: np.ndarray) -> None:
         """Train autoencoder on normal data."""
         self._input_dim = X.shape[1]
-        
+
         if not self._build_model(self._input_dim):
             # Fallback to PCA-like reconstruction
             self._mean = np.mean(X, axis=0)
             self._std = np.std(X, axis=0) + 1e-10
-            X_normalized = (X - self._mean) / self._std
-            
+            x_normalized = (X - self._mean) / self._std
+
             # Simple SVD for dimensionality reduction
             try:
-                U, S, Vt = np.linalg.svd(X_normalized, full_matrices=False)
-                self._components = Vt[:self.encoding_dim]
+                _, _, vt = np.linalg.svd(x_normalized, full_matrices=False)
+                self._components = vt[:self.encoding_dim]
             except:
                 self._components = np.eye(self._input_dim)[:self.encoding_dim]
-            
+
             # Calculate reconstruction threshold
             reconstructed = self._reconstruct_simple(X)
             errors = np.mean((X - reconstructed) ** 2, axis=1)
             self._threshold = np.percentile(errors, self.threshold_percentile)
             self._is_fitted = True
             return
-        
+
         import torch
         import torch.nn as nn
         import torch.optim as optim
-        
+
         # Prepare data
-        X_tensor = torch.FloatTensor(X)
-        dataset = torch.utils.data.TensorDataset(X_tensor, X_tensor)
+        x_tensor = torch.FloatTensor(X)
+        dataset = torch.utils.data.TensorDataset(x_tensor, x_tensor)
         dataloader = torch.utils.data.DataLoader(
-            dataset, batch_size=self.batch_size, shuffle=True
+            dataset, batch_size=self.batch_size, shuffle=True, num_workers=0
         )
-        
+
         # Training
         criterion = nn.MSELoss()
-        optimizer = optim.Adam(self._model.parameters(), lr=0.001)
-        
+        optimizer = optim.Adam(self._model.parameters(), lr=0.001, weight_decay=1e-5)
+
         self._model.train()
         for epoch in range(self.epochs):
             total_loss = 0
@@ -573,49 +573,49 @@ class AutoencoderDetector(AnomalyDetector):
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
-            
+
             if (epoch + 1) % 10 == 0:
                 logger.debug(f"Epoch {epoch + 1}/{self.epochs}, Loss: {total_loss:.4f}")
-        
+
         # Calculate threshold
         self._model.eval()
         with torch.no_grad():
             reconstructed = self._model(X_tensor)
             errors = torch.mean((X_tensor - reconstructed) ** 2, dim=1).numpy()
             self._threshold = np.percentile(errors, self.threshold_percentile)
-        
+
         self._is_fitted = True
         logger.info(f"Autoencoder trained on {len(X)} samples")
-    
+
     def _reconstruct_simple(self, X: np.ndarray) -> np.ndarray:
         """Simple reconstruction for fallback."""
-        X_normalized = (X - self._mean) / self._std
-        encoded = X_normalized @ self._components.T
+        x_normalized = (X - self._mean) / self._std
+        encoded = x_normalized @ self._components.T
         reconstructed_normalized = encoded @ self._components
         return reconstructed_normalized * self._std + self._mean
-    
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Predict anomaly scores based on reconstruction error."""
         if not self._is_fitted:
             raise RuntimeError("Model not fitted")
-        
+
         if self._model is not None:
             import torch
-            
+
             self._model.eval()
             with torch.no_grad():
-                X_tensor = torch.FloatTensor(X)
-                reconstructed = self._model(X_tensor)
+                x_tensor = torch.FloatTensor(X)
+                reconstructed = self._model(x_tensor)
                 errors = torch.mean((X_tensor - reconstructed) ** 2, dim=1).numpy()
         else:
             reconstructed = self._reconstruct_simple(X)
             errors = np.mean((X - reconstructed) ** 2, axis=1)
-        
+
         # Normalize to 0-1 based on threshold
         scores = errors / (self._threshold * 2)
         scores = np.clip(scores, 0, 1)
         return scores
-    
+
     def save(self, path: str) -> None:
         """Save model to file."""
         data = {
@@ -625,7 +625,7 @@ class AutoencoderDetector(AnomalyDetector):
             "input_dim": self._input_dim,
             "is_fitted": self._is_fitted
         }
-        
+
         if self._model is not None:
             import torch
             data["model_state"] = self._model.state_dict()
@@ -633,21 +633,21 @@ class AutoencoderDetector(AnomalyDetector):
             data["mean"] = self._mean
             data["std"] = self._std
             data["components"] = self._components
-        
+
         with open(path, "wb") as f:
             pickle.dump(data, f)
-    
+
     def load(self, path: str) -> None:
         """Load model from file."""
         with open(path, "rb") as f:
             data = pickle.load(f)
-        
+
         self.encoding_dim = data["encoding_dim"]
         self.hidden_dims = data["hidden_dims"]
         self._threshold = data["threshold"]
         self._input_dim = data["input_dim"]
         self._is_fitted = data["is_fitted"]
-        
+
         if "model_state" in data:
             self._build_model(self._input_dim)
             import torch
@@ -660,7 +660,7 @@ class AutoencoderDetector(AnomalyDetector):
 
 class EnsembleDetector(AnomalyDetector):
     """Ensemble of multiple anomaly detectors."""
-    
+
     def __init__(
         self,
         detectors: List[AnomalyDetector] = None,
@@ -672,54 +672,54 @@ class EnsembleDetector(AnomalyDetector):
                 LocalOutlierFactorDetector(),
                 AutoencoderDetector()
             ]
-        
+
         self.detectors = detectors
         self.weights = weights or [1.0 / len(detectors)] * len(detectors)
         self._is_fitted = False
-    
+
     def fit(self, X: np.ndarray) -> None:
         """Train all detectors."""
         for detector in self.detectors:
             detector.fit(X)
         self._is_fitted = True
         logger.info(f"Ensemble trained with {len(self.detectors)} detectors")
-    
+
     def predict(self, X: np.ndarray) -> np.ndarray:
         """Predict using weighted ensemble."""
         if not self._is_fitted:
             raise RuntimeError("Model not fitted")
-        
+
         scores = np.zeros(len(X))
         for detector, weight in zip(self.detectors, self.weights):
             detector_scores = detector.predict(X)
             scores += weight * detector_scores
-        
+
         return scores
-    
+
     def save(self, path: str) -> None:
         """Save all models."""
         for i, detector in enumerate(self.detectors):
             detector.save(f"{path}_{i}")
-        
+
         meta = {"weights": self.weights, "n_detectors": len(self.detectors)}
         with open(f"{path}_meta", "wb") as f:
             pickle.dump(meta, f)
-    
+
     def load(self, path: str) -> None:
         """Load all models."""
         with open(f"{path}_meta", "rb") as f:
             meta = pickle.load(f)
-        
+
         self.weights = meta["weights"]
         for i, detector in enumerate(self.detectors[:meta["n_detectors"]]):
             detector.load(f"{path}_{i}")
-        
+
         self._is_fitted = True
 
 
 class AnomalyDetectionService:
     """Main service for ML-based anomaly detection."""
-    
+
     # Default detection rules
     DEFAULT_RULES = [
         DetectionRule(
@@ -763,7 +763,7 @@ class AnomalyDetectionService:
             severity=SeverityLevel.MEDIUM
         )
     ]
-    
+
     def __init__(
         self,
         db_client,
@@ -775,7 +775,7 @@ class AnomalyDetectionService:
         auto_retrain_days: int = 7
     ):
         """Initialize anomaly detection service.
-        
+
         Args:
             db_client: Database client
             model_path: Path to save/load models
@@ -791,33 +791,33 @@ class AnomalyDetectionService:
         self.training_days = training_days
         self.min_training_samples = min_training_samples
         self.auto_retrain_days = auto_retrain_days
-        
+
         # Initialize detector
         self.detector = self._create_detector(detector_type)
         self.feature_extractor = FeatureExtractor()
-        
+
         # Detection rules
         self.rules: Dict[str, DetectionRule] = {
             rule.rule_id: rule for rule in self.DEFAULT_RULES
         }
-        
+
         # Alerts
         self.alerts: List[AnomalyAlert] = []
         self._alert_callbacks: List[callable] = []
-        
+
         # Model status
         self.model_status = ModelStatus.TRAINING
         self.model_metrics: Optional[ModelMetrics] = None
         self.last_trained: Optional[datetime] = None
-        
+
         # Background task
         self._running = False
         self._background_task: Optional[asyncio.Task] = None
-        
+
         # Context cache
         self._actor_context: Dict[str, Dict[str, Any]] = defaultdict(dict)
         self._volume_context: Dict[str, int] = defaultdict(int)
-    
+
     def _create_detector(self, detector_type: str) -> AnomalyDetector:
         """Create detector instance."""
         if detector_type == "isolation_forest":
@@ -828,11 +828,11 @@ class AnomalyDetectionService:
             return AutoencoderDetector()
         else:
             return EnsembleDetector()
-    
+
     async def start(self):
         """Start the anomaly detection service."""
         self._running = True
-        
+
         # Try to load existing model
         try:
             self.detector.load(self.model_path)
@@ -841,66 +841,68 @@ class AnomalyDetectionService:
         except FileNotFoundError:
             logger.info("No existing model found, will train new model")
             await self.train_model()
-        
+
         # Start background monitoring
         self._background_task = asyncio.create_task(self._monitoring_loop())
-        
+
         logger.info("Anomaly detection service started")
-    
+
     async def stop(self):
         """Stop the anomaly detection service."""
         self._running = False
-        
+
         if self._background_task:
             self._background_task.cancel()
             try:
                 await self._background_task
             except asyncio.CancelledError:
-                logger.debug("Background task cancelled")
-        
+                # Intentionally not re-raised: we initiated the cancellation
+                # during shutdown, so propagation is not needed
+                logger.debug("Background task cancelled during shutdown")
+
         # Save model
         try:
             self.detector.save(self.model_path)
             logger.info("Anomaly detection model saved")
         except Exception as e:
             logger.error(f"Failed to save model: {e}")
-        
+
         logger.info("Anomaly detection service stopped")
-    
+
     async def _monitoring_loop(self):
         """Background monitoring loop."""
         while self._running:
             try:
                 await asyncio.sleep(60)  # Check every minute
-                
+
                 # Check if retraining is needed
                 if self.last_trained:
                     days_since_training = (
                         datetime.now(timezone.utc) - self.last_trained
                     ).days
-                    
+
                     if days_since_training >= self.auto_retrain_days:
                         logger.info("Auto-retraining model")
                         await self.train_model()
-                
+
             except asyncio.CancelledError:
                 logger.debug("Monitoring loop cancelled")
                 raise
             except Exception as e:
                 logger.error(f"Monitoring loop error: {e}")
-    
+
     async def train_model(self) -> bool:
         """Train the anomaly detection model.
-        
+
         Returns:
             True if training successful
         """
         self.model_status = ModelStatus.TRAINING
-        
+
         try:
             # Get training data
             from_ts = datetime.now(timezone.utc) - timedelta(days=self.training_days)
-            
+
             logs = await self.db.fetch(
                 """
                 SELECT * FROM audits.audit_log
@@ -909,18 +911,18 @@ class AnomalyDetectionService:
                 """,
                 from_ts
             )
-            
+
             if len(logs) < self.min_training_samples:
                 logger.warning(
                     f"Insufficient training data: {len(logs)} < {self.min_training_samples}"
                 )
                 self.model_status = ModelStatus.FAILED
                 return False
-            
+
             # Build contexts and extract features
             log_dicts = []
             contexts = []
-            
+
             for log in logs:
                 log_dict = {
                     "id": log["id"],
@@ -931,23 +933,23 @@ class AnomalyDetectionService:
                     "timestamp": log["ts"]
                 }
                 log_dicts.append(log_dict)
-                
+
                 # Build context
                 context = await self._build_context(log_dict)
                 contexts.append(context)
-            
+
             # Extract features
             X = self.feature_extractor.extract_batch_features(log_dicts, contexts)
-            
+
             # Train model
             self.detector.fit(X)
-            
+
             # Calculate metrics (using validation split)
             split_idx = int(len(X) * 0.8)
-            X_train, X_val = X[:split_idx], X[split_idx:]
-            
-            val_scores = self.detector.predict(X_val)
-            
+            _x_train, x_val = X[:split_idx], X[split_idx:]
+
+            val_scores = self.detector.predict(x_val)
+
             self.model_metrics = ModelMetrics(
                 accuracy=1.0 - np.mean(val_scores > self.anomaly_threshold),
                 precision=0.95,  # Estimated
@@ -957,33 +959,33 @@ class AnomalyDetectionService:
                 training_samples=len(X),
                 last_trained=datetime.now(timezone.utc)
             )
-            
+
             # Save model
             self.detector.save(self.model_path)
-            
+
             self.model_status = ModelStatus.READY
             self.last_trained = datetime.now(timezone.utc)
-            
+
             logger.info(
                 f"Model trained successfully on {len(X)} samples, "
                 f"FPR: {self.model_metrics.false_positive_rate:.2%}"
             )
-            
+
             return True
-            
+
         except Exception as e:
             logger.error(f"Model training failed: {e}")
             self.model_status = ModelStatus.FAILED
             return False
-    
+
     async def _build_context(self, log_entry: Dict[str, Any]) -> Dict[str, Any]:
         """Build context for a log entry."""
         actor_id = log_entry.get("actor_id")
         ts = log_entry.get("timestamp")
-        
+
         if isinstance(ts, str):
             ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
-        
+
         # Get actor history from cache or database
         if actor_id not in self._actor_context:
             # Query recent activity
@@ -996,10 +998,10 @@ class AnomalyDetectionService:
                 actor_id,
                 ts - timedelta(hours=1)
             )
-            
-            unique_entities = set(log["entity"] for log in recent_logs)
-            unique_actions = set(log["action"] for log in recent_logs)
-            
+
+            unique_entities = {log["entity"] for log in recent_logs}
+            unique_actions = {log["action"] for log in recent_logs}
+
             self._actor_context[actor_id] = {
                 "actions_per_hour": len(recent_logs),
                 "unique_entities": len(unique_entities),
@@ -1007,11 +1009,11 @@ class AnomalyDetectionService:
                 "action_diversity": len(unique_actions) / max(len(recent_logs), 1),
                 "entity_diversity": len(unique_entities) / max(len(recent_logs), 1)
             }
-        
+
         # Get volume context
         hour_key = ts.strftime("%Y%m%d%H")
         day_key = ts.strftime("%Y%m%d")
-        
+
         return {
             "actor_history": self._actor_context.get(actor_id, {}),
             "volume": {
@@ -1024,49 +1026,49 @@ class AnomalyDetectionService:
             },
             "time_since_last": 0
         }
-    
+
     async def analyze_log(
         self,
         log_entry: Dict[str, Any]
     ) -> Tuple[float, List[AnomalyAlert]]:
         """Analyze a single log entry for anomalies.
-        
+
         Args:
             log_entry: Audit log entry to analyze
-            
+
         Returns:
             Tuple of (anomaly_score, list of alerts)
         """
         if self.model_status != ModelStatus.READY:
             logger.warning("Model not ready, skipping analysis")
             return 0.0, []
-        
+
         alerts = []
-        
+
         # Build context
         context = await self._build_context(log_entry)
-        
+
         # Extract features
         features = self.feature_extractor.extract_features(log_entry, context)
         features = features.reshape(1, -1)
-        
+
         # Get ML anomaly score
         anomaly_score = float(self.detector.predict(features)[0])
-        
+
         # Check detection rules
         for rule in self.rules.values():
             if not rule.enabled:
                 continue
-            
+
             # Check cooldown
             if rule.last_triggered:
                 elapsed = (datetime.now(timezone.utc) - rule.last_triggered).seconds
                 if elapsed < rule.cooldown_seconds:
                     continue
-            
+
             # Evaluate rule condition
             rule_triggered = self._evaluate_rule(rule, log_entry, context)
-            
+
             if rule_triggered and anomaly_score >= rule.threshold:
                 alert = self._create_alert(
                     rule,
@@ -1077,14 +1079,14 @@ class AnomalyDetectionService:
                 alerts.append(alert)
                 self.alerts.append(alert)
                 rule.last_triggered = datetime.now(timezone.utc)
-                
+
                 # Notify callbacks
                 for callback in self._alert_callbacks:
                     try:
                         callback(alert)
                     except Exception as e:
                         logger.error(f"Alert callback failed: {e}")
-        
+
         # ML-only alert for high scores
         if anomaly_score >= self.anomaly_threshold and not alerts:
             alert = AnomalyAlert(
@@ -1101,16 +1103,16 @@ class AnomalyDetectionService:
             )
             alerts.append(alert)
             self.alerts.append(alert)
-        
+
         # Update volume context
         ts = log_entry.get("timestamp") or log_entry.get("ts")
         if isinstance(ts, str):
             ts = datetime.fromisoformat(ts.replace('Z', '+00:00'))
         hour_key = ts.strftime("%Y%m%d%H")
         self._volume_context[hour_key] = self._volume_context.get(hour_key, 0) + 1
-        
+
         return anomaly_score, alerts
-    
+
     def _evaluate_rule(
         self,
         rule: DetectionRule,
@@ -1130,15 +1132,15 @@ class AnomalyDetectionService:
                 "consecutive_failures": context.get("consecutive_failures", 0),
                 "is_new_entity": context.get("is_new_entity", False)
             }
-            
+
             # Safely evaluate condition
             result = eval(rule.condition, {"__builtins__": {}}, eval_context)
             return bool(result)
-            
+
         except Exception as e:
             logger.error(f"Rule evaluation failed for {rule.rule_id}: {e}")
             return False
-    
+
     def _create_alert(
         self,
         rule: DetectionRule,
@@ -1163,7 +1165,7 @@ class AnomalyDetectionService:
             },
             timestamp=datetime.now(timezone.utc)
         )
-    
+
     def _score_to_severity(self, score: float) -> SeverityLevel:
         """Convert anomaly score to severity level."""
         if score >= 0.95:
@@ -1174,22 +1176,22 @@ class AnomalyDetectionService:
             return SeverityLevel.MEDIUM
         else:
             return SeverityLevel.LOW
-    
+
     def add_rule(self, rule: DetectionRule):
         """Add a detection rule."""
         self.rules[rule.rule_id] = rule
         logger.info(f"Added detection rule: {rule.rule_id}")
-    
+
     def remove_rule(self, rule_id: str):
         """Remove a detection rule."""
         if rule_id in self.rules:
             del self.rules[rule_id]
             logger.info(f"Removed detection rule: {rule_id}")
-    
+
     def register_alert_callback(self, callback: callable):
         """Register a callback for alerts."""
         self._alert_callbacks.append(callback)
-    
+
     def acknowledge_alert(self, alert_id: str) -> bool:
         """Acknowledge an alert."""
         for alert in self.alerts:
@@ -1197,7 +1199,7 @@ class AnomalyDetectionService:
                 alert.acknowledged = True
                 return True
         return False
-    
+
     def resolve_alert(self, alert_id: str, notes: str = None) -> bool:
         """Resolve an alert."""
         for alert in self.alerts:
@@ -1206,7 +1208,7 @@ class AnomalyDetectionService:
                 alert.resolution_notes = notes
                 return True
         return False
-    
+
     def get_alerts(
         self,
         severity: SeverityLevel = None,
@@ -1217,24 +1219,24 @@ class AnomalyDetectionService:
     ) -> List[AnomalyAlert]:
         """Get filtered alerts."""
         alerts = self.alerts.copy()
-        
+
         if severity:
             alerts = [a for a in alerts if a.severity == severity]
-        
+
         if anomaly_type:
             alerts = [a for a in alerts if a.anomaly_type == anomaly_type]
-        
+
         if unacknowledged_only:
             alerts = [a for a in alerts if not a.acknowledged]
-        
+
         if unresolved_only:
             alerts = [a for a in alerts if not a.resolved]
-        
+
         # Sort by timestamp descending
         alerts.sort(key=lambda a: a.timestamp, reverse=True)
-        
+
         return alerts[:limit]
-    
+
     def get_status(self) -> Dict[str, Any]:
         """Get service status."""
         return {

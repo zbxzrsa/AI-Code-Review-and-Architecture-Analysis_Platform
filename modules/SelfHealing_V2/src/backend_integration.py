@@ -94,7 +94,7 @@ class ProductionHealthMonitor:
 
             latency = (time.time() - start) * 1000
 
-        except Exception as e:
+        except Exception:
             healthy = False
             latency = (time.time() - start) * 1000
 

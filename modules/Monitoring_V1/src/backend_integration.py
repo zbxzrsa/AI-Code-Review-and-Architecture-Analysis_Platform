@@ -136,7 +136,7 @@ def track_time(metric_name: str, **labels):
             try:
                 return func(*args, **kwargs)
             finally:
-                duration = time.time() - start
+                _duration = time.time() - start  # Available for local logging
                 # Log locally if backend unavailable
         return wrapper
     return decorator

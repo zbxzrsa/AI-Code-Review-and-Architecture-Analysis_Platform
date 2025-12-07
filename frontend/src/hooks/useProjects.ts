@@ -4,12 +4,7 @@
  * Provides caching, optimistic updates, and mutations for projects.
  */
 
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  UseQueryOptions,
-} from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, UseQueryOptions } from "@tanstack/react-query";
 import { message } from "antd";
 import { apiService } from "../services/api";
 import { ensureArray } from "../utils/safeData";
@@ -52,10 +47,7 @@ interface PaginatedResponse<T> {
 export function useProjects(
   filters: ProjectFilters,
   pagination: PaginationState,
-  options?: Omit<
-    UseQueryOptions<PaginatedResponse<Project>>,
-    "queryKey" | "queryFn"
-  >
+  options?: Omit<UseQueryOptions<PaginatedResponse<Project>>, "queryKey" | "queryFn">
 ) {
   return useQuery({
     queryKey: projectKeys.list(filters, pagination),
@@ -64,8 +56,8 @@ export function useProjects(
         page: pagination.page,
         limit: pagination.pageSize,
         search: filters.search || undefined,
-        status: filters.status !== "all" ? filters.status : undefined,
-        language: filters.language !== "all" ? filters.language : undefined,
+        status: filters.status === "all" ? undefined : filters.status,
+        language: filters.language === "all" ? undefined : filters.language,
         sort_field: filters.sortField,
         sort_order: filters.sortOrder,
       });
@@ -236,9 +228,7 @@ export function useUpdateProject() {
       await queryClient.cancelQueries({ queryKey: projectKeys.detail(id) });
 
       // Snapshot the previous value
-      const previousProject = queryClient.getQueryData<Project>(
-        projectKeys.detail(id)
-      );
+      const previousProject = queryClient.getQueryData<Project>(projectKeys.detail(id));
 
       // Optimistically update to the new value
       if (previousProject) {
@@ -253,10 +243,7 @@ export function useUpdateProject() {
     onError: (error, { id }, context) => {
       // Rollback on error
       if (context?.previousProject) {
-        queryClient.setQueryData(
-          projectKeys.detail(id),
-          context.previousProject
-        );
+        queryClient.setQueryData(projectKeys.detail(id), context.previousProject);
       }
       message.error(`Failed to update project: ${error.message}`);
     },
@@ -367,18 +354,8 @@ export function useUpdateMemberRole(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({
-      memberId,
-      role,
-    }: {
-      memberId: string;
-      role: string;
-    }) => {
-      const response = await apiService.projects.updateMemberRole(
-        projectId,
-        memberId,
-        role
-      );
+    mutationFn: async ({ memberId, role }: { memberId: string; role: string }) => {
+      const response = await apiService.projects.updateMemberRole(projectId, memberId, role);
       return response.data as TeamMember;
     },
     onSuccess: () => {
@@ -421,11 +398,7 @@ export function useCreateWebhook(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
-      url: string;
-      events: string[];
-      secret?: string;
-    }) => {
+    mutationFn: async (data: { url: string; events: string[]; secret?: string }) => {
       const response = await apiService.projects.createWebhook(projectId, data);
       return response.data as Webhook;
     },
@@ -455,11 +428,7 @@ export function useUpdateWebhook(projectId: string) {
       webhookId: string;
       data: { url?: string; events?: string[]; is_active?: boolean };
     }) => {
-      const response = await apiService.projects.updateWebhook(
-        projectId,
-        webhookId,
-        data
-      );
+      const response = await apiService.projects.updateWebhook(projectId, webhookId, data);
       return response.data as Webhook;
     },
     onSuccess: () => {
@@ -503,10 +472,7 @@ export function useDeleteWebhook(projectId: string) {
 export function useTestWebhook(projectId: string) {
   return useMutation({
     mutationFn: async (webhookId: string) => {
-      const response = await apiService.projects.testWebhook(
-        projectId,
-        webhookId
-      );
+      const response = await apiService.projects.testWebhook(projectId, webhookId);
       return response.data;
     },
     onSuccess: () => {
@@ -527,11 +493,7 @@ export function useCreateApiKey(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: {
-      name: string;
-      permissions: string[];
-      expires_at?: string;
-    }) => {
+    mutationFn: async (data: { name: string; permissions: string[]; expires_at?: string }) => {
       const response = await apiService.projects.createApiKey(projectId, data);
       return response.data as APIKey & { key: string }; // Full key returned only on creation
     },

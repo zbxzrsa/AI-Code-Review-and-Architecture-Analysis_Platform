@@ -1,6 +1,6 @@
 /**
  * AI Model Testing Page
- * 
+ *
  * Admin interface for testing AI models and technologies
  * from the three-version evolution cycle (V1/V2/V3).
  */
@@ -92,8 +92,9 @@ const statusColors: Record<string, string> = {
 };
 
 const AIModelTesting: React.FC = () => {
-  const { t } = useTranslation();
-  const [form] = Form.useForm();
+  // Translation available: const { t } = useTranslation();
+  useTranslation();  // For future i18n
+  const [_form] = Form.useForm();  // Available for form validation
 
   // State
   const [models, setModels] = useState<AIModel[]>([]);
@@ -518,14 +519,7 @@ const AIModelTesting: React.FC = () => {
               )
             }
           >
-            {!selectedModel ? (
-              <Alert
-                message="Select a Model"
-                description="Click 'Test' on any model from the list to start testing."
-                type="info"
-                showIcon
-              />
-            ) : (
+            {selectedModel ? (
               <Space direction="vertical" style={{ width: '100%' }} size="middle">
                 {/* Config */}
                 <div>
@@ -602,6 +596,13 @@ const AIModelTesting: React.FC = () => {
                   </div>
                 )}
               </Space>
+            ) : (
+              <Alert
+                message="Select a Model"
+                description="Click 'Test' on any model from the list to start testing."
+                type="info"
+                showIcon
+              />
             )}
           </Card>
         </Col>

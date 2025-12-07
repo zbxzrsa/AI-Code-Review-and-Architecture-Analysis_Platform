@@ -102,8 +102,8 @@ def test():
         """Test consistency checking across runs"""
         code_hash = "test_hash"
 
-        # First run
-        scores1 = await detector.consistency_check([valid_finding], code_hash)
+        # First run - establishes baseline
+        await detector.consistency_check([valid_finding], code_hash)
 
         # Second run with same finding
         scores2 = await detector.consistency_check([valid_finding], code_hash)

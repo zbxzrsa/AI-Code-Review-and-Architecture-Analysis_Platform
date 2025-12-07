@@ -35,31 +35,62 @@ FunctionName_V{X}/
 
 | Module              | Description             | V1  | V2  | V3  | Status   |
 | ------------------- | ----------------------- | :-: | :-: | :-: | -------- |
-| **CodeReviewAI**    | AI-powered code review  |     |     |     | Complete |
-| **Authentication**  | User auth & sessions    |     |     |     | Complete |
-| **SelfHealing**     | System self-healing     |     |     |     | Complete |
-| **AIOrchestration** | AI model orchestration  |     |     |     | Skeleton |
-| **Caching**         | Multi-level caching     |     |     |     | Skeleton |
-| **Monitoring**      | Metrics & observability |     |     |     | Skeleton |
+| **CodeReviewAI**    | AI-powered code review  | ✅  | ✅  | ✅  | Complete |
+| **Authentication**  | User auth & sessions    | ✅  | ✅  | ✅  | Complete |
+| **SelfHealing**     | System self-healing     | ✅  | ✅  | ✅  | Complete |
+| **AIOrchestration** | AI model orchestration  | ✅  | ✅  | ✅  | Complete |
+| **Caching**         | Multi-level caching     | ✅  | ✅  | ✅  | Complete |
+| **Monitoring**      | Metrics & observability | ✅  | ✅  | ✅  | Complete |
+
+## Backend Integration
+
+All modules integrate with `backend/shared/` implementations via bridge layers:
+
+| Module          | Backend Source              | Key Features                    |
+| --------------- | --------------------------- | ------------------------------- |
+| SelfHealing     | `self_healing/`             | Health monitoring, auto-repair  |
+| Monitoring      | `monitoring/`               | Metrics, SLO alerts, tracing    |
+| Caching         | `cache/`                    | Multi-tier, semantic cache      |
+| Authentication  | `auth/`, `security/`        | JWT, OAuth, MFA                 |
+| AIOrchestration | `services/ai-orchestrator/` | Load balancing, circuit breaker |
+
+> See [BACKEND_MAPPING.md](BACKEND_MAPPING.md) for detailed integration docs
 
 ## Quick Start
 
 ### Use Production Module (V2)
 
 ```python
-from modules.CodeReviewAI_V2 import CodeReviewer
+from modules import get_production_module
 
-reviewer = CodeReviewer()
-result = await reviewer.review(code, language="python")
+# Get any production module
+monitoring = get_production_module("Monitoring")
+self_healing = get_production_module("SelfHealing")
+
+# Or import directly with backend integration
+from modules.SelfHealing_V2.src.backend_integration import get_health_monitor
+
+monitor = get_health_monitor()
+result = await monitor.check_health("api-service")
 ```
 
 ### Use Experimental Module (V1)
 
 ```python
-from modules.Authentication_V1 import AuthManager
+from modules.Authentication_V1.src.backend_integration import get_auth_manager
 
-auth = AuthManager()
-result = await auth.login(email, password)
+auth = get_auth_manager(use_backend=True)
+result = await auth.authenticate(email, password)
+```
+
+### Use Legacy Module (V3) for Comparison
+
+```python
+from modules.Caching_V3.src.legacy_bridge import get_legacy_cache_manager
+
+# Issues deprecation warning
+legacy = get_legacy_cache_manager()
+comparison = legacy.compare_with_current(v2_cache)
 ```
 
 ## Version Lifecycle

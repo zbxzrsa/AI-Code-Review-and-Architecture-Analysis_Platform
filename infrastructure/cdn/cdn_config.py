@@ -55,24 +55,24 @@ class CachePolicy:
     stale_while_revalidate: Optional[int] = None
     stale_if_error: Optional[int] = None
     vary: List[str] = field(default_factory=lambda: ["Accept-Encoding"])
-    
+
     def to_header(self) -> str:
         """Generate Cache-Control header value."""
         parts = [self.cache_control.value]
         parts.append(f"max-age={self.max_age}")
-        
+
         if self.s_maxage:
             parts.append(f"s-maxage={self.s_maxage}")
-        
+
         if self.immutable:
             parts.append("immutable")
-        
+
         if self.stale_while_revalidate:
             parts.append(f"stale-while-revalidate={self.stale_while_revalidate}")
-        
+
         if self.stale_if_error:
             parts.append(f"stale-if-error={self.stale_if_error}")
-        
+
         return ", ".join(parts)
 
 
@@ -162,24 +162,24 @@ class CDNConfig:
     enabled: bool = True
     cdn_url: str = ""
     origin_url: str = ""
-    
+
     # Cache settings
     default_max_age: int = 86400  # 1 day
     respect_origin_headers: bool = True
-    
+
     # Compression
     enable_compression: bool = True
     compression_level: int = 6  # 1-9 for gzip, 1-11 for brotli
-    
+
     # Versioning
     enable_versioning: bool = True
     version_param: str = "v"
     hash_length: int = 8
-    
+
     # Security
     enable_cors: bool = True
     cors_origins: List[str] = field(default_factory=lambda: ["*"])
-    
+
     # Performance
     http2_push: bool = True
     preload_critical_resources: bool = True
@@ -188,23 +188,23 @@ class CDNConfig:
 class ResourceVersioner:
     """
     Handles resource versioning for cache busting.
-    
+
     Generates content-based hashes for versioned URLs.
     """
-    
+
     def __init__(self, config: CDNConfig):
         self._config = config
         self._version_cache: Dict[str, str] = {}
-    
+
     def get_content_hash(self, content: bytes) -> str:
         """Generate content hash for versioning."""
         return hashlib.sha256(content).hexdigest()[:self._config.hash_length]
-    
+
     def get_file_hash(self, file_path: str) -> str:
         """Get hash for a file."""
         if file_path in self._version_cache:
             return self._version_cache[file_path]
-        
+
         try:
             with open(file_path, "rb") as f:
                 content = f.read()
@@ -214,20 +214,20 @@ class ResourceVersioner:
         except Exception as e:
             logger.error(f"Failed to hash file {file_path}: {e}")
             return "unknown"
-    
+
     def version_url(self, url: str, file_path: Optional[str] = None) -> str:
         """Add version parameter to URL."""
         if not self._config.enable_versioning:
             return url
-        
+
         if file_path:
             version = self.get_file_hash(file_path)
         else:
             version = datetime.now().strftime("%Y%m%d%H")
-        
+
         separator = "&" if "?" in url else "?"
         return f"{url}{separator}{self._config.version_param}={version}"
-    
+
     def clear_cache(self):
         """Clear version cache."""
         self._version_cache.clear()
@@ -236,18 +236,18 @@ class ResourceVersioner:
 class ResourceCompressor:
     """
     Handles resource compression.
-    
+
     Supports gzip and brotli compression with configurable levels.
     """
-    
+
     def __init__(self, config: CDNConfig):
         self._config = config
-    
+
     def compress_gzip(self, content: bytes) -> bytes:
         """Compress content with gzip."""
         import gzip
         return gzip.compress(content, compresslevel=self._config.compression_level)
-    
+
     def compress_brotli(self, content: bytes) -> bytes:
         """Compress content with brotli."""
         try:
@@ -259,7 +259,7 @@ class ResourceCompressor:
         except ImportError:
             logger.warning("Brotli not available, falling back to gzip")
             return self.compress_gzip(content)
-    
+
     def compress(
         self,
         content: bytes,
@@ -267,23 +267,23 @@ class ResourceCompressor:
     ) -> Tuple[bytes, float]:
         """
         Compress content with specified algorithm.
-        
+
         Returns:
             Tuple of (compressed_content, compression_ratio)
         """
         if compression_type == CompressionType.NONE:
             return content, 1.0
-        
+
         if compression_type == CompressionType.GZIP:
             compressed = self.compress_gzip(content)
         elif compression_type == CompressionType.BROTLI:
             compressed = self.compress_brotli(content)
         else:
             return content, 1.0
-        
+
         ratio = len(compressed) / len(content) if content else 1.0
         return compressed, ratio
-    
+
     def should_compress(
         self,
         content: bytes,
@@ -292,74 +292,74 @@ class ResourceCompressor:
         """Determine if content should be compressed."""
         if not self._config.enable_compression:
             return False
-        
+
         if not resource_type.compress:
             return False
-        
+
         if len(content) < resource_type.min_compress_size:
             return False
-        
+
         return True
 
 
 class CDNManager:
     """
     Main CDN management class.
-    
+
     Handles:
     - Cache policy generation
     - Resource versioning
     - Compression
     - Cache invalidation
     """
-    
+
     def __init__(self, config: Optional[CDNConfig] = None):
         self._config = config or CDNConfig()
         self._versioner = ResourceVersioner(self._config)
         self._compressor = ResourceCompressor(self._config)
         self._invalidation_queue: List[str] = []
-    
+
     def get_resource_type(self, file_path: str) -> Optional[ResourceType]:
         """Get resource type configuration for a file."""
         ext = Path(file_path).suffix.lower()
-        
+
         for resource_type in RESOURCE_TYPES.values():
             if ext in resource_type.extensions:
                 return resource_type
-        
+
         return None
-    
+
     def get_cache_headers(self, file_path: str) -> Dict[str, str]:
         """Get cache headers for a resource."""
         resource_type = self.get_resource_type(file_path)
-        
+
         if not resource_type:
             # Default policy for unknown types
             return {
                 "Cache-Control": "public, max-age=3600",
             }
-        
+
         headers = {
             "Cache-Control": resource_type.cache_policy.to_header(),
         }
-        
+
         if resource_type.cache_policy.vary:
             headers["Vary"] = ", ".join(resource_type.cache_policy.vary)
-        
+
         return headers
-    
+
     def get_cdn_url(self, path: str, file_path: Optional[str] = None) -> str:
         """Get CDN URL for a resource."""
         if not self._config.enabled or not self._config.cdn_url:
             return path
-        
+
         # Add versioning
         versioned_path = self._versioner.version_url(path, file_path)
-        
+
         # Combine with CDN URL
         cdn_url = self._config.cdn_url.rstrip("/")
         return f"{cdn_url}/{versioned_path.lstrip('/')}"
-    
+
     def process_resource(
         self,
         content: bytes,
@@ -368,74 +368,74 @@ class CDNManager:
     ) -> Tuple[bytes, Dict[str, str]]:
         """
         Process resource for CDN delivery.
-        
+
         Returns:
             Tuple of (content, headers)
         """
         resource_type = self.get_resource_type(file_path)
         headers = self.get_cache_headers(file_path)
-        
+
         # Determine compression
         if resource_type and self._compressor.should_compress(content, resource_type):
             # Check client support
             if "br" in accept_encoding and CompressionType.BROTLI in resource_type.supported_compressions:
-                content, ratio = self._compressor.compress(content, CompressionType.BROTLI)
+                content, _ratio = self._compressor.compress(content, CompressionType.BROTLI)
                 headers["Content-Encoding"] = "br"
             elif "gzip" in accept_encoding and CompressionType.GZIP in resource_type.supported_compressions:
-                content, ratio = self._compressor.compress(content, CompressionType.GZIP)
+                content, _ratio = self._compressor.compress(content, CompressionType.GZIP)
                 headers["Content-Encoding"] = "gzip"
-        
+
         # Add content type
         content_type, _ = mimetypes.guess_type(file_path)
         if content_type:
             headers["Content-Type"] = content_type
-        
+
         headers["Content-Length"] = str(len(content))
-        
+
         return content, headers
-    
+
     def queue_invalidation(self, paths: List[str]):
         """Queue paths for cache invalidation."""
         self._invalidation_queue.extend(paths)
         logger.info(f"Queued {len(paths)} paths for invalidation")
-    
+
     def invalidate_all(self):
         """Invalidate all cached resources."""
         self._versioner.clear_cache()
         self._invalidation_queue.append("/*")
         logger.info("Queued full cache invalidation")
-    
+
     def get_pending_invalidations(self) -> List[str]:
         """Get and clear pending invalidations."""
         paths = self._invalidation_queue.copy()
         self._invalidation_queue.clear()
         return paths
-    
+
     def generate_preload_headers(
         self,
         resources: List[Dict[str, str]]
     ) -> List[str]:
         """
         Generate Link headers for HTTP/2 push.
-        
+
         Args:
             resources: List of dicts with 'path' and 'as' keys
-            
+
         Returns:
             List of Link header values
         """
         headers = []
-        
+
         for resource in resources:
             path = resource.get("path", "")
             as_type = resource.get("as", "")
-            
+
             if path and as_type:
                 cdn_url = self.get_cdn_url(path)
                 headers.append(f'<{cdn_url}>; rel=preload; as={as_type}')
-        
+
         return headers
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get CDN statistics."""
         return {
@@ -472,7 +472,7 @@ location ~* \\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {{
     expires 1y;
     add_header Cache-Control "public, immutable";
     add_header Vary "Accept-Encoding";
-    
+
     # Enable HTTP/2 server push
     http2_push_preload on;
 }}

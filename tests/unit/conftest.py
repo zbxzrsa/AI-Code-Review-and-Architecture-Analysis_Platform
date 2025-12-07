@@ -42,12 +42,12 @@ class MockUser:
     email: str = "test@example.com"
     name: str = "Test User"
     role: str = "user"
-    created_at: datetime = None
-    
+    created_at: Optional[datetime] = None
+
     def __post_init__(self):
         if self.created_at is None:
             self.created_at = datetime.now(timezone.utc)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -66,7 +66,7 @@ class MockProject:
     owner_id: str = "user-123"
     language: str = "python"
     status: str = "active"
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -85,7 +85,7 @@ class MockAnalysisResult:
     status: str = "completed"
     issues: List[Dict] = None
     metrics: Dict[str, Any] = None
-    
+
     def __post_init__(self):
         if self.issues is None:
             self.issues = [
@@ -103,7 +103,7 @@ class MockAnalysisResult:
                 "issues_found": 1,
                 "duration_ms": 1500,
             }
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
@@ -194,7 +194,7 @@ def mock_redis():
 def mock_http_client():
     """Provide mock HTTP client."""
     client = MagicMock()
-    
+
     async def mock_request(*args, **kwargs):
         return MagicMock(
             status_code=200,
@@ -202,7 +202,7 @@ def mock_http_client():
             text="OK",
             headers={},
         )
-    
+
     client.get = AsyncMock(side_effect=mock_request)
     client.post = AsyncMock(side_effect=mock_request)
     client.put = AsyncMock(side_effect=mock_request)
@@ -218,23 +218,23 @@ def mock_http_client():
 def mock_ai_client():
     """Provide mock AI client."""
     client = MagicMock()
-    
+
     client.analyze = AsyncMock(return_value={
         "issues": [
             {"type": "security", "severity": "high", "message": "Test issue"}
         ],
         "metrics": {"lines": 100},
     })
-    
+
     client.chat = AsyncMock(return_value={
         "response": "This is a test response",
         "tokens_used": 100,
     })
-    
+
     client.embed = AsyncMock(return_value={
         "embedding": [0.1] * 768,
     })
-    
+
     return client
 
 
@@ -242,22 +242,22 @@ def mock_ai_client():
 def mock_openai_client():
     """Provide mock OpenAI client."""
     client = MagicMock()
-    
+
     # Mock chat completion
     completion = MagicMock()
     completion.choices = [
         MagicMock(message=MagicMock(content="Test response"))
     ]
     completion.usage = MagicMock(total_tokens=100)
-    
+
     client.chat.completions.create = AsyncMock(return_value=completion)
-    
+
     # Mock embeddings
     embedding_response = MagicMock()
     embedding_response.data = [MagicMock(embedding=[0.1] * 1536)]
-    
+
     client.embeddings.create = AsyncMock(return_value=embedding_response)
-    
+
     return client
 
 
@@ -299,10 +299,10 @@ def env_vars(monkeypatch):
         "OPENAI_API_KEY": "sk-test-key",
         "MOCK_MODE": "true",
     }
-    
+
     for key, value in test_env.items():
         monkeypatch.setenv(key, value)
-    
+
     return test_env
 
 
@@ -338,7 +338,7 @@ def mock_response():
 
 class TestHelper:
     """Helper utilities for tests."""
-    
+
     @staticmethod
     def generate_token(user_id: str = "user-123", role: str = "user") -> str:
         """Generate test JWT token."""
@@ -349,12 +349,12 @@ class TestHelper:
             "exp": datetime.now(timezone.utc).timestamp() + 3600,
         }
         return jwt.encode(payload, "test-secret-key-for-testing-only", algorithm="HS256")
-    
+
     @staticmethod
     def create_test_file(content: str = "test content") -> bytes:
         """Create test file content."""
         return content.encode("utf-8")
-    
+
     @staticmethod
     def generate_code_sample(language: str = "python", lines: int = 100) -> str:
         """Generate sample code for testing."""

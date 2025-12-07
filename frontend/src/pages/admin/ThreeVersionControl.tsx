@@ -1,20 +1,20 @@
 /**
  * 三版本演化控制面板 (Three-Version Evolution Control Panel)
- * 
+ *
  * 功能描述:
  *   管理三版本自演化循环的管理员界面。
- * 
+ *
  * 版本说明:
  *   - V1（新版）: 实验，试错
  *   - V2（稳定版）: 生产，修复 V1 错误
  *   - V3（旧版）: 隔离，比较，排除
- * 
+ *
  * 主要特性:
  *   - 版本状态监控
  *   - 升级/降级操作
  *   - 实验管理
  *   - 性能对比
- * 
+ *
  * 最后修改日期: 2024-12-07
  */
 
@@ -127,22 +127,23 @@ interface MetricRow {
 }
 
 const ThreeVersionControl: React.FC = () => {
-  const { t } = useTranslation();
+  // Translation available: const { t } = useTranslation();
+  useTranslation();  // For future i18n
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('v1');
-  
+
   // State
   const [cycleStatus, setCycleStatus] = useState<CycleStatus | null>(null);
   const [aiStatus, setAiStatus] = useState<Record<string, VersionAIStatus>>({});
   const [quarantineStats, setQuarantineStats] = useState<QuarantineStats | null>(null);
   const [feedbackStats, setFeedbackStats] = useState<FeedbackStats | null>(null);
-  
+
   // Dialog states
   const [errorModalOpen, setErrorModalOpen] = useState(false);
   const [promoteModalOpen, setPromoteModalOpen] = useState(false);
   const [degradeModalOpen, setDegradeModalOpen] = useState(false);
-  
+
   // Forms
   const [errorForm] = Form.useForm();
   const [promoteForm] = Form.useForm();
@@ -157,7 +158,7 @@ const ThreeVersionControl: React.FC = () => {
         fetch(`${API_BASE}/ai/status`),
         fetch(`${API_BASE}/v3/quarantine`),
       ]);
-      
+
       if (statusRes.ok) {
         const data = await statusRes.json();
         setCycleStatus(data.spiral_status);
@@ -169,7 +170,7 @@ const ThreeVersionControl: React.FC = () => {
       if (quarantineRes.ok) {
         setQuarantineStats(await quarantineRes.json());
       }
-      
+
       setError(null);
     } catch (_err) {
       setError('Failed to fetch status');

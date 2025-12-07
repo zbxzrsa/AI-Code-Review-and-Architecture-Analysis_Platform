@@ -25,6 +25,14 @@ import pytest
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# Constants
+# =============================================================================
+
+CONTENT_TYPE_JSON = "application/json"
+API_V1_PROJECTS = "/api/v1/projects"
+
+
 class HttpMethod(str, Enum):
     """HTTP methods."""
     GET = "GET"
@@ -56,7 +64,7 @@ class ContractViolation:
     expected: Any = None
     actual: Any = None
     severity: str = "error"  # error, warning
-    
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "type": self.violation_type.value,
@@ -83,7 +91,7 @@ class EndpointContract:
     responses: Dict[int, Dict] = field(default_factory=dict)
     tags: List[str] = field(default_factory=list)
     deprecated: bool = False
-    
+
     def to_openapi(self) -> Dict[str, Any]:
         """Convert to OpenAPI format."""
         spec = {
@@ -93,7 +101,7 @@ class EndpointContract:
             "deprecated": self.deprecated,
             "responses": {},
         }
-        
+
         # Parameters
         parameters = []
         for param in self.path_params:
@@ -102,25 +110,25 @@ class EndpointContract:
             parameters.append({**param, "in": "query"})
         for param in self.headers:
             parameters.append({**param, "in": "header"})
-        
+
         if parameters:
             spec["parameters"] = parameters
-        
+
         # Request body
         if self.request_body:
             spec["requestBody"] = {
                 "required": True,
                 "content": {
-                    "application/json": {
+                    CONTENT_TYPE_JSON: {
                         "schema": self.request_body
                     }
                 }
             }
-        
+
         # Responses
         for status_code, response in self.responses.items():
             spec["responses"][str(status_code)] = response
-        
+
         return spec
 
 
@@ -133,16 +141,16 @@ class APIContract:
     endpoints: List[EndpointContract] = field(default_factory=list)
     schemas: Dict[str, Dict] = field(default_factory=dict)
     security_schemes: Dict[str, Dict] = field(default_factory=dict)
-    
+
     def to_openapi(self) -> Dict[str, Any]:
         """Convert to OpenAPI 3.0 specification."""
         paths = {}
-        
+
         for endpoint in self.endpoints:
             if endpoint.path not in paths:
                 paths[endpoint.path] = {}
             paths[endpoint.path][endpoint.method.value.lower()] = endpoint.to_openapi()
-        
+
         return {
             "openapi": "3.0.3",
             "info": {
@@ -156,18 +164,18 @@ class APIContract:
                 "securitySchemes": self.security_schemes,
             },
         }
-    
+
     def save(self, path: str):
         """Save contract to file."""
         spec = self.to_openapi()
-        
+
         if path.endswith(".yaml") or path.endswith(".yml"):
             with open(path, "w") as f:
                 yaml.dump(spec, f, default_flow_style=False)
         else:
             with open(path, "w") as f:
                 json.dump(spec, f, indent=2)
-    
+
     @classmethod
     def load(cls, path: str) -> "APIContract":
         """Load contract from file."""
@@ -176,19 +184,19 @@ class APIContract:
                 spec = yaml.safe_load(f)
             else:
                 spec = json.load(f)
-        
+
         return cls.from_openapi(spec)
-    
+
     @classmethod
     def from_openapi(cls, spec: Dict) -> "APIContract":
         """Create contract from OpenAPI specification."""
         endpoints = []
-        
+
         for path, methods in spec.get("paths", {}).items():
             for method, details in methods.items():
                 if method.upper() not in [m.value for m in HttpMethod]:
                     continue
-                
+
                 endpoint = EndpointContract(
                     path=path,
                     method=HttpMethod(method.upper()),
@@ -197,7 +205,7 @@ class APIContract:
                     tags=details.get("tags", []),
                     deprecated=details.get("deprecated", False),
                 )
-                
+
                 # Parse parameters
                 for param in details.get("parameters", []):
                     param_data = {
@@ -205,26 +213,26 @@ class APIContract:
                         "required": param.get("required", False),
                         "schema": param.get("schema", {}),
                     }
-                    
+
                     if param.get("in") == "path":
                         endpoint.path_params.append(param_data)
                     elif param.get("in") == "query":
                         endpoint.query_params.append(param_data)
                     elif param.get("in") == "header":
                         endpoint.headers.append(param_data)
-                
+
                 # Parse request body
                 if "requestBody" in details:
                     content = details["requestBody"].get("content", {})
-                    if "application/json" in content:
-                        endpoint.request_body = content["application/json"].get("schema")
-                
+                    if CONTENT_TYPE_JSON in content:
+                        endpoint.request_body = content[CONTENT_TYPE_JSON].get("schema")
+
                 # Parse responses
                 for status_code, response in details.get("responses", {}).items():
                     endpoint.responses[int(status_code)] = response
-                
+
                 endpoints.append(endpoint)
-        
+
         return cls(
             title=spec.get("info", {}).get("title", "API"),
             version=spec.get("info", {}).get("version", "1.0.0"),
@@ -237,14 +245,14 @@ class APIContract:
 
 class SchemaValidator:
     """Validates data against JSON schemas."""
-    
+
     @classmethod
     def validate(cls, data: Any, schema: Dict) -> List[str]:
         """Validate data against schema. Returns list of errors."""
         errors = []
-        
+
         schema_type = schema.get("type")
-        
+
         if schema_type == "object":
             errors.extend(cls._validate_object(data, schema))
         elif schema_type == "array":
@@ -257,85 +265,85 @@ class SchemaValidator:
             errors.extend(cls._validate_number(data, schema))
         elif schema_type == "boolean":
             errors.extend(cls._validate_boolean(data, schema))
-        
+
         return errors
-    
+
     @classmethod
     def _validate_object(cls, data: Any, schema: Dict) -> List[str]:
         errors = []
-        
+
         if not isinstance(data, dict):
             return [f"Expected object, got {type(data).__name__}"]
-        
+
         # Check required fields
         required = schema.get("required", [])
         for field in required:
             if field not in data:
                 errors.append(f"Missing required field: {field}")
-        
+
         # Validate properties
         properties = schema.get("properties", {})
         for prop, prop_schema in properties.items():
             if prop in data:
                 prop_errors = cls.validate(data[prop], prop_schema)
                 errors.extend([f"{prop}.{e}" for e in prop_errors])
-        
+
         return errors
-    
+
     @classmethod
     def _validate_array(cls, data: Any, schema: Dict) -> List[str]:
         errors = []
-        
+
         if not isinstance(data, list):
             return [f"Expected array, got {type(data).__name__}"]
-        
+
         # Validate items
         items_schema = schema.get("items", {})
         for i, item in enumerate(data):
             item_errors = cls.validate(item, items_schema)
             errors.extend([f"[{i}].{e}" for e in item_errors])
-        
+
         return errors
-    
+
     @classmethod
     def _validate_string(cls, data: Any, schema: Dict) -> List[str]:
         if not isinstance(data, str):
             return [f"Expected string, got {type(data).__name__}"]
-        
+
         errors = []
-        
+
         if "minLength" in schema and len(data) < schema["minLength"]:
             errors.append(f"String too short (min: {schema['minLength']})")
-        
+
         if "maxLength" in schema and len(data) > schema["maxLength"]:
             errors.append(f"String too long (max: {schema['maxLength']})")
-        
+
         if "pattern" in schema and not re.match(schema["pattern"], data):
             errors.append(f"String doesn't match pattern: {schema['pattern']}")
-        
+
         return errors
-    
+
     @classmethod
     def _validate_integer(cls, data: Any, schema: Dict) -> List[str]:
         if not isinstance(data, int) or isinstance(data, bool):
             return [f"Expected integer, got {type(data).__name__}"]
-        
+
         errors = []
-        
+
         if "minimum" in schema and data < schema["minimum"]:
             errors.append(f"Value too small (min: {schema['minimum']})")
-        
+
         if "maximum" in schema and data > schema["maximum"]:
             errors.append(f"Value too large (max: {schema['maximum']})")
-        
+
         return errors
-    
+
     @classmethod
     def _validate_number(cls, data: Any, schema: Dict) -> List[str]:
         if not isinstance(data, (int, float)) or isinstance(data, bool):
             return [f"Expected number, got {type(data).__name__}"]
         return []
-    
+
     @classmethod
     def _validate_boolean(cls, data: Any, schema: Dict) -> List[str]:
         if not isinstance(data, bool):
@@ -345,11 +353,11 @@ class SchemaValidator:
 
 class ContractValidator:
     """Validates API implementations against contracts."""
-    
+
     def __init__(self, contract: APIContract):
         self.contract = contract
         self.violations: List[ContractViolation] = []
-    
+
     def validate_response(
         self,
         path: str,
@@ -360,7 +368,7 @@ class ContractValidator:
     ) -> List[ContractViolation]:
         """Validate a response against the contract."""
         violations = []
-        
+
         # Find endpoint
         endpoint = self._find_endpoint(path, method)
         if not endpoint:
@@ -371,7 +379,7 @@ class ContractValidator:
                 message=f"Endpoint not found in contract: {method.value} {path}",
             ))
             return violations
-        
+
         # Check status code
         if status_code not in endpoint.responses:
             violations.append(ContractViolation(
@@ -386,11 +394,11 @@ class ContractValidator:
             # Validate response schema
             response_spec = endpoint.responses[status_code]
             content = response_spec.get("content", {})
-            
-            if "application/json" in content:
-                schema = content["application/json"].get("schema", {})
+
+            if CONTENT_TYPE_JSON in content:
+                schema = content[CONTENT_TYPE_JSON].get("schema", {})
                 errors = SchemaValidator.validate(response_body, schema)
-                
+
                 for error in errors:
                     violations.append(ContractViolation(
                         violation_type=ContractViolationType.SCHEMA_MISMATCH,
@@ -398,21 +406,21 @@ class ContractValidator:
                         method=method,
                         message=f"Schema validation error: {error}",
                     ))
-        
+
         self.violations.extend(violations)
         return violations
-    
+
     def validate_request(
         self,
         path: str,
         method: HttpMethod,
         request_body: Any = None,
         query_params: Dict = None,
-        headers: Dict = None
+        _headers: Dict = None  # Reserved for header validation
     ) -> List[ContractViolation]:
         """Validate a request against the contract."""
         violations = []
-        
+
         endpoint = self._find_endpoint(path, method)
         if not endpoint:
             violations.append(ContractViolation(
@@ -422,7 +430,7 @@ class ContractValidator:
                 message=f"Endpoint not found in contract: {method.value} {path}",
             ))
             return violations
-        
+
         # Validate request body
         if endpoint.request_body and request_body:
             errors = SchemaValidator.validate(request_body, endpoint.request_body)
@@ -433,7 +441,7 @@ class ContractValidator:
                     method=method,
                     message=f"Request body validation error: {error}",
                 ))
-        
+
         # Validate required query params
         if query_params:
             for param in endpoint.query_params:
@@ -444,10 +452,10 @@ class ContractValidator:
                         method=method,
                         message=f"Missing required query parameter: {param['name']}",
                     ))
-        
+
         self.violations.extend(violations)
         return violations
-    
+
     def _find_endpoint(self, path: str, method: HttpMethod) -> Optional[EndpointContract]:
         """Find endpoint matching path and method."""
         for endpoint in self.contract.endpoints:
@@ -457,15 +465,15 @@ class ContractValidator:
                 if re.fullmatch(pattern, path):
                     return endpoint
         return None
-    
+
     def check_breaking_changes(self, old_contract: APIContract) -> List[ContractViolation]:
         """Check for breaking changes between contracts."""
         violations = []
-        
+
         # Check for removed endpoints
         old_endpoints = {(e.path, e.method) for e in old_contract.endpoints}
         new_endpoints = {(e.path, e.method) for e in self.contract.endpoints}
-        
+
         for path, method in old_endpoints - new_endpoints:
             violations.append(ContractViolation(
                 violation_type=ContractViolationType.BREAKING_CHANGE,
@@ -474,7 +482,7 @@ class ContractValidator:
                 message=f"Endpoint removed: {method.value} {path}",
                 severity="error",
             ))
-        
+
         # Check for removed required fields in existing endpoints
         for old_endpoint in old_contract.endpoints:
             new_endpoint = self._find_endpoint(old_endpoint.path, old_endpoint.method)
@@ -489,9 +497,9 @@ class ContractValidator:
                             message=f"Response status code removed: {status_code}",
                             severity="error",
                         ))
-        
+
         return violations
-    
+
     def get_report(self) -> Dict[str, Any]:
         """Get validation report."""
         return {
@@ -522,20 +530,20 @@ class Interaction:
 
 class ConsumerContract:
     """Consumer-driven contract for Pact-style testing."""
-    
+
     def __init__(self, consumer: str, provider: str):
         self.consumer = consumer
         self.provider = provider
         self.interactions: List[Interaction] = []
-    
+
     def given(self, provider_state: str) -> "InteractionBuilder":
         """Start defining an interaction."""
         return InteractionBuilder(self, provider_state)
-    
+
     def add_interaction(self, interaction: Interaction):
         """Add an interaction to the contract."""
         self.interactions.append(interaction)
-    
+
     def to_pact(self) -> Dict[str, Any]:
         """Convert to Pact format."""
         return {
@@ -554,7 +562,7 @@ class ConsumerContract:
                 "pactSpecification": {"version": "2.0.0"}
             }
         }
-    
+
     def save(self, path: str):
         """Save Pact contract."""
         with open(path, "w") as f:
@@ -563,19 +571,19 @@ class ConsumerContract:
 
 class InteractionBuilder:
     """Builder for Pact interactions."""
-    
+
     def __init__(self, contract: ConsumerContract, provider_state: str):
         self._contract = contract
         self._provider_state = provider_state
         self._description = ""
         self._request = {}
         self._response = {}
-    
+
     def upon_receiving(self, description: str) -> "InteractionBuilder":
         """Set interaction description."""
         self._description = description
         return self
-    
+
     def with_request(
         self,
         method: str,
@@ -596,7 +604,7 @@ class InteractionBuilder:
         if query:
             self._request["query"] = query
         return self
-    
+
     def will_respond_with(
         self,
         status: int,
@@ -609,7 +617,7 @@ class InteractionBuilder:
             self._response["headers"] = headers
         if body:
             self._response["body"] = body
-        
+
         # Create and add interaction
         interaction = Interaction(
             description=self._description,
@@ -618,7 +626,7 @@ class InteractionBuilder:
             response=self._response,
         )
         self._contract.add_interaction(interaction)
-        
+
         return self._contract
 
 
@@ -642,7 +650,7 @@ def sample_api_contract() -> APIContract:
                     200: {
                         "description": "Success",
                         "content": {
-                            "application/json": {
+                            CONTENT_TYPE_JSON: {
                                 "schema": {
                                     "type": "object",
                                     "properties": {
@@ -689,56 +697,56 @@ def sample_api_contract() -> APIContract:
 
 class TestContractValidation:
     """Contract validation tests."""
-    
+
     def test_valid_response_passes(self, sample_api_contract):
         """Test that valid response passes validation."""
         validator = ContractValidator(sample_api_contract)
-        
+
         violations = validator.validate_response(
             path="/api/v1/projects",
             method=HttpMethod.GET,
             status_code=200,
             response_body={"projects": [], "total": 0},
         )
-        
+
         assert len(violations) == 0
-    
+
     def test_missing_required_field_fails(self, sample_api_contract):
         """Test that missing required field fails validation."""
         validator = ContractValidator(sample_api_contract)
-        
+
         violations = validator.validate_response(
             path="/api/v1/projects",
             method=HttpMethod.GET,
             status_code=200,
             response_body={"projects": []},  # Missing 'total'
         )
-        
+
         assert len(violations) > 0
         assert any(v.violation_type == ContractViolationType.SCHEMA_MISMATCH for v in violations)
-    
+
     def test_unexpected_status_code(self, sample_api_contract):
         """Test that unexpected status code is detected."""
         validator = ContractValidator(sample_api_contract)
-        
+
         violations = validator.validate_response(
             path="/api/v1/projects",
             method=HttpMethod.GET,
             status_code=500,
             response_body={"error": "Internal error"},
         )
-        
+
         assert len(violations) > 0
         assert any(v.violation_type == ContractViolationType.STATUS_CODE_MISMATCH for v in violations)
 
 
 class TestConsumerContract:
     """Consumer contract tests."""
-    
+
     def test_create_pact_contract(self):
         """Test creating Pact-style contract."""
         contract = ConsumerContract("frontend", "api")
-        
+
         contract.given("a user exists").upon_receiving(
             "a request to get user"
         ).with_request(
@@ -747,12 +755,12 @@ class TestConsumerContract:
             headers={"Authorization": "Bearer token"},
         ).will_respond_with(
             status=200,
-            headers={"Content-Type": "application/json"},
+            headers={"Content-Type": CONTENT_TYPE_JSON},
             body={"id": "123", "name": "Test User"},
         )
-        
+
         pact = contract.to_pact()
-        
+
         assert pact["consumer"]["name"] == "frontend"
         assert pact["provider"]["name"] == "api"
         assert len(pact["interactions"]) == 1

@@ -195,10 +195,10 @@ class OAuthProvider:
     async def _get_user_info(
         self,
         config: OAuthConfig,
-        access_token: str,
+        _access_token: str,  # Used in production to fetch user info
     ) -> Optional[OAuthUser]:
         """Get user info from provider"""
-        # In production, make actual HTTP request
+        # In production, make actual HTTP request with access_token
         # This is a mock implementation
 
         logger.info(f"Getting user info from {config.provider.value}")

@@ -328,8 +328,8 @@ class ExpertCoordinator:
     async def _execute_expert(
         self,
         expert: ExpertType,
-        code: str,  # noqa: ARG002 - reserved for actual expert execution
-        language: str,  # noqa: ARG002 - reserved for actual expert execution
+        _code: str,  # Reserved for actual expert execution
+        _language: str,  # Reserved for actual expert execution
     ) -> Optional[ExpertResult]:
         """Execute a single expert."""
         # Mock implementation

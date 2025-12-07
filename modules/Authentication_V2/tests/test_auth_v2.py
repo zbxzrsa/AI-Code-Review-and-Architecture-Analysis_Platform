@@ -89,7 +89,7 @@ class TestSessionManagerV2:
         sessions.max_sessions_per_user = 2
 
         s1 = await sessions.create_session("user-123")
-        s2 = await sessions.create_session("user-123")
+        _s2 = await sessions.create_session("user-123")  # Creates second session
         s3 = await sessions.create_session("user-123")
 
         # First session should be invalidated

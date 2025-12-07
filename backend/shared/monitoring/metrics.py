@@ -12,14 +12,14 @@ Metrics Categories:
 
 Usage:
     from backend.shared.monitoring.metrics import MetricsCollector
-    
+
     # Record vulnerability
     MetricsCollector.record_vulnerability("critical", "sql_injection")
-    
+
     # Time a scan
     with MetricsCollector.scan_duration.time():
         perform_scan()
-    
+
     # Update gauge
     MetricsCollector.active_fixes.set(5)
 """
@@ -109,31 +109,45 @@ class AnalysisType(str, Enum):
 
 if not PROMETHEUS_AVAILABLE:
     class NoOpMetric:
-        """No-op metric that does nothing."""
+        """
+        No-op metric fallback when prometheus_client is not available.
+
+        All methods are intentionally empty to provide a compatible interface
+        without actually collecting any metrics. This allows code to run
+        without prometheus_client installed.
+        """
         def __init__(self, *args, **kwargs):
+            # Intentionally empty - no-op fallback when prometheus unavailable
             pass
-        
+
         def inc(self, *args, **kwargs):
+            # Intentionally empty - no-op increment
             pass
-        
+
         def dec(self, *args, **kwargs):
+            # Intentionally empty - no-op decrement
             pass
-        
+
         def set(self, *args, **kwargs):
+            # Intentionally empty - no-op set value
             pass
-        
+
         def observe(self, *args, **kwargs):
+            # Intentionally empty - no-op observe for histograms
             pass
-        
+
         def labels(self, *args, **kwargs):
+            # Returns self to allow chaining like real metrics
             return self
-        
+
         def time(self):
+            # Returns a no-op context manager for timing
             return contextmanager(lambda: (yield))()
-        
+
         def info(self, *args, **kwargs):
+            # Intentionally empty - no-op info metric
             pass
-    
+
     Counter = Histogram = Gauge = Summary = Info = NoOpMetric
 
 
@@ -144,50 +158,50 @@ if not PROMETHEUS_AVAILABLE:
 class MetricsCollector:
     """
     Central metrics collector for the AI Code Review Platform.
-    
+
     All metrics are class-level singletons to ensure proper Prometheus registration.
     """
-    
+
     # =========================================================================
     # Vulnerability Detection Metrics
     # =========================================================================
-    
+
     # Total vulnerabilities detected (by severity and category)
     vulnerabilities_detected = Counter(
         'coderev_vulnerabilities_detected_total',
         'Total number of vulnerabilities detected',
         ['severity', 'category', 'project_id']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Vulnerabilities by status
     vulnerabilities_by_status = Gauge(
         'coderev_vulnerabilities_by_status',
         'Current count of vulnerabilities by status',
         ['status']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Auto-fix metrics
     auto_fixes_generated = Counter(
         'coderev_auto_fixes_generated_total',
         'Total auto-fix suggestions generated',
         ['vulnerability_type', 'confidence_level']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     auto_fixes_applied = Counter(
         'coderev_auto_fixes_applied_total',
         'Total auto-fixes applied',
         ['vulnerability_type', 'result']  # result: success, failed, rejected
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     active_fixes = Gauge(
         'coderev_active_fixes_count',
         'Number of fixes currently in progress'
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # =========================================================================
     # Code Analysis Metrics
     # =========================================================================
-    
+
     # Scan duration histogram (seconds)
     scan_duration = Histogram(
         'coderev_scan_duration_seconds',
@@ -195,35 +209,35 @@ class MetricsCollector:
         ['scan_type', 'project_id'],
         buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0)
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Analysis throughput
     analyses_completed = Counter(
         'coderev_analyses_completed_total',
         'Total analyses completed',
         ['analysis_type', 'status']  # status: success, failed, timeout
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Files analyzed
     files_analyzed = Counter(
         'coderev_files_analyzed_total',
         'Total files analyzed',
         ['language', 'project_id']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Lines of code analyzed
     lines_analyzed = Counter(
         'coderev_lines_analyzed_total',
         'Total lines of code analyzed',
         ['language']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Analysis queue depth
     analysis_queue_depth = Gauge(
         'coderev_analysis_queue_depth',
         'Number of analyses waiting in queue',
         ['priority']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Code quality score distribution
     code_quality_score = Histogram(
         'coderev_code_quality_score',
@@ -231,11 +245,11 @@ class MetricsCollector:
         ['project_id'],
         buckets=(10, 20, 30, 40, 50, 60, 70, 80, 90, 100)
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # =========================================================================
     # AI Provider Metrics
     # =========================================================================
-    
+
     # AI request latency
     ai_request_duration = Histogram(
         'coderev_ai_request_duration_seconds',
@@ -243,130 +257,130 @@ class MetricsCollector:
         ['provider', 'model', 'operation'],
         buckets=(0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0)
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # AI requests total
     ai_requests_total = Counter(
         'coderev_ai_requests_total',
         'Total AI provider requests',
         ['provider', 'model', 'status']  # status: success, error, timeout, rate_limited
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Token usage
     ai_tokens_used = Counter(
         'coderev_ai_tokens_used_total',
         'Total tokens consumed',
         ['provider', 'model', 'token_type']  # token_type: prompt, completion
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # AI cost tracking (in USD cents)
     ai_cost_cents = Counter(
         'coderev_ai_cost_cents_total',
         'Total AI cost in cents',
         ['provider', 'model']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Provider health status (1 = healthy, 0 = unhealthy)
     ai_provider_health = Gauge(
         'coderev_ai_provider_health',
         'AI provider health status',
         ['provider']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Active AI requests
     ai_requests_in_flight = Gauge(
         'coderev_ai_requests_in_flight',
         'Number of AI requests currently in progress',
         ['provider']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # =========================================================================
     # Three-Version System Metrics
     # =========================================================================
-    
+
     # Version status
     version_status = Gauge(
         'coderev_version_status',
         'Current version status (1=active, 0=inactive)',
         ['version']  # v1, v2, v3
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Promotions/Degradations
     version_transitions = Counter(
         'coderev_version_transitions_total',
         'Total version transitions',
         ['from_version', 'to_version', 'reason']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Experiments
     experiments_total = Counter(
         'coderev_experiments_total',
         'Total experiments run',
         ['status']  # created, running, completed, failed, promoted, quarantined
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # =========================================================================
     # System Health Metrics
     # =========================================================================
-    
+
     # Memory usage (bytes)
     memory_usage_bytes = Gauge(
         'coderev_memory_usage_bytes',
         'Current memory usage',
         ['type']  # rss, vms, shared
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # GPU memory (if available)
     gpu_memory_usage_bytes = Gauge(
         'coderev_gpu_memory_usage_bytes',
         'GPU memory usage',
         ['device']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Active connections
     active_connections = Gauge(
         'coderev_active_connections',
         'Number of active connections',
         ['type']  # http, websocket, database
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Background tasks
     background_tasks_active = Gauge(
         'coderev_background_tasks_active',
         'Number of active background tasks',
         ['task_type']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # Cache metrics
     cache_hits = Counter(
         'coderev_cache_hits_total',
         'Total cache hits',
         ['cache_type']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     cache_misses = Counter(
         'coderev_cache_misses_total',
         'Total cache misses',
         ['cache_type']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # =========================================================================
     # Business Metrics
     # =========================================================================
-    
+
     # Reviews completed
     reviews_completed = Counter(
         'coderev_reviews_completed_total',
         'Total code reviews completed',
         ['project_id', 'review_type']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # User activity
     user_actions = Counter(
         'coderev_user_actions_total',
         'Total user actions',
         ['action_type']  # login, review_request, fix_apply, etc.
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # API endpoint latency
     http_request_duration = Histogram(
         'coderev_http_request_duration_seconds',
@@ -374,27 +388,27 @@ class MetricsCollector:
         ['method', 'endpoint', 'status_code'],
         buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # API requests total
     http_requests_total = Counter(
         'coderev_http_requests_total',
         'Total HTTP requests',
         ['method', 'endpoint', 'status_code']
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # =========================================================================
     # Application Info
     # =========================================================================
-    
+
     app_info = Info(
         'coderev_app',
         'Application information'
     ) if PROMETHEUS_AVAILABLE else NoOpMetric()
-    
+
     # =========================================================================
     # Helper Methods
     # =========================================================================
-    
+
     @classmethod
     def record_vulnerability(
         cls,
@@ -408,7 +422,7 @@ class MetricsCollector:
             category=category,
             project_id=project_id
         ).inc()
-    
+
     @classmethod
     def record_analysis(
         cls,
@@ -422,12 +436,12 @@ class MetricsCollector:
             analysis_type=analysis_type,
             status=status
         ).inc()
-        
+
         cls.scan_duration.labels(
             scan_type=analysis_type,
             project_id=project_id
         ).observe(duration_seconds)
-    
+
     @classmethod
     def record_ai_request(
         cls,
@@ -445,33 +459,33 @@ class MetricsCollector:
             model=model,
             status=status
         ).inc()
-        
+
         cls.ai_request_duration.labels(
             provider=provider,
             model=model,
             operation="completion"
         ).observe(duration_seconds)
-        
+
         if prompt_tokens > 0:
             cls.ai_tokens_used.labels(
                 provider=provider,
                 model=model,
                 token_type="prompt"
             ).inc(prompt_tokens)
-        
+
         if completion_tokens > 0:
             cls.ai_tokens_used.labels(
                 provider=provider,
                 model=model,
                 token_type="completion"
             ).inc(completion_tokens)
-        
+
         if cost_cents > 0:
             cls.ai_cost_cents.labels(
                 provider=provider,
                 model=model
             ).inc(cost_cents)
-    
+
     @classmethod
     def record_http_request(
         cls,
@@ -486,13 +500,13 @@ class MetricsCollector:
             endpoint=endpoint,
             status_code=str(status_code)
         ).inc()
-        
+
         cls.http_request_duration.labels(
             method=method,
             endpoint=endpoint,
             status_code=str(status_code)
         ).observe(duration_seconds)
-    
+
     @classmethod
     def update_system_metrics(cls):
         """Update system health metrics."""
@@ -500,15 +514,15 @@ class MetricsCollector:
             import psutil
             process = psutil.Process()
             memory = process.memory_info()
-            
+
             cls.memory_usage_bytes.labels(type="rss").set(memory.rss)
             cls.memory_usage_bytes.labels(type="vms").set(memory.vms)
-            
+
             if hasattr(memory, 'shared'):
                 cls.memory_usage_bytes.labels(type="shared").set(memory.shared)
         except ImportError:
             pass
-        
+
         # GPU memory if available
         try:
             import torch
@@ -518,7 +532,7 @@ class MetricsCollector:
                     cls.gpu_memory_usage_bytes.labels(device=f"cuda:{i}").set(allocated)
         except ImportError:
             pass
-    
+
     @classmethod
     def set_app_info(
         cls,
@@ -542,7 +556,7 @@ class MetricsCollector:
 def track_time(metric_name: str = "scan_duration", **labels):
     """
     Decorator to track execution time of a function.
-    
+
     Usage:
         @track_time("scan_duration", scan_type="vulnerability")
         async def scan_codebase():
@@ -560,7 +574,7 @@ def track_time(metric_name: str = "scan_duration", **labels):
                 metric = getattr(MetricsCollector, metric_name, None)
                 if metric and hasattr(metric, 'labels'):
                     metric.labels(**labels).observe(duration)
-        
+
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs):
             start_time = time.time()
@@ -572,19 +586,19 @@ def track_time(metric_name: str = "scan_duration", **labels):
                 metric = getattr(MetricsCollector, metric_name, None)
                 if metric and hasattr(metric, 'labels'):
                     metric.labels(**labels).observe(duration)
-        
+
         import asyncio
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
-    
+
     return decorator
 
 
 def count_calls(metric_name: str, **labels):
     """
     Decorator to count function calls.
-    
+
     Usage:
         @count_calls("analyses_completed", analysis_type="code_review")
         def analyze_code():
@@ -604,7 +618,7 @@ def count_calls(metric_name: str, **labels):
                 if metric:
                     metric.labels(**labels, status="error").inc()
                 raise
-        
+
         @functools.wraps(func)
         def sync_wrapper(*args, **kwargs):
             try:
@@ -618,12 +632,12 @@ def count_calls(metric_name: str, **labels):
                 if metric:
                     metric.labels(**labels, status="error").inc()
                 raise
-        
+
         import asyncio
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
-    
+
     return decorator
 
 
@@ -631,7 +645,7 @@ def count_calls(metric_name: str, **labels):
 def track_in_flight(gauge_metric, **labels):
     """
     Context manager to track in-flight operations.
-    
+
     Usage:
         with track_in_flight(MetricsCollector.ai_requests_in_flight, provider="openai"):
             await make_ai_request()
@@ -650,47 +664,47 @@ def track_in_flight(gauge_metric, **labels):
 class PrometheusMiddleware:
     """
     ASGI middleware for collecting HTTP metrics.
-    
+
     Usage:
         from fastapi import FastAPI
         app = FastAPI()
         app.add_middleware(PrometheusMiddleware)
     """
-    
+
     def __init__(self, app):
         self.app = app
-    
+
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
-        
+
         start_time = time.time()
         status_code = 500  # Default in case of error
-        
+
         async def send_wrapper(message):
             nonlocal status_code
             if message["type"] == "http.response.start":
                 status_code = message["status"]
             await send(message)
-        
+
         try:
             await self.app(scope, receive, send_wrapper)
         finally:
             duration = time.time() - start_time
             method = scope.get("method", "UNKNOWN")
             path = scope.get("path", "/")
-            
+
             # Normalize path (remove IDs) for cleaner metrics
             path = self._normalize_path(path)
-            
+
             MetricsCollector.record_http_request(
                 method=method,
                 endpoint=path,
                 status_code=status_code,
                 duration_seconds=duration
             )
-    
+
     @staticmethod
     def _normalize_path(path: str) -> str:
         """Normalize path by replacing IDs with placeholders."""
@@ -713,7 +727,7 @@ class PrometheusMiddleware:
 def get_metrics():
     """
     Generate Prometheus metrics output.
-    
+
     Usage in FastAPI:
         @app.get("/metrics")
         def metrics():
