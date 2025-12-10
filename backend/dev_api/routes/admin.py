@@ -112,6 +112,9 @@ async def admin_delete_project(project_id: str):
 @router.get("/audit")
 async def get_audit_logs(page: int = 1, limit: int = 20):
     """Get audit logs."""
+    # Cap limit to prevent resource exhaustion from user-controlled input
+    MAX_LIMIT = 100
+    safe_limit = min(max(1, limit), MAX_LIMIT)
     logs = [
         {
             "id": f"log_{i}",
@@ -122,9 +125,9 @@ async def get_audit_logs(page: int = 1, limit: int = 20):
             "timestamp": (datetime.now() - timedelta(hours=i)).isoformat(),
             "details": {"browser": "Chrome", "os": "Windows"},
         }
-        for i in range(limit)
+        for i in range(safe_limit)
     ]
-    return {"items": logs, "total": 100, "page": page, "limit": limit}
+    return {"items": logs, "total": 100, "page": page, "limit": safe_limit}
 
 
 @router.get("/audit/analytics")

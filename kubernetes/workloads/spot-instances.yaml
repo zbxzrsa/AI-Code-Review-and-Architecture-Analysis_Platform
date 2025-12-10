@@ -55,6 +55,7 @@ spec:
         version: v1
         spot-tolerant: "true"
     spec:
+      automountServiceAccountToken: false
       # Tolerate spot instance taint
       tolerations:
         - key: spot-instance

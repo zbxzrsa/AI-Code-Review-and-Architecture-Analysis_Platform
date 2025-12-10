@@ -19,7 +19,7 @@
 """
 
 import asyncio
-from typing import Dict, List, Optional, Any, Callable, Union
+from typing import Dict, List, Optional, Any, Callable, Union, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -684,6 +684,3 @@ class AutomatedTestingPipeline:
             for s in recent
         ]
 
-
-# Import Tuple for type hints
-from typing import Tuple

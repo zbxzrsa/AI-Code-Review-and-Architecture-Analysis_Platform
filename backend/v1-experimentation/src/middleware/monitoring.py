@@ -27,6 +27,25 @@ active_requests = Gauge(
     "Number of active HTTP requests",
 )
 
+# Unified cross-version metrics
+version_request_count = Counter(
+    "version_http_requests_total",
+    "Total HTTP requests across versions",
+    ["version", "method", "endpoint", "status"],
+)
+
+version_request_duration = Histogram(
+    "version_http_request_duration_seconds",
+    "HTTP request duration across versions",
+    ["version", "method", "endpoint"],
+)
+
+version_active_requests = Gauge(
+    "version_http_active_requests",
+    "Number of active HTTP requests across versions",
+    ["version"],
+)
+
 
 class MonitoringMiddleware(BaseHTTPMiddleware):
     """Middleware for monitoring requests."""
@@ -35,6 +54,7 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
         """Process request and track metrics."""
         start_time = time.time()
         active_requests.inc()
+        version_active_requests.labels(version="v1").inc()
 
         try:
             response = await call_next(request)
@@ -42,6 +62,7 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
         finally:
             duration = time.time() - start_time
             active_requests.dec()
+            version_active_requests.labels(version="v1").dec()
 
             # Record metrics
             endpoint = request.url.path
@@ -54,7 +75,20 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
                 status=status_code,
             ).inc()
 
+            version_request_count.labels(
+                version="v1",
+                method=method,
+                endpoint=endpoint,
+                status=status_code,
+            ).inc()
+
             request_duration.labels(
+                method=method,
+                endpoint=endpoint,
+            ).observe(duration)
+
+            version_request_duration.labels(
+                version="v1",
                 method=method,
                 endpoint=endpoint,
             ).observe(duration)

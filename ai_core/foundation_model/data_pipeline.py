@@ -1095,6 +1095,7 @@ class DataPipeline:
         self,
         output_path: str,
         tokens_per_shard: int = 10_000_000,  # 10M tokens per shard
+        seed: Optional[int] = None,
     ) -> List[str]:
         """
         Create training shards from processed data.
@@ -1103,6 +1104,7 @@ class DataPipeline:
         """
         output_dir = Path(output_path)
         output_dir.mkdir(parents=True, exist_ok=True)
+        rng = np.random.default_rng(seed)
         
         # Collect all shards
         all_shards = self.storage.list_shards()
@@ -1123,7 +1125,6 @@ class DataPipeline:
                     training_shard_id = f"train_{shard_idx:06d}"
                     
                     # Shuffle before writing
-                    rng = np.random.default_rng()
                     rng.shuffle(current_docs)
                     
                     train_storage = ParquetStorage(output_path, "zstd")
@@ -1137,7 +1138,6 @@ class DataPipeline:
         # Write remaining
         if current_docs:
             training_shard_id = f"train_{shard_idx:06d}"
-            rng = np.random.default_rng()
             rng.shuffle(current_docs)
             train_storage = ParquetStorage(output_path, "zstd")
             train_storage.write(current_docs, training_shard_id)
@@ -1170,6 +1170,7 @@ class StreamingDataLoader:
         max_length: int = 4096,
         num_workers: int = 4,
         prefetch_factor: int = 2,
+        seed: Optional[int] = None,
     ):
         self.data_path = Path(data_path)
         self.batch_size = batch_size
@@ -1181,9 +1182,11 @@ class StreamingDataLoader:
         self.storage = ParquetStorage(str(data_path))
         self.shards = self.storage.list_shards()
         
+        # RNG for deterministic shuffling if seed provided
+        self._rng = np.random.default_rng(seed)
+        
         # Shuffle shards
-        rng = np.random.default_rng()
-        rng.shuffle(self.shards)
+        self._rng.shuffle(self.shards)
         
         self._current_shard_idx = 0
         self._current_docs: List[Document] = []
@@ -1230,15 +1233,13 @@ class StreamingDataLoader:
         self._current_shard_idx += 1
         
         # Shuffle within shard
-        rng = np.random.default_rng()
-        rng.shuffle(self._current_docs)
+        self._rng.shuffle(self._current_docs)
         
         return True
     
     def reset(self):
         """Reset the data loader."""
-        rng = np.random.default_rng()
-        rng.shuffle(self.shards)
+        self._rng.shuffle(self.shards)
         self._current_shard_idx = 0
         self._current_docs = []
         self._doc_idx = 0

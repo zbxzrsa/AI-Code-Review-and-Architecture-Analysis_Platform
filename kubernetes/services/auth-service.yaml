@@ -58,6 +58,7 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: auth-service
+      automountServiceAccountToken: false
 
       # Pod security context
       securityContext:
@@ -95,9 +96,11 @@ spec:
             requests:
               memory: "256Mi"
               cpu: "100m"
+              ephemeral-storage: "1Gi"
             limits:
               memory: "512Mi"
               cpu: "500m"
+              ephemeral-storage: "2Gi"
 
           # Environment variables
           envFrom:

@@ -103,10 +103,12 @@ spec:
               cpu: 1000m
               memory: 2Gi
               nvidia.com/gpu: "1" # GPU for intensive evaluation
+              ephemeral-storage: "2Gi"
             limits:
               cpu: 4
               memory: 8Gi
               nvidia.com/gpu: "1"
+              ephemeral-storage: "4Gi"
 
           livenessProbe:
             httpGet:

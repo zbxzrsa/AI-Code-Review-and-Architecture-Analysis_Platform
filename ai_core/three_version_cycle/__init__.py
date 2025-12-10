@@ -111,6 +111,13 @@ from .spiral_evolution_manager import (
     EliminationRecord,
 )
 
+from .parallel_orchestrator import (
+    ThreeVersionOrchestrator,
+    ParallelVersionStatus,
+    create_three_version_system,
+    run_three_version_demo,
+)
+
 __all__ = [
     # Version Management
     "VersionManager",
@@ -175,4 +182,11 @@ __all__ = [
     "TechEliminationConfig",
     "TechEliminationManager",
     "EliminationRecord",
+    
+    # Three-Version Parallel Orchestrator (MAIN ENTRY POINT)
+    "ThreeVersionOrchestrator",
+    "ParallelVersionStatus",
+    "create_three_version_system",
+    "run_three_version_demo",
 ]
+

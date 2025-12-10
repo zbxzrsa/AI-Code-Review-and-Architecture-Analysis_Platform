@@ -41,6 +41,9 @@ help:
 	@echo "  make start-three-version      - Start three-version service"
 	@echo "  make stop-three-version       - Stop three-version service"
 	@echo "  make logs-three-version       - View three-version service logs"
+	@echo "  make start-three-versions     - Start v1/v2/v3 APIs in Docker"
+	@echo "  make stop-three-versions      - Stop v1/v2/v3 API containers"
+	@echo "  make logs-three-versions      - Tail v1/v2/v3 API logs"
 	@echo ""
 	@echo "Networked Learning:"
 	@echo "  make verify-networked-learning - Verify all networked learning modules"
@@ -85,6 +88,16 @@ dev-stop:
 dev-logs:
 	docker-compose logs -f
 
+# Start three FastAPI versions in parallel (Docker Compose dev)
+start-three-versions:
+	docker compose -f docker-compose.dev.yml up -d postgres redis v1-experimentation-api v2-production-api v3-quarantine-api
+
+stop-three-versions:
+	docker compose -f docker-compose.dev.yml stop v1-experimentation-api v2-production-api v3-quarantine-api
+
+logs-three-versions:
+	docker compose -f docker-compose.dev.yml logs -f v1-experimentation-api v2-production-api v3-quarantine-api
+
 # ============================================================
 # Testing
 # ============================================================
@@ -115,6 +128,15 @@ lint:
 	cd backend && ruff check .
 	cd backend && black --check .
 	cd frontend && npm run lint
+
+# Python type checking using mypy (optional; ensure mypy installed)
+python-typecheck:
+	mypy backend/v1-experimentation/src backend/v2-production/src backend/v3-quarantine/src backend/shared
+
+# Frontend tests & lint combined
+lint-all:
+	$(MAKE) lint
+	$(MAKE) python-typecheck
 
 lint-fix:
 	cd backend && ruff check --fix .

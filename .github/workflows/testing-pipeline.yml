@@ -12,14 +12,14 @@ on:
 env:
   NODE_VERSION: "20"
   PYTHON_VERSION: "3.11"
-  COVERAGE_THRESHOLD: 80
+  COVERAGE_THRESHOLD: 95
 
 jobs:
   # ============================================================
   # 1. Unit Tests with Coverage (High Priority)
   # ============================================================
   unit-tests:
-    name: Unit Tests (Coverage ≥80%)
+    name: Unit Tests (Coverage ≥95%)
     runs-on: ubuntu-latest
 
     steps:

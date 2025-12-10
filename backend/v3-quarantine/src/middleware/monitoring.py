@@ -1,5 +1,5 @@
 """
-Monitoring middleware for V2 production.
+Monitoring middleware for V3 quarantine.
 """
 import time
 import logging
@@ -9,21 +9,21 @@ from prometheus_client import Counter, Histogram, Gauge
 
 logger = logging.getLogger(__name__)
 
-# Metrics
+# Version-specific metrics
 request_count = Counter(
-    "v2_http_requests_total",
+    "v3_http_requests_total",
     "Total HTTP requests",
     ["method", "endpoint", "status"],
 )
 
 request_duration = Histogram(
-    "v2_http_request_duration_seconds",
+    "v3_http_request_duration_seconds",
     "HTTP request duration",
     ["method", "endpoint"],
 )
 
 active_requests = Gauge(
-    "v2_http_active_requests",
+    "v3_http_active_requests",
     "Number of active HTTP requests",
 )
 
@@ -54,7 +54,7 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
         """Process request and track metrics."""
         start_time = time.time()
         active_requests.inc()
-        version_active_requests.labels(version="v2").inc()
+        version_active_requests.labels(version="v3").inc()
 
         try:
             response = await call_next(request)
@@ -62,7 +62,7 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
         finally:
             duration = time.time() - start_time
             active_requests.dec()
-            version_active_requests.labels(version="v2").dec()
+            version_active_requests.labels(version="v3").dec()
 
             # Record metrics
             endpoint = request.url.path
@@ -76,7 +76,7 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
             ).inc()
 
             version_request_count.labels(
-                version="v2",
+                version="v3",
                 method=method,
                 endpoint=endpoint,
                 status=status_code,
@@ -88,7 +88,7 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
             ).observe(duration)
 
             version_request_duration.labels(
-                version="v2",
+                version="v3",
                 method=method,
                 endpoint=endpoint,
             ).observe(duration)

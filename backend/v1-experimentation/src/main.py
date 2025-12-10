@@ -3,7 +3,7 @@ V1 Experimentation API - Testing ground for new AI models and techniques.
 """
 import logging
 from contextlib import asynccontextmanager
-from datetime, timezone import datetime, timezone
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
@@ -57,6 +57,13 @@ promotion_count = Counter(
 quarantine_count = Counter(
     "v1_quarantines_total",
     "Total experiments quarantined to V3",
+)
+
+# Unified cross-version error metrics
+version_error_count = Counter(
+    "version_errors_total",
+    "Total errors across versions",
+    ["version", "error_type"],
 )
 
 
@@ -144,6 +151,8 @@ async def global_exception_handler(request, exc):
         error_message=str(exc),
         path=request.url.path,
     )
+
+    version_error_count.labels(version="v1", error_type=error_type).inc()
 
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

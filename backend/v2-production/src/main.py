@@ -3,7 +3,7 @@ V2 Production API - Stable code review service for end users.
 """
 import logging
 from contextlib import asynccontextmanager
-from datetime, timezone import datetime, timezone
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.responses import JSONResponse
@@ -61,10 +61,11 @@ error_count = Counter(
     ["error_type"],
 )
 
-slo_violations = Counter(
-    "v2_slo_violations_total",
-    "Total SLO violations",
-    ["metric"],
+# Unified cross-version error metrics
+version_error_count = Counter(
+    "version_errors_total",
+    "Total errors across versions",
+    ["version", "error_type"],
 )
 
 
@@ -146,6 +147,7 @@ async def global_exception_handler(request, exc):
     """Global exception handler."""
     error_type = type(exc).__name__
     error_count.labels(error_type=error_type).inc()
+    version_error_count.labels(version="v2", error_type=error_type).inc()
 
     logger.error(
         "Unhandled exception",

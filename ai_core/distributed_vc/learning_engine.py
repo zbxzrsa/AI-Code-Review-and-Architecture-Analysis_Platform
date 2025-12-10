@@ -191,13 +191,21 @@ class LearningChannel(ABC):
         self.source = source
         self.session: Optional[aiohttp.ClientSession] = None
     
-    def initialize(self) -> None:
+    async def initialize(self) -> None:
         """
         初始化渠道
         
         创建 HTTP 会话用于网络请求。
+        Must be called within an async context.
         """
-        self.session = aiohttp.ClientSession()
+        # Create session with timeout and connection limits for reliability
+        timeout = aiohttp.ClientTimeout(total=60, connect=10, sock_read=30)
+        connector = aiohttp.TCPConnector(limit=10, limit_per_host=5)
+        self.session = aiohttp.ClientSession(
+            timeout=timeout,
+            connector=connector,
+            raise_for_status=False  # Handle errors explicitly
+        )
     
     async def close(self) -> None:
         """
@@ -205,8 +213,11 @@ class LearningChannel(ABC):
         
         释放 HTTP 会话资源。
         """
-        if self.session:
-            await self.session.close()
+        if self.session and not self.session.closed:
+            try:
+                await self.session.close()
+            except Exception as e:
+                logger.warning(f"Error closing session: {e}")
     
     @abstractmethod
     async def fetch(self) -> List[LearningItem]:

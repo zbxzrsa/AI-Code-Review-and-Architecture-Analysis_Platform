@@ -2,13 +2,13 @@
 Experiment evaluation and promotion endpoints for V1.
 """
 import logging
-from datetime, timezone import datetime, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, status
 
 from config.settings import settings
-from models.experiment import PromotionStatus
+from backend.shared.models.experiment import PromotionStatus
 
 logger = logging.getLogger(__name__)
 

@@ -100,6 +100,75 @@ services:
     ports:
       - "8002:8000"
 
+  # V1 Experimentation API (FastAPI)
+  v1-experimentation-api:
+    build:
+      context: ./backend/v1-experimentation
+      dockerfile: Dockerfile
+    container_name: platform-v1-experimentation-api
+    environment:
+      ENVIRONMENT: development
+      PLATFORM_VERSION: v1
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: coderev
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_in_production}
+      DB_NAME: experiments_v1
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8101:8000"
+
+  # V2 Production API (FastAPI)
+  v2-production-api:
+    build:
+      context: ./backend/v2-production
+      dockerfile: Dockerfile
+    container_name: platform-v2-production-api
+    environment:
+      ENVIRONMENT: production
+      PLATFORM_VERSION: v2
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: coderev
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_in_production}
+      DB_NAME: production
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8102:8000"
+
+  # V3 Quarantine API (FastAPI, read-only)
+  v3-quarantine-api:
+    build:
+      context: ./backend/v3-quarantine
+      dockerfile: Dockerfile
+    container_name: platform-v3-quarantine-api
+    environment:
+      ENVIRONMENT: quarantine
+      PLATFORM_VERSION: v3
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: coderev
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_in_production}
+      DB_NAME: quarantine
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8103:8000"
+
 volumes:
   postgres_data:
   redis_data:

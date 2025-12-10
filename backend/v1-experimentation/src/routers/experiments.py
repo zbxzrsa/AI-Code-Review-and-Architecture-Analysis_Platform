@@ -3,7 +3,7 @@ Experiment management endpoints for V1.
 """
 import logging
 from typing import Optional, List
-from datetime, timezone import datetime, timezone
+from datetime import datetime, timezone
 import time
 from uuid import uuid4
 
@@ -11,7 +11,12 @@ from fastapi import APIRouter, HTTPException, status, Query
 from pydantic import BaseModel, Field
 
 from config.settings import settings
-from models.experiment import Experiment, ExperimentStatus, ExperimentMetrics, PromotionStatus
+from backend.shared.models.experiment import (
+    Experiment,
+    ExperimentStatus,
+    ExperimentMetrics,
+    PromotionStatus,
+)
 
 logger = logging.getLogger(__name__)
 

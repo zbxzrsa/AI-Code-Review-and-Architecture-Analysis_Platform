@@ -3,16 +3,18 @@ V3 Quarantine API - Archive and review of failed experiments.
 """
 import logging
 from contextlib import asynccontextmanager
-from datetime, timezone import datetime, timezone
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import structlog
+from prometheus_client import Counter
 
 from config.settings import settings
 from database.connection import init_db, get_db_session
 from routers import quarantine, health
+from middleware.monitoring import MonitoringMiddleware
 
 # Configure logging
 structlog.configure(
@@ -33,6 +35,13 @@ structlog.configure(
 )
 
 logger = structlog.get_logger(__name__)
+
+# Unified cross-version error metrics
+version_error_count = Counter(
+    "version_errors_total",
+    "Total errors across versions",
+    ["version", "error_type"],
+)
 
 
 @asynccontextmanager
@@ -69,6 +78,9 @@ app.add_middleware(
 # Include routers
 app.include_router(health.router, prefix=settings.api_prefix, tags=["health"])
 app.include_router(quarantine.router, prefix=settings.api_prefix, tags=["quarantine"])
+
+# Add monitoring middleware
+app.add_middleware(MonitoringMiddleware)
 
 
 @app.get("/")
@@ -115,6 +127,8 @@ async def global_exception_handler(request, exc):
         error_message=str(exc),
         path=request.url.path,
     )
+
+    version_error_count.labels(version="v3", error_type=error_type).inc()
 
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

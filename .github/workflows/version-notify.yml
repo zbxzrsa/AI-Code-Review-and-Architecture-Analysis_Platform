@@ -1,0 +1,43 @@
+name: Version Notifications
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"  # Every Monday 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  weekly-summary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate summary
+        id: summary
+        run: |
+          echo "Generating version summary..."
+          NEW_COMMITS=$(git log --pretty=oneline --since="1 week ago" | wc -l)
+          OPEN_PRS=$(gh pr list --search "is:open" --json number | jq length || echo 0)
+          echo "new_commits=$NEW_COMMITS" >> $GITHUB_OUTPUT
+          echo "open_prs=$OPEN_PRS" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Notify Slack
+        if: always()
+        uses: slackapi/slack-github-action@v1
+        with:
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "Weekly Version Summary",
+              "blocks": [
+                {"type":"section","text":{"type":"mrkdwn","text":"*Weekly Version Summary*"}},
+                {"type":"section","fields":[
+                  {"type":"mrkdwn","text":"*New commits:* ${{ steps.summary.outputs.new_commits }}"},
+                  {"type":"mrkdwn","text":"*Open PRs:* ${{ steps.summary.outputs.open_prs }}"}
+                ]}
+              ]
+            }
+

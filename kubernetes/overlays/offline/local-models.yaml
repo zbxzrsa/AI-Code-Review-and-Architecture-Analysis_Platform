@@ -25,6 +25,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8000"
     spec:
+      automountServiceAccountToken: false
       nodeSelector:
         nvidia.com/gpu: "true"
         gpu-type: "a100"
@@ -54,10 +55,12 @@ spec:
               nvidia.com/gpu: 1
               memory: "48Gi"
               cpu: "8"
+              ephemeral-storage: "2Gi"
             limits:
               nvidia.com/gpu: 1
               memory: "64Gi"
               cpu: "16"
+              ephemeral-storage: "4Gi"
           volumeMounts:
             - name: model-storage
               mountPath: /models
@@ -111,6 +114,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8000"
     spec:
+      automountServiceAccountToken: false
       nodeSelector:
         nvidia.com/gpu: "true"
       tolerations:
@@ -139,10 +143,12 @@ spec:
               nvidia.com/gpu: 1
               memory: "48Gi"
               cpu: "8"
+              ephemeral-storage: "2Gi"
             limits:
               nvidia.com/gpu: 1
               memory: "64Gi"
               cpu: "16"
+              ephemeral-storage: "4Gi"
           volumeMounts:
             - name: model-storage
               mountPath: /models
@@ -194,6 +200,7 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "80"
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: tei
           image: ghcr.io/huggingface/text-embeddings-inference:latest
@@ -209,9 +216,11 @@ spec:
             requests:
               memory: "2Gi"
               cpu: "2"
+              ephemeral-storage: "1Gi"
             limits:
               memory: "4Gi"
               cpu: "4"
+              ephemeral-storage: "2Gi"
           volumeMounts:
             - name: model-storage
               mountPath: /models

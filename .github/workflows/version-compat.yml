@@ -1,0 +1,53 @@
+name: Version Compatibility Tests
+
+on:
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  spin-up-and-healthcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Compose
+        run: |
+          docker version
+          docker compose version
+
+      - name: Start databases
+        run: |
+          docker compose -f docker-compose.dev.yml up -d postgres redis
+
+      - name: Start three versions
+        run: |
+          docker compose -f docker-compose.dev.yml up -d v1-experimentation-api v2-production-api v3-quarantine-api
+
+      - name: Wait for services
+        run: |
+          for i in {1..30}; do
+            echo "Attempt $i"
+            READY=0
+            curl -fs http://localhost:8101/health/live && READY=$((READY+1)) || true
+            curl -fs http://localhost:8102/health/live && READY=$((READY+1)) || true
+            curl -fs http://localhost:8103/health/live && READY=$((READY+1)) || true
+            if [ "$READY" = "3" ]; then echo "All healthy"; break; fi
+            sleep 5
+          done
+          if [ "$READY" != "3" ]; then echo "Health checks failed"; exit 1; fi
+
+      - name: Basic compatibility checks
+        run: |
+          set -e
+          curl -fs http://localhost:8101/ | jq .
+          curl -fs http://localhost:8102/ | jq .
+          curl -fs http://localhost:8103/ | jq .
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker compose -f docker-compose.dev.yml down
+

@@ -3,15 +3,15 @@ Code review API endpoints for V2 production.
 """
 import logging
 from typing import Optional, List
-from datetime, timezone import datetime, timezone
+from datetime import datetime, timezone
 import time
 
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from pydantic import BaseModel, Field
 
 from config.settings import settings
-from utils.ai_client import create_ai_client, AIResponse
-from models.experiment import CodeReviewAnalysis
+from backend.shared.utils.ai_client import create_ai_client, AIResponse
+from backend.shared.models.experiment import CodeReviewAnalysis
 
 logger = logging.getLogger(__name__)
 

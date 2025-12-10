@@ -1,0 +1,68 @@
+name: Version Control Policy
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop, "feature/*", "hotfix/*", "release/*", "experiment/*"]
+
+jobs:
+  enforce-branching:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch naming
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const ref = context.payload.ref || context.payload.pull_request?.head?.ref;
+            const base = context.payload.pull_request?.base?.ref || context.ref.replace('refs/heads/','');
+            const name = (ref || context.ref).replace('refs/heads/','');
+            function fail(msg){ core.setFailed(msg); }
+            function ok(msg){ core.info(msg); }
+            const rules = [
+              { pattern: /^feature\//, base: 'develop', desc: 'Feature branches must target develop' },
+              { pattern: /^hotfix\//, base: 'main', desc: 'Hotfix branches must target main' },
+              { pattern: /^release\//, base: 'main', desc: 'Release branches must target main' },
+              { pattern: /^experiment\//, base: 'develop', desc: 'Experiment branches should target develop' },
+            ];
+            // Direct pushes to main/develop discouraged
+            if(context.eventName==='push' && (name==='main'||name==='develop')){
+              fail(`Direct pushes to ${name} are not allowed. Use Pull Requests.`);
+              return;
+            }
+            // Only enforce for PRs with matching prefixes
+            if(context.eventName==='pull_request'){
+              for(const r of rules){
+                if(r.pattern.test(name) && base!==r.base){
+                  fail(`${r.desc}. Branch: ${name}, Base: ${base}`);
+                  return;
+                }
+              }
+            }
+            ok('Branch naming and base branch validation passed.');
+
+  require-labels:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Require version-sync label when touching multiple versions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const number = pr.number;
+            const octokit = github.getOctokit(process.env.GITHUB_TOKEN);
+            const files = await octokit.paginate(octokit.rest.pulls.listFiles, { ...context.repo, pull_number: number });
+            const touched = new Set();
+            for(const f of files){
+              if(f.filename.startsWith('backend/v1-experimentation/')) touched.add('v1');
+              if(f.filename.startsWith('backend/v2-production/')) touched.add('v2');
+              if(f.filename.startsWith('backend/v3-quarantine/')) touched.add('v3');
+            }
+            const labels = (pr.labels||[]).map(l=>l.name);
+            if(touched.size>=2 && !labels.includes('version-sync')){
+              core.setFailed('PR touches multiple versions but is missing required label: version-sync');
+            } else {
+              core.info('Label check passed');
+            }
+

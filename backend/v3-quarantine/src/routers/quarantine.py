@@ -3,11 +3,11 @@ Quarantine management endpoints for V3.
 """
 import logging
 from typing import Optional, List
-from datetime, timezone import datetime, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, status, Query
 
-from models.experiment import QuarantineRecord
+from backend.shared.models.experiment import QuarantineRecord
 
 logger = logging.getLogger(__name__)
 

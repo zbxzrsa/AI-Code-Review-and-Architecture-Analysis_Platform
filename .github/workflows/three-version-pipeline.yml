@@ -102,14 +102,16 @@ jobs:
             --oidc-issuer=https://token.actions.githubusercontent.com \
             ${{ env.REGISTRY }}/vcai@${{ steps.build.outputs.digest }}
 
-      # Vulnerability scan
-      - name: Trivy Scan
+      # Vulnerability scan - consolidated SARIF generation and critical check
+      - name: Trivy Vulnerability Scan
+        id: trivy
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: ${{ env.REGISTRY }}/vcai:${{ steps.meta.outputs.version }}
           format: "sarif"
           output: "trivy-results.sarif"
           severity: "CRITICAL,HIGH"
+          exit-code: "0"  # Don't fail here, we process results below
 
       - name: Upload Trivy Results
         uses: github/codeql-action/upload-sarif@v3
@@ -117,13 +119,17 @@ jobs:
           sarif_file: "trivy-results.sarif"
         continue-on-error: true
 
-      - name: Fail on Critical Vulnerabilities
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: ${{ env.REGISTRY }}/vcai:${{ steps.meta.outputs.version }}
-          exit-code: "1"
-          severity: "CRITICAL"
-        continue-on-error: true
+      - name: Check for Critical Vulnerabilities
+        run: |
+          # Parse SARIF for critical vulnerabilities
+          if [ -f "trivy-results.sarif" ]; then
+            CRITICAL_COUNT=$(jq '[.runs[].results[] | select(.level == "error")] | length' trivy-results.sarif 2>/dev/null || echo "0")
+            echo "Critical vulnerabilities found: $CRITICAL_COUNT"
+            if [ "$CRITICAL_COUNT" -gt "0" ]; then
+              echo "::warning::Found $CRITICAL_COUNT critical vulnerabilities"
+              # Uncomment to enforce: exit 1
+            fi
+          fi
 
   # ============================================================
   # Stage 2: Test - Unit, Integration, Security, Property
@@ -203,6 +209,28 @@ jobs:
             --hypothesis-seed=42 \
             || true
         continue-on-error: true
+
+      # Three-Version Cycle Tests (V1→V2→V3 validation)
+      - name: Three-Version Cycle Tests
+        id: cycle_tests
+        run: |
+          echo "Running three-version cycle tests..."
+          pytest tests/backend/test_three_version_cycle.py \
+            tests/unit/test_self_evolution_cycle.py \
+            tests/integration/test_version_lifecycle.py \
+            -v --tb=short \
+            --cov=ai_core/three_version_cycle \
+            --cov-report=term \
+            -m "not slow"
+        continue-on-error: true
+
+      - name: Version Cycle Summary
+        if: always()
+        run: |
+          echo "## Three-Version Cycle Tests" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Cycle Tests | ${{ steps.cycle_tests.outcome }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v4
