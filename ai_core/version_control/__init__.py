@@ -1,22 +1,28 @@
 """
-模型版本控制模块 (Model Version Control Module)
+Model Version Control Module
 
-模块功能描述:
-    提供 AI 模型的版本控制和管理功能。
+Module Description:
+    Provides AI model version control and management functionality,
+    as well as project self-update capabilities.
 
-主要功能:
-    - 模型版本跟踪和管理
-    - 模型注册表
-    - 性能指标跟踪
-    - 版本历史记录
+Main Features:
+    - Model version tracking and management
+    - Model registry
+    - Performance metrics tracking
+    - Version history
+    - Project self-update engine (new)
+    - Enhanced version control AI (new)
 
-主要组件:
-    - ModelVersionControl: 模型版本控制主类
-    - ModelRegistry: 模型注册表
-    - VersionTracker: 版本跟踪器
-    - PerformanceTracker: 性能跟踪器
+Main Components:
+    - ModelVersionControl: Main model version control class
+    - ModelRegistry: Model registry
+    - VersionTracker: Version tracker
+    - PerformanceTracker: Performance tracker
+    - ProjectSelfUpdateEngine: Project self-update engine (new)
+    - EnhancedVersionControlAI: Enhanced version control AI (new)
+    - ProjectSelfUpdateService: Project self-update service (new)
 
-最后修改日期: 2024-12-07
+Last Modified: 2024-12-07
 """
 
 from .model_version_control import ModelVersionControl
@@ -24,9 +30,44 @@ from .model_registry import ModelRegistry
 from .version_tracker import VersionTracker
 from .performance_tracker import PerformanceTracker
 
+# New: Project self-update related
+from .project_self_update_engine import (
+    ProjectSelfUpdateEngine,
+    ImprovementCategory,
+    ImprovementPriority,
+    ImprovementStatus,
+    CodeIssue,
+    ImprovementPatch,
+    ProjectScanResult,
+    ImprovementCycle,
+)
+from .enhanced_version_control_ai import (
+    EnhancedVersionControlAI,
+    VersionControlAIConfig,
+)
+from .self_update_service import (
+    ProjectSelfUpdateService,
+    create_self_update_service,
+)
+
 __all__ = [
+    # Original components
     'ModelVersionControl',
     'ModelRegistry',
     'VersionTracker',
-    'PerformanceTracker'
+    'PerformanceTracker',
+    # New: Project self-update
+    'ProjectSelfUpdateEngine',
+    'EnhancedVersionControlAI',
+    'ProjectSelfUpdateService',
+    'create_self_update_service',
+    # Enums and data types
+    'ImprovementCategory',
+    'ImprovementPriority',
+    'ImprovementStatus',
+    'CodeIssue',
+    'ImprovementPatch',
+    'ProjectScanResult',
+    'ImprovementCycle',
+    'VersionControlAIConfig',
 ]

@@ -1,0 +1,23 @@
+{
+  "$id": "tech.candidate",
+  "type": "object",
+  "required": ["id", "name", "source", "metrics", "submittedAt"],
+  "properties": {
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "source": { "type": "string" },
+    "rationale": { "type": "string" },
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "latencyImprovementPct": { "type": "number" },
+        "throughputImprovementPct": { "type": "number" },
+        "resourceDeltaPct": { "type": "number" }
+      },
+      "additionalProperties": false
+    },
+    "submittedAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}
+

@@ -1,0 +1,138 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: tech-monitor-events
+  namespace: baseline-v3
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: tech-baseline-report
+  namespace: baseline-v3
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: tech-candidate
+  namespace: baseline-v3
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+  config:
+    retention.ms: 604800000
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: v1-sandbox-run
+  namespace: dev-v1
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: v1-validation-report
+  namespace: dev-v1
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ai-sign-v1
+  namespace: dev-v1
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 1
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ai-sign-v3
+  namespace: baseline-v3
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 1
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: ai-sign-v2
+  namespace: stable-v2
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 1
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: release-candidate
+  namespace: stable-v2
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: release-preprod-report
+  namespace: stable-v2
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: release-rollout
+  namespace: stable-v2
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+---
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: release-rollback
+  namespace: stable-v2
+  labels:
+    strimzi.io/cluster: platform-kafka
+spec:
+  partitions: 3
+  replicas: 3
+

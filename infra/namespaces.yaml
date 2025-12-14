@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: dev-v1
+      labels:
+        stage: dev
+        version: v1
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: stable-v2
+      labels:
+        stage: prod
+        version: v2
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: baseline-v3
+      labels:
+        stage: baseline
+        version: v3
+

@@ -1,0 +1,21 @@
+# 版本架构系统依赖
+
+# 加密和安全
+cryptography>=41.0.0
+
+# 异步支持（Python 3.7+内置，但列出以明确依赖）
+# asyncio - 内置
+
+# 数据验证和序列化
+# dataclasses - Python 3.7+内置
+# typing - Python 3.5+内置
+
+# 日志（内置）
+# logging - 内置
+
+# 路径处理（内置）
+# pathlib - Python 3.4+内置
+
+# JSON处理（内置）
+# json - 内置
+
