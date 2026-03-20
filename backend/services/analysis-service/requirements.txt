@@ -1,8 +1,0 @@
-# Analysis Service Dependencies
-# Includes shared base + service-specific packages
--r ../../requirements-base.txt
-
-# Analysis-specific dependencies
-celery>=5.3.0
-neo4j>=5.14.0
-minio>=7.2.0
